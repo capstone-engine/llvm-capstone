@@ -57,6 +57,7 @@ enum ActionType {
   GenAutomata,
   GenDirectivesEnumDecl,
   GenDirectivesEnumImpl,
+  GenCapstone,
 };
 
 namespace llvm {
@@ -138,7 +139,9 @@ cl::opt<ActionType> Action(
         clEnumValN(GenDirectivesEnumDecl, "gen-directive-decl",
                    "Generate directive related declaration code (header file)"),
         clEnumValN(GenDirectivesEnumImpl, "gen-directive-impl",
-                   "Generate directive related implementation code")));
+                   "Generate directive related implementation code"),
+        clEnumValN(GenCapstone, "gen-capstone",
+                   "Generate file for capstone engine")));
 
 cl::OptionCategory PrintEnumsCat("Options for -print-enums");
 cl::opt<std::string> Class("class", cl::desc("Print Enum list for this class"),
@@ -271,6 +274,9 @@ bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenDirectivesEnumImpl:
     EmitDirectivesImpl(Records, OS);
+    break;
+  case GenCapstone:
+    EmitCapstone(Records, OS);
     break;
   }
 
