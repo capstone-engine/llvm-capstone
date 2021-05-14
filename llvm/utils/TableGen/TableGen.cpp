@@ -58,6 +58,7 @@ enum ActionType {
   GenDirectivesEnumDecl,
   GenDirectivesEnumImpl,
   GenDXILOperation,
+  GenCapstone,
 };
 
 namespace llvm {
@@ -142,6 +143,8 @@ cl::opt<ActionType> Action(
                    "Generate directive related implementation code"),
         clEnumValN(GenDXILOperation, "gen-dxil-operation",
                    "Generate DXIL operation information")));
+        clEnumValN(GenCapstone, "gen-capstone",
+                   "Generate file for capstone engine")));
 
 cl::OptionCategory PrintEnumsCat("Options for -print-enums");
 cl::opt<std::string> Class("class", cl::desc("Print Enum list for this class"),
@@ -277,6 +280,8 @@ bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenDXILOperation:
     EmitDXILOperation(Records, OS);
+  case GenCapstone:
+    EmitCapstone(Records, OS);
     break;
   }
 
