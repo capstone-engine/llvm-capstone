@@ -1251,7 +1251,7 @@ bool FilterChooser::emitPredicateMatch(raw_ostream &o, unsigned &Indentation,
       if (!isa<DefInit>(Arg) ||
           !cast<DefInit>(Arg)->getDef()->isSubClassOf("SubtargetFeature"))
         PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
-      o << "(Bits & " << Emitter->PredicateNamespace << "_"
+      o << "(Bits & 1 << " << Emitter->PredicateNamespace << "_"
         << Arg->getAsString() << ")";
     }
 
