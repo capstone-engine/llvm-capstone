@@ -773,8 +773,8 @@ void CapstoneGenInfo::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       ++I;
       unsigned Start = *I++;
       unsigned Len = *I++;
-      OS.indent(Indentation) << "MCD_OPC_ExtractField, " << Start << ", " << Len
-                             << ",  // Inst{";
+      OS.indent(Indentation)
+          << "MCD_OPC_ExtractField, " << Start << ", " << Len << ",  // Inst{";
       if (Len > 1)
         OS << (Start + Len - 1) << "-";
       OS << Start << "} ...\n";
@@ -855,8 +855,8 @@ void CapstoneGenInfo::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
                "ULEB128 value too large!");
       // Decode the Opcode value.
       unsigned Opc = decodeULEB128(Buffer);
-      OS.indent(Indentation) << "MCD_OPC_" << (IsTry ? "Try" : "")
-                             << "Decode, ";
+      OS.indent(Indentation)
+          << "MCD_OPC_" << (IsTry ? "Try" : "") << "Decode, ";
       for (p = Buffer; *p >= 128; ++p)
         OS << (unsigned)*p << ", ";
       OS << (unsigned)*p << ", ";
@@ -1173,11 +1173,25 @@ void FilterChooser::emitDecoder(raw_ostream &OS, unsigned Indentation,
     // If a custom instruction decoder was specified, use that.
     if (Op.numFields() == 0 && !Op.Decoder.empty()) {
       HasCompleteDecoder = Op.HasCompleteDecoder;
-      OS.indent(Indentation)
-          << Emitter->GuardPrefix << Op.Decoder
-          << "(MI, insn, Address, Decoder)" << Emitter->GuardPostfix << " { "
-          << (HasCompleteDecoder ? "" : "DecodeComplete = false; ")
-          << "return MCDisassembler_Fail; }\\\n";
+      auto Decoder = Op.Decoder;
+      if (Decoder.find('<') != std::string::npos) {
+        // we decided the params should be replaced
+        size_t end = Decoder.find('>');
+        size_t start = Decoder.find('<');
+        OS.indent(Indentation)
+            << Emitter->GuardPrefix << Decoder.substr(0, start)
+            << "(MI, tmp, Address, Decoder, "
+            << Decoder.substr(start + 1, end - start - 1) << ")"
+            << Emitter->GuardPostfix << " { "
+            << (HasCompleteDecoder ? "" : "DecodeComplete = false; ")
+            << "return MCDisassembler_Fail; }\\\n";
+      } else {
+        OS.indent(Indentation)
+            << Emitter->GuardPrefix << (Op.Decoder)
+            << "(MI, insn, Address, Decoder)" << Emitter->GuardPostfix << " { "
+            << (HasCompleteDecoder ? "" : "DecodeComplete = false; ")
+            << "return MCDisassembler_Fail; }\\\n";
+      }
       break;
     }
 
@@ -2169,11 +2183,6 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
   return true;
 }
 
-// emitFieldFromInstruction - Emit the templated helper function
-// fieldFromInstruction().
-// On Windows we make sure that this function is not inlined when
-// using the VS compiler. It has a bug which causes the function
-// to be optimized out in some circustances. See llvm.org/pr38292
 static void emitFieldFromInstruction(formatted_raw_ostream &OS) {
   OS << "// Helper function for extracting fields from encoded instructions.\n"
         "#define FieldFromInstruction(fname, InsnType) \\\n"
