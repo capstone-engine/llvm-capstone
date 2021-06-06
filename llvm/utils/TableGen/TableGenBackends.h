@@ -95,6 +95,7 @@ void EmitDirectivesDecl(RecordKeeper &RK, raw_ostream &OS);
 void EmitDirectivesImpl(RecordKeeper &RK, raw_ostream &OS);
 void EmitDXILOperation(RecordKeeper &RK, raw_ostream &OS);
 void EmitCapstone(RecordKeeper &RK, raw_ostream &OS);
+void EmitCapstoneMapper(RecordKeeper &RK, raw_ostream &OS);
 
 } // End llvm namespace
 
