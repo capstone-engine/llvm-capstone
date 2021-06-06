@@ -44,6 +44,7 @@
 #include <vector>
 
 #include "Capstone/CapstoneGenInfo.h"
+#include "Capstone/CapstoneGenMapper.h"
 
 namespace llvm {
 
@@ -53,6 +54,10 @@ void EmitCapstone(RecordKeeper &RK, raw_ostream &OS) {
                   "  DecodeStatus S = "
                   "MCDisassembler_Success;\n(void)S;")
       .run(OS);
+}
+
+void EmitCapstoneMapper(RecordKeeper &RK, raw_ostream &OS) {
+  CapstoneGenMapper(RK).run(OS);
 }
 
 } // end namespace llvm
