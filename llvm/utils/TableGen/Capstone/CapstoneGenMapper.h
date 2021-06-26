@@ -1808,6 +1808,15 @@ public:
   void run(raw_ostream &O);
 };
 
+std::string truncForCapstone(std::string flag) {
+  if (flag.find("IS") == 0 || flag.find("IN") == 0) {
+    return flag.substr(2);
+  }
+  if (flag.find("HAS") == 0)
+    return flag.substr(3);
+  return flag;
+}
+
 void emitInstrMatchTable(raw_ostream &OS, CodeGenTarget &Target,
                          const AsmMatcherInfo &Info) {
   OS << "static const insn_map insns[] = {\n"
@@ -1819,6 +1828,9 @@ void emitInstrMatchTable(raw_ostream &OS, CodeGenTarget &Target,
      << "#endif\n"
      << "\t},\n"
      << "\n";
+
+  std::set<std::string> InstructClass;
+
 
   unsigned VariantCount = Target.getAsmParserVariantCount();
   for (unsigned VC = 0; VC != VariantCount; ++VC) {
@@ -1841,11 +1853,16 @@ void emitInstrMatchTable(raw_ostream &OS, CodeGenTarget &Target,
         CapstoneMnemonic = CapstoneMnemonic.substr(0, DotPos);
       }
 
+      CapstoneMnemonic = Target.getInstNamespace().upper() + "_INS_" + CapstoneMnemonic;
+
       OS << "\t{\n"
          << " /* " << MI->Mnemonic << " */ \n\t\t" << Target.getInstNamespace()
          << "_" << MI->getResultInst()->TheDef->getName() << ", "
-         << Target.getInstNamespace().upper() << "_INS_" << CapstoneMnemonic
+         << CapstoneMnemonic
+         << ","
          << "\n";
+
+      InstructClass.insert(CapstoneMnemonic);
 
       OS << "#ifndef CAPSTONE_DIET\n";
 
@@ -1854,14 +1871,25 @@ void emitInstrMatchTable(raw_ostream &OS, CodeGenTarget &Target,
       OS << "{ ";
       for (unsigned i = 0, e = MI->RequiredFeatures.size(); i != e; ++i)
         OS << Target.getInstNamespace().upper() << "_GRP_"
-           << MI->RequiredFeatures[i]->TheDef->getName().upper() << ", ";
+           << truncForCapstone(
+                  MI->RequiredFeatures[i]->TheDef->getName().upper())
+           << ", ";
       OS << "0 }, ";
       OS << uint16_t(IsBranch) << ", " << uint16_t(IsIndirectBranch);
       OS << "\n#endif\n\t},\n";
     }
 
-    OS << "};\n\n";
+    OS << "};\n\n\n\n";
   }
+
+  OS << "typedef enum " << Target.getInstNamespace().lower()
+     << "_insn {\n"
+        "  "
+     << Target.getInstNamespace().upper() << "_INS_INVALID = 0";
+  for (auto Mnemonic: InstructClass) {
+    OS << ",\n  " << Mnemonic;
+  }
+  OS << "\n} " << Target.getInstNamespace().lower() <<"_insn;";
 }
 
 void CapstoneGenMapper::run(raw_ostream &O) {
