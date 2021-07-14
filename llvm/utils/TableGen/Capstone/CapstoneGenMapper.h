@@ -1831,7 +1831,6 @@ void emitInstrMatchTable(raw_ostream &OS, CodeGenTarget &Target,
 
   std::set<std::string> InstructClass;
 
-
   unsigned VariantCount = Target.getAsmParserVariantCount();
   for (unsigned VC = 0; VC != VariantCount; ++VC) {
     Record *AsmVariant = Target.getAsmParserVariant(VC);
@@ -1853,13 +1852,13 @@ void emitInstrMatchTable(raw_ostream &OS, CodeGenTarget &Target,
         CapstoneMnemonic = CapstoneMnemonic.substr(0, DotPos);
       }
 
-      CapstoneMnemonic = Target.getInstNamespace().upper() + "_INS_" + CapstoneMnemonic;
+      CapstoneMnemonic =
+          Target.getInstNamespace().upper() + "_INS_" + CapstoneMnemonic;
 
       OS << "\t{\n"
          << " /* " << MI->Mnemonic << " */ \n\t\t" << Target.getInstNamespace()
          << "_" << MI->getResultInst()->TheDef->getName() << ", "
-         << CapstoneMnemonic
-         << ","
+         << CapstoneMnemonic << ","
          << "\n";
 
       InstructClass.insert(CapstoneMnemonic);
@@ -1882,14 +1881,13 @@ void emitInstrMatchTable(raw_ostream &OS, CodeGenTarget &Target,
     OS << "};\n\n\n\n";
   }
 
-  OS << "typedef enum " << Target.getInstNamespace().lower()
-     << "_insn {\n"
-        "  "
+  OS << "typedef enum " << Target.getInstNamespace().lower() << "_insn {\n"
+                                                                "  "
      << Target.getInstNamespace().upper() << "_INS_INVALID = 0";
-  for (auto Mnemonic: InstructClass) {
+  for (auto Mnemonic : InstructClass) {
     OS << ",\n  " << Mnemonic;
   }
-  OS << "\n} " << Target.getInstNamespace().lower() <<"_insn;";
+  OS << "\n} " << Target.getInstNamespace().lower() << "_insn;";
 }
 
 void CapstoneGenMapper::run(raw_ostream &O) {
