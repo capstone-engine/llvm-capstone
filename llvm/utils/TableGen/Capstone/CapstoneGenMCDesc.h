@@ -247,11 +247,13 @@ void CapstoneGenInfo::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
 
     RegClassStrings.add(Name);
 
+    StringRef Namespace = RC.Namespace;
+
     // Emit the register list now.
     OS << "  // " << Name << " Register Class...\n"
        << "  static const MCPhysReg " << Name << "[] = {\n    ";
     for (Record *Reg : Order) {
-      OS << TargetName << "_" << Reg->getName().str() << ", ";
+      OS << Namespace << "_" << Reg->getName().str() << ", ";
     }
     OS << "\n  };\n\n";
 
