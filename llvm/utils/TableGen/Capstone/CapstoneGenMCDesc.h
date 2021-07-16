@@ -258,7 +258,7 @@ void CapstoneGenInfo::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
     OS << "\n  };\n\n";
 
     OS << "  // " << Name << " Bit set.\n"
-       << "  const uint8_t " << Name << "Bits[] = {\n    ";
+       << "  static const uint8_t " << Name << "Bits[] = {\n    ";
     BitVectorEmitter BVE;
     for (Record *Reg : Order) {
       BVE.add(Target.getRegBank().getReg(Reg)->EnumValue);
