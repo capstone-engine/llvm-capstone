@@ -2284,7 +2284,7 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
         "      NumToSkip |= (*Ptr++) << 8; \\\n"
         "      NumToSkip |= (*Ptr++) << 16; \\\n"
         "      /* Check the predicate. */ \\\n"
-        "      if (!(Pred = checkDecoderPredicate(PIdx, MI))) \\\n"
+        "      if (!(Pred = checkDecoderPredicate(PIdx, feature))) \\\n"
         "        Ptr += NumToSkip; \\\n"
         "\t\t/* printf(\"55 PIdx = %u, Pred = %u\\n\", PIdx, Pred); */ \\\n"
         "      (void)Pred; \\\n"
