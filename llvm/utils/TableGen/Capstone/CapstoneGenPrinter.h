@@ -7,6 +7,18 @@
 #include "../Types.h"
 #include <llvm/Support/FormatVariadic.h>
 
+std::string extractTemplate(std::string &Printer) {
+  if (Printer.find('<') != std::string::npos) {
+    size_t end = Printer.find('>');
+    size_t start = Printer.find('<');
+    std::string TemplateVar =
+        std::string(", ") + Printer.substr(start + 1, end - start - 1);
+    Printer = Printer.substr(0, start);
+    return TemplateVar;
+  }
+  return "";
+}
+
 std::string getCode(const AsmWriterOperand &Op, bool PassSubtarget) {
   if (Op.OperandType == Op.isLiteralTextOperand) {
     return "SStream_concat0(O, \"" + Op.Str + "\");";
@@ -17,8 +29,12 @@ std::string getCode(const AsmWriterOperand &Op, bool PassSubtarget) {
 
   std::string StrBase = Op.Str;
 
+  // TODO this is a patch for capstone mips, don't sure what are other possible
+  // consequences
   if (Op.Str.find("printUImm") != std::string::npos)
     StrBase = "printUnsignedImm";
+
+  std::string Template = extractTemplate(StrBase);
 
   std::string Result = StrBase + "(MI";
   // FIXME is this correct ?
@@ -26,12 +42,12 @@ std::string getCode(const AsmWriterOperand &Op, bool PassSubtarget) {
   //    Result += ", Address";
   if (Op.MIOpNo != ~0U)
     Result += ", " + utostr(Op.MIOpNo);
-  if (PassSubtarget)
-    Result += ", STI";
+  //  if (PassSubtarget)
+  //    Result += ", STI";
   Result += ", O";
   if (!Op.MiModifier.empty())
     Result += ", \"" + Op.MiModifier + '"';
-  return Result + ");";
+  return Result + Template + ");";
 }
 
 static void
@@ -78,10 +94,10 @@ static void EmitInstructions(std::vector<AsmWriterInst> &Insts, raw_ostream &O,
     }
   }
 
-  O << "  case " << FirstInst.CGI->Namespace
-    << "::" << FirstInst.CGI->TheDef->getName() << ":\n";
+  O << "  case " << FirstInst.CGI->Namespace << "_"
+    << FirstInst.CGI->TheDef->getName() << ":\n";
   for (const AsmWriterInst &AWI : SimilarInsts)
-    O << "  case " << AWI.CGI->Namespace << "::" << AWI.CGI->TheDef->getName()
+    O << "  case " << AWI.CGI->Namespace << "_" << AWI.CGI->TheDef->getName()
       << ":\n";
   for (unsigned i = 0, e = FirstInst.Operands.size(); i != e; ++i) {
     if (i != DifferingOperand) {
@@ -94,13 +110,13 @@ static void EmitInstructions(std::vector<AsmWriterInst> &Insts, raw_ostream &O,
       O << "    default: llvm_unreachable(\"Unexpected opcode.\");\n";
       std::vector<std::pair<std::string, AsmWriterOperand>> OpsToPrint;
       OpsToPrint.push_back(
-          std::make_pair(FirstInst.CGI->Namespace.str() + "::" +
+          std::make_pair(FirstInst.CGI->Namespace.str() + "_" +
                              FirstInst.CGI->TheDef->getName().str(),
                          FirstInst.Operands[i]));
 
       for (const AsmWriterInst &AWI : SimilarInsts) {
         OpsToPrint.push_back(std::make_pair(
-            AWI.CGI->Namespace.str() + "::" + AWI.CGI->TheDef->getName().str(),
+            AWI.CGI->Namespace.str() + "_" + AWI.CGI->TheDef->getName().str(),
             AWI.Operands[i]));
       }
       std::reverse(OpsToPrint.begin(), OpsToPrint.end());
@@ -621,7 +637,7 @@ void CapstoneGenInfo::EmitGetRegisterName(raw_ostream &O) {
       StringRef AltName = R->getName();
       O << "  case ";
       if (!Namespace.empty())
-        O << Namespace << "::";
+        O << Namespace << "_";
       O << AltName << ":\n";
       if (R->isValueUnset("FallbackRegAltNameIndex"))
         O << "    assert(*(AsmStrs" << AltName << "+RegAsmOffset" << AltName
@@ -632,7 +648,7 @@ void CapstoneGenInfo::EmitGetRegisterName(raw_ostream &O) {
           << "[RegNo-1]))\n"
           << "      return getRegisterName(RegNo, ";
         if (!Namespace.empty())
-          O << Namespace << "::";
+          O << Namespace << "_";
         O << R->getValueAsDef("FallbackRegAltNameIndex")->getName() << ");\n";
       }
       O << "    return AsmStrs" << AltName << "+RegAsmOffset" << AltName
@@ -1214,10 +1230,13 @@ void CapstoneGenInfo::EmitPrintAliasInstruction(raw_ostream &O) {
       std::string BaseStr = PrintMethods[i].first;
       if (BaseStr.find("printUImm") != std::string::npos)
         BaseStr = "printUnsignedImm";
+      std::string Template = extractTemplate(BaseStr);
       O << "  case " << i << ":\n"
         << "    " << BaseStr << "(MI, "
-        << (PrintMethods[i].second ? "Address, " : "") << "OpIdx, "
-        << (PassSubtarget ? "STI, " : "") << "OS);\n"
+        << (PrintMethods[i].second ? "Address, " : "")
+        << "OpIdx, "
+           /*<< (PassSubtarget ? "STI, " : "") <<*/ "OS"
+        << Template << ");\n"
         << "    break;\n";
     }
     O << "  }\n";

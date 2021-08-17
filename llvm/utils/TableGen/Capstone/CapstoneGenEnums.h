@@ -78,5 +78,38 @@ void CapstoneGenInfo::runEnums(raw_ostream &OS, CodeGenTarget &Target,
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue())
     OS << "#define " << Namespace << "_" << Inst->TheDef->getName() << "\t "
        << Num++ << "\n";
+
   OS << "#endif // GET_INSTRINFO_ENUM\n\n";
+
+  OS << "#ifdef GET_REGINFO_EXTRA\n";
+  OS << "#undef GET_REGINFO_EXTRA\n";
+
+  const std::vector<Record *> &RegAltNameIndices =
+      Target.getRegAltNameIndices();
+  // If the only definition is the default NoRegAltName, we don't need to
+  // emit anything.
+  if (RegAltNameIndices.size() > 1) {
+    OS << "\n// Register alternate name indices\n\n";
+    OS << "enum {\n";
+    for (unsigned i = 0, e = RegAltNameIndices.size(); i != e; ++i)
+      OS << "  " << Namespace << "_" << RegAltNameIndices[i]->getName()
+         << ",\t// " << i << "\n  ";
+    OS << Namespace << "_"
+       << "NUM_TARGET_REG_ALT_NAMES = " << RegAltNameIndices.size() << "\n";
+    OS << "};\n";
+  }
+
+  auto &SubRegIndices = Bank.getSubRegIndices();
+  if (!SubRegIndices.empty()) {
+    OS << "\n// Subregister indices\n\n";
+    OS << "enum {\n  NoSubRegister,\n";
+    unsigned i = 0;
+    for (const auto &Idx : SubRegIndices)
+      OS << "  " << Namespace << "_" << Idx.getName() << ",\t// " << ++i
+         << "\n  ";
+    OS << Namespace << "_"
+       << "NUM_TARGET_SUBREGS\n};\n";
+  }
+
+  OS << "#endif // GET_REGINFO_EXTRA\n\n";
 }
