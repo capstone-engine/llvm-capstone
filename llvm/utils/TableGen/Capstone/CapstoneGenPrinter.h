@@ -9,13 +9,43 @@
 
 std::string extractTemplate(std::string &Printer) {
   if (Printer.find('<') != std::string::npos) {
-    size_t end = Printer.find('>');
-    size_t start = Printer.find('<');
-    std::string TemplateVar =
-        std::string(", ") + Printer.substr(start + 1, end - start - 1);
-    Printer = Printer.substr(0, start);
-    return TemplateVar;
-  }
+    size_t End = Printer.find('>');
+    size_t Start = Printer.find('<');
+    std::string TemplateVar = Printer.substr(Start + 1, End - Start - 1);
+
+    while (auto Pos = TemplateVar.find("::"))
+      if (Pos != std::string::npos)
+        TemplateVar =
+            TemplateVar.substr(0, Pos) + "_" + TemplateVar.substr(Pos + 2);
+      else
+        break;
+
+    bool AllBlank = true;
+    for (char C : TemplateVar) {
+      if (!isspace(C))
+        AllBlank = false;
+    }
+
+    auto TemplateVarAdd = std::string(", ") + TemplateVar;
+    Printer = Printer.substr(0, Start);
+    // Return a default `0` for null template
+    if (AllBlank)
+      return ", 0";
+    if (TemplateVar == "int8_t" || TemplateVar == "int16_t" ||
+        TemplateVar == "int32_t" || TemplateVar == "uint8_t" ||
+        TemplateVar == "uint16_t" || TemplateVar == "uint32_t") {
+      Printer += "32";
+      return "";
+    }
+    if (TemplateVar == "int64_t" || TemplateVar == "uint64_t") {
+      Printer += "64";
+      return "";
+    }
+    return TemplateVarAdd;
+  } // dummy patch for default value
+  if (Printer.find("printPrefetchOp") != std::string::npos)
+    return ", false";
+
   return "";
 }
 
@@ -34,9 +64,11 @@ std::string getCode(const AsmWriterOperand &Op, bool PassSubtarget) {
   if (Op.Str.find("printUImm") != std::string::npos)
     StrBase = "printUnsignedImm";
 
+  auto Comment = std::string("/* ") + StrBase + " */";
+
   std::string Template = extractTemplate(StrBase);
 
-  std::string Result = StrBase + "(MI";
+  std::string Result = StrBase + Comment + "(MI";
   // FIXME is this correct ?
   //  if (Op.PCRel)
   //    Result += ", Address";
@@ -1142,6 +1174,8 @@ void CapstoneGenInfo::EmitPrintAliasInstruction(raw_ostream &O) {
     O << "#endif // PRINT_ALIAS_INSTR\n";
     return;
   }
+  // TODO this is now considered unnecessary
+  MCOpPredicates.clear();
 
   // Forward declare the validation method if needed.
   if (!MCOpPredicates.empty())
@@ -1228,6 +1262,7 @@ void CapstoneGenInfo::EmitPrintAliasInstruction(raw_ostream &O) {
 
     for (unsigned i = 0; i < PrintMethods.size(); ++i) {
       std::string BaseStr = PrintMethods[i].first;
+      O << "// " << BaseStr << "\n";
       if (BaseStr.find("printUImm") != std::string::npos)
         BaseStr = "printUnsignedImm";
       std::string Template = extractTemplate(BaseStr);
