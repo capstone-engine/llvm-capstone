@@ -973,7 +973,7 @@ void CapstoneGenInfo::emitDecoderFunction(formatted_raw_ostream &OS,
       << "#define DecodeToMCInst(fname, fieldname, InsnType) \\\n"
          "static DecodeStatus fname(DecodeStatus S, unsigned Idx, InsnType "
          "insn, MCInst *MI, \\\n"
-         "                uint64_t Address, void *Decoder) {\\\n";
+         "                uint64_t Address, bool *Decoder) {\\\n";
   Indentation += 2;
   // TODO: When InsnType is large, using uint64_t limits all fields to 64 bits
   // It would be better for emitBinaryParser to use a 64-bit tmp whenever
@@ -1149,14 +1149,14 @@ void FilterChooser::emitBinaryParser(raw_ostream &o, unsigned &Indentation,
           << "(MI, tmp, Address, Decoder, "
           << Decoder.substr(start + 1, end - start - 1) << ")"
           << Emitter->GuardPostfix << " { "
-          << (OpHasCompleteDecoder ? "" : "DecodeComplete = false; ")
+          << (OpHasCompleteDecoder ? "" : "*Decoder = false; ")
           << "return MCDisassembler_Fail; }\\\n";
     } else {
       OpHasCompleteDecoder = OpInfo.HasCompleteDecoder;
       o.indent(Indentation)
           << Emitter->GuardPrefix << Decoder << "(MI, tmp, Address, Decoder)"
           << Emitter->GuardPostfix << " { "
-          << (OpHasCompleteDecoder ? "" : "DecodeComplete = false; ")
+          << (OpHasCompleteDecoder ? "" : "*Decoder = false; ")
           << "return MCDisassembler_Fail; }\\\n";
     }
   } else {
@@ -1183,13 +1183,13 @@ void FilterChooser::emitDecoder(raw_ostream &OS, unsigned Indentation,
             << "(MI, tmp, Address, Decoder, "
             << Decoder.substr(start + 1, end - start - 1) << ")"
             << Emitter->GuardPostfix << " { "
-            << (HasCompleteDecoder ? "" : "DecodeComplete = false; ")
+            << (HasCompleteDecoder ? "" : "*Decoder = false; ")
             << "return MCDisassembler_Fail; }\\\n";
       } else {
         OS.indent(Indentation)
             << Emitter->GuardPrefix << (Op.Decoder)
             << "(MI, insn, Address, Decoder)" << Emitter->GuardPostfix << " { "
-            << (HasCompleteDecoder ? "" : "DecodeComplete = false; ")
+            << (HasCompleteDecoder ? "" : "*Decoder = false; ")
             << "return MCDisassembler_Fail; }\\\n";
       }
       break;
@@ -1255,18 +1255,20 @@ bool FilterChooser::emitPredicateMatch(raw_ostream &o, unsigned &Indentation,
     ListSeparator LS(IsOr ? " || " : " && ");
     for (auto *Arg : D->getArgs()) {
       o << LS;
+      bool Require = true;
       if (auto *NotArg = dyn_cast<DagInit>(Arg)) {
         if (NotArg->getOperator()->getAsString() != "not" ||
             NotArg->getNumArgs() != 1)
           PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
         Arg = NotArg->getArg(0);
-        o << "!";
+        Require = false;
       }
       if (!isa<DefInit>(Arg) ||
           !cast<DefInit>(Arg)->getDef()->isSubClassOf("SubtargetFeature"))
         PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
-      o << "(Bits & 1 << " << Emitter->PredicateNamespace << "_"
-        << Arg->getAsString() << ")";
+      // Capstone needs to know if this predicate is required or rejected
+      o << "checkFeatureRequired(Bits, " << Emitter->PredicateNamespace << "_"
+        << Arg->getAsString() << ", " << Require << ")";
     }
 
     if (IsOr)
