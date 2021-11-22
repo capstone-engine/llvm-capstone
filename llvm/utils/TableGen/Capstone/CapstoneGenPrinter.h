@@ -7,7 +7,7 @@
 #include "../Types.h"
 #include <llvm/Support/FormatVariadic.h>
 
-std::string extractTemplate(std::string &Printer) {
+std::string extractTemplate(std::string &Printer, std::string Op = "") {
   if (Printer.find('<') != std::string::npos) {
     size_t End = Printer.find('>');
     size_t Start = Printer.find('<');
@@ -31,6 +31,7 @@ std::string extractTemplate(std::string &Printer) {
     // Return a default `0` for null template
     if (AllBlank)
       return ", 0";
+    // Try delegate
     if (TemplateVar == "int8_t" || TemplateVar == "int16_t" ||
         TemplateVar == "int32_t" || TemplateVar == "uint8_t" ||
         TemplateVar == "uint16_t" || TemplateVar == "uint32_t") {
@@ -45,6 +46,9 @@ std::string extractTemplate(std::string &Printer) {
   } // dummy patch for default value
   if (Printer.find("printPrefetchOp") != std::string::npos)
     return ", false";
+  // dummy patch for default value - sparc
+  if (Printer.find("printMemOperand") != std::string::npos && Op.empty())
+    return ", \"\"";
 
   return "";
 }
@@ -64,9 +68,10 @@ std::string getCode(const AsmWriterOperand &Op, bool PassSubtarget) {
   if (Op.Str.find("printUImm") != std::string::npos)
     StrBase = "printUnsignedImm";
 
-  auto Comment = std::string("/* ") + StrBase + " */";
+  auto Comment = std::string("/* ") + StrBase + " (+ " + Op.MiModifier + ") */";
 
-  std::string Template = extractTemplate(StrBase);
+  std::string Template =
+      extractTemplate(StrBase, Op.MiModifier.empty() ? "" : Op.MiModifier);
 
   std::string Result = StrBase + Comment + "(MI";
   // FIXME is this correct ?
@@ -893,6 +898,9 @@ void CapstoneGenInfo::EmitPrintAliasInstruction(raw_ostream &O) {
         continue;
 
       StringRef Namespace = Target.getName();
+      const auto &Registers = Target.getRegBank().getRegisters();
+      StringRef NamespaceBrief =
+          Registers.front().TheDef->getValueAsString("Namespace");
       unsigned NumMIOps = 0;
       for (auto &ResultInstOpnd : CGA.ResultInst->Operands)
         NumMIOps += ResultInstOpnd.MINumOperands;
@@ -962,7 +970,7 @@ void CapstoneGenInfo::EmitPrintAliasInstruction(raw_ostream &O) {
                 R = R->getValueAsDef("RegClass");
               IAP.addCond(std::string(
                   formatv("AliasPatternCond_K_RegClass, {0}_{1}RegClassID",
-                          Namespace, R->getName())));
+                          NamespaceBrief, R->getName())));
             } else {
               IAP.addCond(std::string(formatv("AliasPatternCond_K_TiedReg, {0}",
                                               IAP.getOpIndex(ROName))));
@@ -1009,7 +1017,7 @@ void CapstoneGenInfo::EmitPrintAliasInstruction(raw_ostream &O) {
 
           StringRef Reg = CGA.ResultOperands[i].getRegister()->getName();
           IAP.addCond(std::string(
-              formatv("AliasPatternCond_K_Reg, {0}_{1}", Namespace, Reg)));
+              formatv("AliasPatternCond_K_Reg, {0}_{1}", NamespaceBrief, Reg)));
           break;
         }
 
