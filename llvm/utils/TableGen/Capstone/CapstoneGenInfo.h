@@ -6,6 +6,8 @@
 #define LLVM_CAPSTONEGENINFO_H
 
 #include "../AsmWriterInst.h"
+#include "../CodeGenDAGPatterns.h"
+#include "../CodeGenSchedule.h"
 
 using namespace llvm;
 
@@ -87,10 +89,13 @@ raw_ostream &operator<<(raw_ostream &OS, const EncodingAndInst &Value) {
 }
 
 class CapstoneGenInfo {
+  typedef std::map<std::vector<std::string>, unsigned> OperandInfoMapTy;
   RecordKeeper &RK;
+  CodeGenDAGPatterns CDP;
   std::vector<EncodingAndInst> NumberedEncodings;
   ArrayRef<const CodeGenInstruction *> NumberedInstructions;
   std::vector<llvm::AsmWriterInst> Instructions;
+  const CodeGenSchedModels &SchedModels;
 
 public:
   // Defaults preserved here for documentation, even though they aren't
@@ -101,7 +106,8 @@ public:
                   std::string ROK = "MCDisassembler::Success",
                   std::string RFail = "MCDisassembler::Fail",
                   std::string L = "")
-      : RK(R), Target(R), PredicateNamespace(std::move(PredicateNamespace)),
+      : RK(R), CDP(R), SchedModels(CDP.getTargetInfo().getSchedModels()),
+        Target(R), PredicateNamespace(std::move(PredicateNamespace)),
         GuardPrefix(std::move(GPrefix)), GuardPostfix(std::move(GPostfix)),
         ReturnOK(std::move(ROK)), ReturnFail(std::move(RFail)),
         Locals(std::move(L)) {
@@ -160,6 +166,12 @@ public:
   std::string GuardPrefix, GuardPostfix;
   std::string ReturnOK, ReturnFail;
   std::string Locals;
+  void EmitOperandInfo(raw_ostream &OS, OperandInfoMapTy &OperandInfoIDs);
+  std::vector<std::string> GetOperandInfo(const CodeGenInstruction &Inst);
+  void emitRecord(const CodeGenInstruction &Inst, unsigned Num,
+                  Record *InstrInfo,
+                  std::map<std::vector<Record *>, unsigned> &EmittedLists,
+                  const OperandInfoMapTy &OpInfo, raw_ostream &OS);
 };
 
 } // end anonymous namespace
@@ -2354,6 +2366,154 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
         "}\n";
 }
 
+std::vector<std::string>
+CapstoneGenInfo::GetOperandInfo(const CodeGenInstruction &Inst) {
+  std::vector<std::string> Result;
+
+  for (auto &Op : Inst.Operands) {
+    // Handle aggregate operands and normal operands the same way by expanding
+    // either case into a list of operands for this op.
+    std::vector<CGIOperandList::OperandInfo> OperandList;
+
+    // This might be a multiple operand thing.  Targets like X86 have
+    // registers in their multi-operand operands.  It may also be an anonymous
+    // operand, which has a single operand, but no declared class for the
+    // operand.
+    DagInit *MIOI = Op.MIOperandInfo;
+
+    if (!MIOI || MIOI->getNumArgs() == 0) {
+      // Single, anonymous, operand.
+      OperandList.push_back(Op);
+    } else {
+      for (unsigned j = 0, e = Op.MINumOperands; j != e; ++j) {
+        OperandList.push_back(Op);
+
+        auto *OpR = cast<DefInit>(MIOI->getArg(j))->getDef();
+        OperandList.back().Rec = OpR;
+      }
+    }
+
+    for (unsigned j = 0, e = OperandList.size(); j != e; ++j) {
+      Record *OpR = OperandList[j].Rec;
+      std::string Res;
+
+      if (OpR->isSubClassOf("RegisterOperand"))
+        OpR = OpR->getValueAsDef("RegClass");
+      if (OpR->isSubClassOf("RegisterClass"))
+        Res += std::string(OpR->getValueAsString("Namespace")) + "_" +
+               OpR->getName().str() + "RegClassID, ";
+      else if (OpR->isSubClassOf("PointerLikeRegClass"))
+        Res += utostr(OpR->getValueAsInt("RegClassKind")) + ", ";
+      else
+        // -1 means the operand does not have a fixed register class.
+        Res += "-1, ";
+
+      // Fill in applicable flags.
+      Res += "0";
+
+      // Ptr value whose register class is resolved via callback.
+      if (OpR->isSubClassOf("PointerLikeRegClass"))
+        Res += "|(1<<MCOI_LookupPtrRegClass)";
+
+      // Predicate operands.  Check to see if the original unexpanded operand
+      // was of type PredicateOp.
+      if (Op.Rec->isSubClassOf("PredicateOp"))
+        Res += "|(1<<MCOI_Predicate)";
+
+      // Optional def operands.  Check to see if the original unexpanded operand
+      // was of type OptionalDefOperand.
+      if (Op.Rec->isSubClassOf("OptionalDefOperand"))
+        Res += "|(1<<MCOI_OptionalDef)";
+
+      // Branch target operands.  Check to see if the original unexpanded
+      // operand was of type BranchTargetOperand.
+      if (Op.Rec->isSubClassOf("BranchTargetOperand"))
+        Res += "|(1<<MCOI_BranchTarget)";
+
+      // Fill in operand type.
+      Res += ", ";
+      assert(!Op.OperandType.empty() && "Invalid operand type.");
+      // replace qualified name
+      auto QualifiedName = std::string(Op.OperandType);
+      if (QualifiedName.find("GENERIC_IMM") != std::string::npos) {
+        QualifiedName = "MCOI_OPERAND_IMMEDIATE";
+      }
+      if (QualifiedName.find("MCOI") == std::string::npos) {
+        QualifiedName = "MCOI_OPERAND_UNKNOWN";
+      }
+      auto pos = QualifiedName.find("::");
+      if (pos != std::string::npos)
+        QualifiedName =
+            QualifiedName.substr(0, pos) + "_" + QualifiedName.substr(pos + 2);
+
+      Res += QualifiedName;
+
+      // Fill in constraint info.
+      Res += ", ";
+
+      const CGIOperandList::ConstraintInfo &Constraint = Op.Constraints[j];
+      if (Constraint.isNone())
+        Res += "0";
+      else if (Constraint.isEarlyClobber())
+        Res += "MCOI_EARLY_CLOBBER";
+      else {
+        assert(Constraint.isTied());
+        Res += "MCOI_TIED_TO/*" + utostr(Constraint.getTiedOperand()) + "*/";
+      }
+
+      Result.push_back(Res);
+    }
+  }
+
+  return Result;
+}
+
+void CapstoneGenInfo::EmitOperandInfo(raw_ostream &OS,
+                                      OperandInfoMapTy &OperandInfoIDs) {
+  // ID #0 is for no operand info.
+  unsigned OperandListNum = 0;
+  OperandInfoIDs[std::vector<std::string>()] = ++OperandListNum;
+
+  OS << "\n";
+  const CodeGenTarget &Target = CDP.getTargetInfo();
+  for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
+    std::vector<std::string> OperandInfo = GetOperandInfo(*Inst);
+    unsigned &N = OperandInfoIDs[OperandInfo];
+    if (N != 0)
+      continue;
+
+    N = ++OperandListNum;
+    OS << "static const MCOperandInfo OperandInfo" << N << "[] = { ";
+    for (const std::string &Info : OperandInfo)
+      OS << "{ " << Info << " }, ";
+    OS << "};\n";
+  }
+}
+
+void CapstoneGenInfo::emitRecord(
+    const CodeGenInstruction &Inst, unsigned Num, Record *InstrInfo,
+    std::map<std::vector<Record *>, unsigned> &EmittedLists,
+    const OperandInfoMapTy &OpInfo, raw_ostream &OS) {
+  int MinOperands = 0;
+  if (!Inst.Operands.empty())
+    // Each logical operand can be multiple MI operands.
+    MinOperands =
+        Inst.Operands.back().MIOperandNo + Inst.Operands.back().MINumOperands;
+
+  OS << "  { ";
+  OS << /*Num << ",\t" <<*/ MinOperands << ",\t";
+  /*<< Inst.Operands.NumDefs << ",\t"
+  << Inst.TheDef->getValueAsInt("Size") << ",\t"
+  << SchedModels.getSchedClassIdx(Inst) << ",\t0"; */
+  std::vector<std::string> OperandInfo = GetOperandInfo(Inst);
+  if (OperandInfo.empty())
+    OS << "NULL";
+  else
+    OS << "OperandInfo" << OpInfo.find(OperandInfo)->second;
+
+  OS << " },  // Inst #" << Num << " = " << Inst.TheDef->getName() << "\n";
+}
+
 // Emits disassembler code for instruction decoding.
 void CapstoneGenInfo::run(raw_ostream &o) {
   formatted_raw_ostream OS(o);
@@ -2532,6 +2692,71 @@ void CapstoneGenInfo::run(raw_ostream &o) {
   OS << "#endif";
 
   EmitPrintAliasInstruction(OS);
+
+  OS << "#ifdef GET_INSTRINFO_MC_DESC\n";
+  OS << "#undef GET_INSTRINFO_MC_DESC\n";
+
+  CodeGenDAGPatterns CDP(RK);
+
+  CodeGenTarget &Target = CDP.getTargetInfo();
+  const std::string &TargetName = std::string(Target.getName());
+  Record *InstrInfo = Target.getInstructionSet();
+
+  // Keep track of all of the def lists we have emitted already.
+  std::map<std::vector<Record *>, unsigned> EmittedLists;
+  unsigned ListNumber = 0;
+  //
+  //  // Emit all of the instruction's implicit uses and defs.
+  //  for (const CodeGenInstruction *II : Target.getInstructionsByEnumValue()) {
+  //    Record *Inst = II->TheDef;
+  //    std::vector<Record*> Uses = Inst->getValueAsListOfDefs("Uses");
+  //    if (!Uses.empty()) {
+  //      unsigned &IL = EmittedLists[Uses];
+  //      if (!IL) PrintDefList(Uses, IL = ++ListNumber, OS);
+  //    }
+  //    std::vector<Record*> Defs = Inst->getValueAsListOfDefs("Defs");
+  //    if (!Defs.empty()) {
+  //      unsigned &IL = EmittedLists[Defs];
+  //      if (!IL) PrintDefList(Defs, IL = ++ListNumber, OS);
+  //    }
+  //  }
+
+  OperandInfoMapTy OperandInfoIDs;
+
+  // Emit all of the operand info records.
+  EmitOperandInfo(OS, OperandInfoIDs);
+
+  // Emit all of the MCInstrDesc records in their ENUM ordering.
+  //
+  OS << "\nextern const MCInstrDesc " << TargetName << "Insts[] = {\n";
+
+  SequenceToOffsetTable<std::string> InstrNames;
+  unsigned Num = 0;
+  for (const CodeGenInstruction *Inst : NumberedInstructions) {
+    // Keep a list of the instruction names.
+    InstrNames.add(std::string(Inst->TheDef->getName()));
+    // Emit the record into the table.
+    emitRecord(*Inst, Num++, InstrInfo, EmittedLists, OperandInfoIDs, OS);
+  }
+  OS << "};\n\n";
+
+  // Emit the array of instruction names.
+  InstrNames.layout();
+  InstrNames.emitStringLiteralDef(OS, Twine("extern const char ") + TargetName +
+                                          "InstrNameData[]");
+
+  OS << "extern const unsigned " << TargetName << "InstrNameIndices[] = {";
+  Num = 0;
+  for (const CodeGenInstruction *Inst : NumberedInstructions) {
+    // Newline every eight entries.
+    if (Num % 8 == 0)
+      OS << "\n    ";
+    OS << InstrNames.get(std::string(Inst->TheDef->getName())) << "U, ";
+    ++Num;
+  }
+  OS << "\n};\n\n";
+
+  OS << "#endif // GET_INSTRINFO_MC_DESC\n\n";
 }
 
 #endif // LLVM_CAPSTONEGENINFO_H

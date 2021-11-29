@@ -7,6 +7,8 @@
 #include "../Types.h"
 #include <llvm/Support/FormatVariadic.h>
 
+
+
 std::string extractTemplate(std::string &Printer, std::string Op = "") {
   if (Printer.find('<') != std::string::npos) {
     size_t End = Printer.find('>');
@@ -63,10 +65,11 @@ std::string getCode(const AsmWriterOperand &Op, bool PassSubtarget) {
 
   std::string StrBase = Op.Str;
 
-  // TODO this is a patch for capstone mips, don't sure what are other possible
+  // quite a lot consequences!
+  //
   // consequences
-  if (Op.Str.find("printUImm") != std::string::npos)
-    StrBase = "printUnsignedImm";
+//  if (Op.Str.find("printUImm") != std::string::npos)
+//    StrBase = "printUnsignedImm";
 
   auto Comment = std::string("/* ") + StrBase + " (+ " + Op.MiModifier + ") */";
 
@@ -1226,8 +1229,6 @@ void CapstoneGenInfo::EmitPrintAliasInstruction(raw_ostream &O) {
     << "  tmpString[I] = 0;\n"
     << "  SStream_concat0(OS, tmpString);\n"
     << "\n"
-    << "  SStream_concat0(OS, \"\\t\");\n"
-    << "  SStream_concat0(OS, AsmString + I);\n"
     << "  if (AsmString[I] != '\\0') {\n"
     << "    if (AsmString[I] == ' ' || AsmString[I] == '\\t') {\n"
     << "      SStream_concat0(OS, \"\\t\");\n"
@@ -1244,7 +1245,7 @@ void CapstoneGenInfo::EmitPrintAliasInstruction(raw_ostream &O) {
     << "        } else\n"
     << "          printOperand(MI, ((unsigned)AsmString[I++]) - 1, OS);\n"
     << "      } else {\n"
-    << "        SStream_concat0(OS, AsmString + (I++));\n"
+    << "        SStream_concat1(OS, *(tmpString + (I++)));\n"
     << "      }\n"
     << "    } while (AsmString[I] != '\\0');\n"
     << "  }\n"
@@ -1271,12 +1272,12 @@ void CapstoneGenInfo::EmitPrintAliasInstruction(raw_ostream &O) {
     for (unsigned i = 0; i < PrintMethods.size(); ++i) {
       std::string BaseStr = PrintMethods[i].first;
       O << "// " << BaseStr << "\n";
-      if (BaseStr.find("printUImm") != std::string::npos)
-        BaseStr = "printUnsignedImm";
+      // this turns out to be harmful - don't use !
+//      if (BaseStr.find("printUImm") != std::string::npos)
+//        BaseStr = "printUnsignedImm";
       std::string Template = extractTemplate(BaseStr);
       O << "  case " << i << ":\n"
         << "    " << BaseStr << "(MI, "
-        << (PrintMethods[i].second ? "Address, " : "")
         << "OpIdx, "
            /*<< (PassSubtarget ? "STI, " : "") <<*/ "OS"
         << Template << ");\n"
