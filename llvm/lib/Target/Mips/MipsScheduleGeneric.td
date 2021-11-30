@@ -796,8 +796,10 @@ def GenericWriteFPUSqrtD : SchedWriteRes<[GenericFPUDivSqrt]> {
 // ---------------------------------
 //
 // c.<cc>.[ds], bc1[tf], bc1[tf]l
-def : InstRW<[GenericWriteFPUCmp], (instrs FCMP_D32, FCMP_D64, FCMP_S32, BC1F,
-                                    BC1T, BC1FL, BC1TL)>;
+def : InstRW<[GenericWriteFPUCmp], (instrs FCMP_D32, FCMP_D64, FCMP_S32, BC0F, BC0T, BC1F,
+                                    BC1T, BC1FL, BC1TL, BC2F,
+                                    BC2T, BC2FL, BC2TL, BC3F,
+                                    BC3T, BC3FL, BC3TL)>;
 
 def : InstRW<[GenericWriteFPUCmp], (instregex "C_[A-Z]+_(S|D32|D64)$")>;
 

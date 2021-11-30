@@ -231,6 +231,17 @@ class SWXC1_FT<string opstr, RegisterOperand DRC,
   let AddedComplexity = 20;
 }
 
+class BC0F_FT<string opstr, DAGOperand opnd, InstrItinClass Itin> :
+  InstSE<(outs), (ins opnd:$offset),
+         !strconcat(opstr, "\t$offset"),
+         [], Itin,
+         FrmFI, opstr> {
+  let isBranch = 1;
+  let isTerminator = 1;
+  let hasDelaySlot = 1;
+  let Defs = [AT];
+}
+
 class BC1F_FT<string opstr, DAGOperand opnd, InstrItinClass Itin,
               SDPatternOperator Op = null_frag> :
   InstSE<(outs), (ins FCCRegsOpnd:$fcc, opnd:$offset),
@@ -244,7 +255,55 @@ class BC1F_FT<string opstr, DAGOperand opnd, InstrItinClass Itin,
   let hasFCCRegOperand = 1;
 }
 
+class BC2F_FT<string opstr, DAGOperand opnd, InstrItinClass Itin,
+              SDPatternOperator Op = null_frag> :
+  InstSE<(outs), (ins FCCRegsOpnd:$fcc, opnd:$offset),
+         !strconcat(opstr, "\t$fcc, $offset"),
+         [(MipsFPBrcond Op, FCCRegsOpnd:$fcc, bb:$offset)], Itin,
+         FrmFI, opstr>, HARDFLOAT {
+  let isBranch = 1;
+  let isTerminator = 1;
+  let hasDelaySlot = 1;
+  let Defs = [AT];
+  let hasFCCRegOperand = 1;
+}
+
+class BC3F_FT<string opstr, DAGOperand opnd, InstrItinClass Itin,
+              SDPatternOperator Op = null_frag> :
+  InstSE<(outs), (ins FCCRegsOpnd:$fcc, opnd:$offset),
+         !strconcat(opstr, "\t$fcc, $offset"),
+         [(MipsFPBrcond Op, FCCRegsOpnd:$fcc, bb:$offset)], Itin,
+         FrmFI, opstr>, HARDFLOAT {
+  let isBranch = 1;
+  let isTerminator = 1;
+  let hasDelaySlot = 1;
+  let Defs = [AT];
+  let hasFCCRegOperand = 1;
+}
+
 class BC1XL_FT<string opstr, DAGOperand opnd, InstrItinClass Itin> :
+  InstSE<(outs), (ins FCCRegsOpnd:$fcc, opnd:$offset),
+         !strconcat(opstr, "\t$fcc, $offset"), [], Itin,
+         FrmFI, opstr>, HARDFLOAT {
+  let isBranch = 1;
+  let isTerminator = 1;
+  let hasDelaySlot = 1;
+  let Defs = [AT];
+  let hasFCCRegOperand = 1;
+}
+
+class BC2XL_FT<string opstr, DAGOperand opnd, InstrItinClass Itin> :
+  InstSE<(outs), (ins FCCRegsOpnd:$fcc, opnd:$offset),
+         !strconcat(opstr, "\t$fcc, $offset"), [], Itin,
+         FrmFI, opstr>, HARDFLOAT {
+  let isBranch = 1;
+  let isTerminator = 1;
+  let hasDelaySlot = 1;
+  let Defs = [AT];
+  let hasFCCRegOperand = 1;
+}
+
+class BC3XL_FT<string opstr, DAGOperand opnd, InstrItinClass Itin> :
   InstSE<(outs), (ins FCCRegsOpnd:$fcc, opnd:$offset),
          !strconcat(opstr, "\t$fcc, $offset"), [], Itin,
          FrmFI, opstr>, HARDFLOAT {
@@ -727,6 +786,10 @@ def MIPS_BRANCH_F  : PatLeaf<(i32 0)>;
 def MIPS_BRANCH_T  : PatLeaf<(i32 1)>;
 
 let AdditionalPredicates = [NotInMicroMips] in {
+  def BC0F : MMRel, BC0F_FT<"bc0f", brtarget, II_BC0F>,
+           BC0F_FM<0, 0>, ISA_MIPS1_NOT_32R6_64R6;
+  def BC0T : MMRel, BC0F_FT<"bc0t", brtarget, II_BC0F>,
+           BC0F_FM<0, 1>, ISA_MIPS1_NOT_32R6_64R6;
   def BC1F : MMRel, BC1F_FT<"bc1f", brtarget, II_BC1F, MIPS_BRANCH_F>,
              BC1F_FM<0, 0>, ISA_MIPS1_NOT_32R6_64R6;
   def BC1FL : MMRel, BC1XL_FT<"bc1fl", brtarget, II_BC1FL>,
@@ -735,6 +798,22 @@ let AdditionalPredicates = [NotInMicroMips] in {
              BC1F_FM<0, 1>, ISA_MIPS1_NOT_32R6_64R6;
   def BC1TL : MMRel, BC1XL_FT<"bc1tl", brtarget, II_BC1TL>,
               BC1F_FM<1, 1>, ISA_MIPS2_NOT_32R6_64R6;
+  def BC2F : MMRel, BC2F_FT<"bc2f", brtarget, II_BC2F, MIPS_BRANCH_F>,
+             BC2F_FM<0, 0>, ISA_MIPS1_NOT_32R6_64R6;
+  def BC2FL : MMRel, BC2XL_FT<"bc2fl", brtarget, II_BC2FL>,
+              BC2F_FM<1, 0>, ISA_MIPS2_NOT_32R6_64R6;
+  def BC2T : MMRel, BC2F_FT<"bc2t", brtarget, II_BC2T, MIPS_BRANCH_T>,
+             BC2F_FM<0, 1>, ISA_MIPS1_NOT_32R6_64R6;
+  def BC2TL : MMRel, BC2XL_FT<"bc2tl", brtarget, II_BC2TL>,
+              BC2F_FM<1, 1>, ISA_MIPS2_NOT_32R6_64R6;
+  def BC3F : MMRel, BC3F_FT<"bc3f", brtarget, II_BC3F, MIPS_BRANCH_F>,
+             BC3F_FM<0, 0>, ISA_MIPS1_NOT_32R6_64R6;
+  def BC3FL : MMRel, BC3XL_FT<"bc3fl", brtarget, II_BC3FL>,
+              BC3F_FM<1, 0>, ISA_MIPS2_NOT_32R6_64R6;
+  def BC3T : MMRel, BC3F_FT<"bc3t", brtarget, II_BC3T, MIPS_BRANCH_T>,
+             BC3F_FM<0, 1>, ISA_MIPS1_NOT_32R6_64R6;
+  def BC3TL : MMRel, BC3XL_FT<"bc3tl", brtarget, II_BC3TL>,
+              BC3F_FM<1, 1>, ISA_MIPS2_NOT_32R6_64R6;
 
 /// Floating Point Compare
   def FCMP_S32 : MMRel, CEQS_FT<"s", FGR32, II_C_CC_S, MipsFPCmp>, CEQS_FM<16>,
@@ -929,6 +1008,16 @@ let AdditionalPredicates = [NotInMicroMips] in {
   defm : BC1_ALIASES<BC1T, "bc1t", BC1F, "bc1f">, ISA_MIPS1_NOT_32R6_64R6,
          HARDFLOAT;
   defm : BC1_ALIASES<BC1TL, "bc1tl", BC1FL, "bc1fl">, ISA_MIPS2_NOT_32R6_64R6,
+         HARDFLOAT;
+// bc1 alias shares the same property, so reuse
+  defm : BC1_ALIASES<BC2T, "bc2t", BC2F, "bc2f">, ISA_MIPS1_NOT_32R6_64R6,
+         HARDFLOAT;
+  defm : BC1_ALIASES<BC2TL, "bc2tl", BC2FL, "bc2fl">, ISA_MIPS2_NOT_32R6_64R6,
+         HARDFLOAT;
+
+  defm : BC1_ALIASES<BC3T, "bc3t", BC3F, "bc3f">, ISA_MIPS1_NOT_32R6_64R6,
+         HARDFLOAT;
+  defm : BC1_ALIASES<BC3TL, "bc3tl", BC3FL, "bc3fl">, ISA_MIPS2_NOT_32R6_64R6,
          HARDFLOAT;
 }
 //===----------------------------------------------------------------------===//
