@@ -40,10 +40,20 @@ def II_BADDU            : InstrItinClass;
 def II_BBIT             : InstrItinClass; // bbit[01], bbit[01]32
 def II_BALC             : InstrItinClass;
 def II_BC               : InstrItinClass;
+def II_BC0F             : InstrItinClass;
+def II_BC0T             : InstrItinClass;
 def II_BC1F             : InstrItinClass;
 def II_BC1FL            : InstrItinClass;
 def II_BC1T             : InstrItinClass;
 def II_BC1TL            : InstrItinClass;
+def II_BC2F             : InstrItinClass;
+def II_BC2FL            : InstrItinClass;
+def II_BC2T             : InstrItinClass;
+def II_BC2TL            : InstrItinClass;
+def II_BC3F             : InstrItinClass;
+def II_BC3FL            : InstrItinClass;
+def II_BC3T             : InstrItinClass;
+def II_BC3TL            : InstrItinClass;
 def II_BC1CCZ           : InstrItinClass;
 def II_BC2CCZ           : InstrItinClass;
 def II_BCC              : InstrItinClass; // beq and bne
@@ -516,6 +526,8 @@ def MipsGenericItineraries : ProcessorItineraries<[ALU, IMULDIV], [], [
   InstrItinData<II_BC              , [InstrStage<1,  [ALU]>]>,
   InstrItinData<II_BC1F            , [InstrStage<1,  [ALU]>]>,
   InstrItinData<II_BC1FL           , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_BC0F            , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_BC0T           , [InstrStage<1,  [ALU]>]>,
   InstrItinData<II_BC1T            , [InstrStage<1,  [ALU]>]>,
   InstrItinData<II_BC1TL           , [InstrStage<1,  [ALU]>]>,
   InstrItinData<II_BC1CCZ          , [InstrStage<1,  [ALU]>]>,
