@@ -570,7 +570,9 @@ def : InstRW<[P5600WriteMoveFPUToGPR], (instregex "^COPY_U_[BHW]$")>;
 def : InstRW<[P5600WriteMoveFPUToGPR], (instregex "^COPY_S_[BHWD]$")>;
 
 // bc1[ft], cfc1, mfc1, mfhc1, movf, movt
-def : InstRW<[P5600WriteMoveFPUToGPR], (instrs BC1F, BC1FL, BC1T, BC1TL, CFC1,
+def : InstRW<[P5600WriteMoveFPUToGPR], (instrs BC0F, BC0T, BC1F, BC1FL, BC1T, BC1TL, BC2F,
+                                    BC2T, BC2FL, BC2TL, BC3F,
+                                    BC3T, BC3FL, BC3TL, CFC1,
                                         MFC1, MFC1_D64, MFHC1_D32, MFHC1_D64,
                                         MOVF_I, MOVT_I, ExtractElementF64,
                                         ExtractElementF64_64)>;

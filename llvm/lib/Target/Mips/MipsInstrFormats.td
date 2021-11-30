@@ -779,6 +779,20 @@ class SWXC1_FM<bits<6> funct> : StdArch {
   let Inst{5-0}   = funct;
 }
 
+class BC0F_FM<bit HasDelaySlot, bit tf> : StdArch {
+  bits<3>  fcc;
+  bits<16> offset;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0x10;
+  let Inst{25-21} = 0x8;
+  let Inst{20-18} = 0x0;
+  let Inst{17} = HasDelaySlot;
+  let Inst{16} = tf;
+  let Inst{15-0} = offset;
+}
+
 class BC1F_FM<bit nd, bit tf> : StdArch {
   bits<3>  fcc;
   bits<16> offset;
@@ -786,6 +800,34 @@ class BC1F_FM<bit nd, bit tf> : StdArch {
   bits<32> Inst;
 
   let Inst{31-26} = 0x11;
+  let Inst{25-21} = 0x8;
+  let Inst{20-18} = fcc;
+  let Inst{17} = nd;
+  let Inst{16} = tf;
+  let Inst{15-0} = offset;
+}
+
+class BC2F_FM<bit nd, bit tf> : StdArch {
+  bits<3>  fcc;
+  bits<16> offset;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0x12;
+  let Inst{25-21} = 0x8;
+  let Inst{20-18} = fcc;
+  let Inst{17} = nd;
+  let Inst{16} = tf;
+  let Inst{15-0} = offset;
+}
+
+class BC3F_FM<bit nd, bit tf> : StdArch {
+  bits<3>  fcc;
+  bits<16> offset;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0x13;
   let Inst{25-21} = 0x8;
   let Inst{20-18} = fcc;
   let Inst{17} = nd;
