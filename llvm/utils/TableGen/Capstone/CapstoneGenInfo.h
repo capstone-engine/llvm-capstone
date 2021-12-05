@@ -1140,7 +1140,7 @@ void FilterChooser::emitBinaryParser(raw_ostream &o, unsigned &Indentation,
       o << "tmp |= ";
     else
       o << "tmp = ";
-    o << "fieldFromInstruction(insn, " << EF.Base << ", " << EF.Width << ')';
+    o << "fieldname(insn, " << EF.Base << ", " << EF.Width << ')';
     if (UseInsertBits)
       o << " << " << EF.Offset;
     else if (EF.Offset != 0)
@@ -2212,27 +2212,6 @@ static void emitFieldFromInstruction(formatted_raw_ostream &OS) {
         "}\n\n";
 }
 
-// emitInsertBits - Emit the templated helper function insertBits().
-static void emitInsertBits(formatted_raw_ostream &OS) {
-  OS << "// Helper function for inserting bits extracted from an encoded "
-        "instruction into\n"
-     << "// a field.\n"
-     << "template <typename InsnType>\n"
-     << "static std::enable_if_t<std::is_integral<InsnType>::value>\n"
-     << "insertBits(InsnType &field, InsnType bits, unsigned startBit, "
-        "unsigned numBits) {\n"
-     << "  assert(startBit + numBits <= sizeof field * 8);\n"
-     << "  field |= (InsnType)bits << startBit;\n"
-     << "}\n"
-     << "\n"
-     << "template <typename InsnType>\n"
-     << "static std::enable_if_t<!std::is_integral<InsnType>::value>\n"
-     << "insertBits(InsnType &field, uint64_t bits, unsigned startBit, "
-        "unsigned numBits) {\n"
-     << "  field.insertBits(bits, startBit, numBits);\n"
-     << "}\n\n";
-}
-
 // emitDecodeInstruction - Emit the templated helper function
 // decodeInstruction().
 static void emitDecodeInstruction(formatted_raw_ostream &OS) {
@@ -2516,7 +2495,14 @@ void CapstoneGenInfo::emitRecord(
 
 // Emits disassembler code for instruction decoding.
 void CapstoneGenInfo::run(raw_ostream &o) {
+
   formatted_raw_ostream OS(o);
+  OS << "/* Capstone Disassembly Engine, http://www.capstone-engine.org */\n"
+     << "/* By Phosphorus15 <phosphorus15@foxmail.com>, Year 2021 */\n"
+     << "/* This generator is under https://github.com/rizinorg/llvm-capstone "
+        "*/\n"
+     << "/* Automatically generated file, do not edit! */\n\n";
+
   OS << "#include \"../../MCInst.h\"\n";
   OS << "#include \"../../LEB128.h\"\n";
   OS << "\n\n";
@@ -2704,22 +2690,6 @@ void CapstoneGenInfo::run(raw_ostream &o) {
 
   // Keep track of all of the def lists we have emitted already.
   std::map<std::vector<Record *>, unsigned> EmittedLists;
-  unsigned ListNumber = 0;
-  //
-  //  // Emit all of the instruction's implicit uses and defs.
-  //  for (const CodeGenInstruction *II : Target.getInstructionsByEnumValue()) {
-  //    Record *Inst = II->TheDef;
-  //    std::vector<Record*> Uses = Inst->getValueAsListOfDefs("Uses");
-  //    if (!Uses.empty()) {
-  //      unsigned &IL = EmittedLists[Uses];
-  //      if (!IL) PrintDefList(Uses, IL = ++ListNumber, OS);
-  //    }
-  //    std::vector<Record*> Defs = Inst->getValueAsListOfDefs("Defs");
-  //    if (!Defs.empty()) {
-  //      unsigned &IL = EmittedLists[Defs];
-  //      if (!IL) PrintDefList(Defs, IL = ++ListNumber, OS);
-  //    }
-  //  }
 
   OperandInfoMapTy OperandInfoIDs;
 
