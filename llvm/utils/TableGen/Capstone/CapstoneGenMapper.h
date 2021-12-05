@@ -1325,38 +1325,6 @@ AsmMatcherInfo::AsmMatcherInfo(Record *asmParser, CodeGenTarget &target,
                                RecordKeeper &records)
     : Records(records), AsmParser(asmParser), Target(target) {}
 
-/// buildOperandMatchInfo - Build the necessary information to handle user
-/// defined operand parsing methods.
-void AsmMatcherInfo::buildOperandMatchInfo() {
-
-  /// Map containing a mask with all operands indices that can be found for
-  /// that class inside a instruction.
-  typedef std::map<ClassInfo *, unsigned, deref<std::less<>>> OpClassMaskTy;
-  OpClassMaskTy OpClassMask;
-
-  for (const auto &MI : Matchables) {
-    OpClassMask.clear();
-
-    // Keep track of all operands of this instructions which belong to the
-    // same class.
-    for (unsigned i = 0, e = MI->AsmOperands.size(); i != e; ++i) {
-      const MatchableInfo::AsmOperand &Op = MI->AsmOperands[i];
-      if (Op.Class->ParserMethod.empty())
-        continue;
-      unsigned &OperandMask = OpClassMask[Op.Class];
-      OperandMask |= (1 << i);
-    }
-
-    // Generate operand match info for each mnemonic/operand class pair.
-    for (const auto &OCM : OpClassMask) {
-      unsigned OpMask = OCM.second;
-      ClassInfo *CI = OCM.first;
-      OperandMatchInfo.push_back(
-          OperandMatchEntry::create(MI.get(), CI, OpMask));
-    }
-  }
-}
-
 void AsmMatcherInfo::buildInfo() {
   // Build information about all of the AssemblerPredicates.
   const std::vector<std::pair<Record *, SubtargetFeatureInfo>>
@@ -1881,8 +1849,9 @@ void emitInstrMatchTable(raw_ostream &OS, CodeGenTarget &Target,
     OS << "};\n\n\n\n";
   }
 
-  OS << "typedef enum " << Target.getInstNamespace().lower() << "_insn {\n"
-                                                                "  "
+  OS << "typedef enum " << Target.getInstNamespace().lower()
+     << "_insn {\n"
+        "  "
      << Target.getInstNamespace().upper() << "_INS_INVALID = 0";
   for (auto Mnemonic : InstructClass) {
     OS << ",\n  " << Mnemonic;
@@ -1893,7 +1862,6 @@ void emitInstrMatchTable(raw_ostream &OS, CodeGenTarget &Target,
 void CapstoneGenMapper::run(raw_ostream &O) {
   CodeGenTarget Target(Records);
   Record *AsmParser = Target.getAsmParser();
-  StringRef ClassName = AsmParser->getValueAsString("AsmParserClassName");
 
   AsmMatcherInfo Info(AsmParser, Target, Records);
   Info.buildInfo();

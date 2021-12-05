@@ -33,10 +33,6 @@ static DiffVec &diffEncode(DiffVec &V, unsigned InitVal, Iter Begin, Iter End) {
 
 static void printDiff16(raw_ostream &OS, uint16_t Val) { OS << Val; }
 
-static void printMask(raw_ostream &OS, LaneBitmask Val) {
-  OS << "LaneBitmask(0x" << PrintLaneMask(Val) << ')';
-}
-
 static void printSubRegIndex(raw_ostream &OS, const CodeGenSubRegIndex *Idx) {
   OS << Idx->EnumValue;
 }
@@ -277,9 +273,6 @@ void CapstoneGenInfo::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
 
   for (const auto &RC : RegisterClasses) {
     assert(isInt<8>(RC.CopyCost) && "Copy cost too large.");
-    uint32_t RegSize = 0;
-    if (RC.RSI.isSimple())
-      RegSize = RC.RSI.getSimple().RegSize;
     OS << "  { " << RC.getName() << ", " << RC.getName() << "Bits, "
        << "sizeof(" << RC.getName() << "Bits)"
        << " },\n";
