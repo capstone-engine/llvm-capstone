@@ -9,6 +9,8 @@
 #include "../SequenceToOffsetTable.h"
 #include "CapstoneGenInfo.h"
 #include "CapstoneHelper.h"
+#include "Types.h"
+#include "llvm/TableGen/Error.h"
 
 bool ValueSet(bit_value_t V) {
   return (V == BIT_TRUE || V == BIT_FALSE);
@@ -636,3 +638,290 @@ void BitVectorEmitter::add(unsigned v) {
 void BitVectorEmitter::print(raw_ostream &OS) {
   printBitVectorAsHex(OS, Values, 8);
 }
+
+void emitRegisterNameString(raw_ostream &O, StringRef AltName, const std::deque<CodeGenRegister> &Registers) {
+  SequenceToOffsetTable<std::string> StringTable;
+  SmallVector<std::string, 4> AsmNames(Registers.size());
+  unsigned i = 0;
+  for (const auto &Reg : Registers) {
+    std::string &AsmName = AsmNames[i++];
+
+    // "NoRegAltName" is special. We don't need to do a lookup for that,
+    // as it's just a reference to the default register name.
+    if (AltName == "" || AltName == "NoRegAltName") {
+      AsmName = std::string(Reg.TheDef->getValueAsString("AsmName"));
+      if (AsmName.empty())
+        AsmName = std::string(Reg.getName());
+    } else {
+      // Make sure the register has an alternate name for this index.
+      std::vector<Record *> AltNameList =
+          Reg.TheDef->getValueAsListOfDefs("RegAltNameIndices");
+      unsigned Idx = 0, e;
+      for (e = AltNameList.size();
+           Idx < e && (AltNameList[Idx]->getName() != AltName); ++Idx)
+        ;
+      // If the register has an alternate name for this index, use it.
+      // Otherwise, leave it empty as an error flag.
+      if (Idx < e) {
+        std::vector<StringRef> AltNames =
+            Reg.TheDef->getValueAsListOfStrings("AltNames");
+        if (AltNames.size() <= Idx)
+          PrintFatalError(Reg.TheDef->getLoc(),
+                          "Register definition missing alt name for '" +
+                              AltName + "'.");
+        AsmName = std::string(AltNames[Idx]);
+      }
+    }
+    StringTable.add(AsmName);
+  }
+
+  StringTable.layout();
+  StringTable.emitStringLiteralDef(O, Twine("  static const char AsmStrs") +
+                                          AltName + "[]");
+
+  O << "  static const " << getMinimalTypeForRange(StringTable.size() - 1, 32)
+    << " RegAsmOffset" << AltName << "[] = {";
+  for (unsigned i = 0, e = Registers.size(); i != e; ++i) {
+    if ((i % 14) == 0)
+      O << "\n    ";
+    O << StringTable.get(AsmNames[i]) << ", ";
+  }
+  O << "\n  };\n"
+    << "\n";
+}
+
+std::string extractTemplate(std::string &Printer, std::string Op = "") {
+  if (Printer.find('<') != std::string::npos) {
+    size_t End = Printer.find('>');
+    size_t Start = Printer.find('<');
+    std::string TemplateVar = Printer.substr(Start + 1, End - Start - 1);
+
+    while (auto Pos = TemplateVar.find("::"))
+      if (Pos != std::string::npos)
+        TemplateVar =
+            TemplateVar.substr(0, Pos) + "_" + TemplateVar.substr(Pos + 2);
+      else
+        break;
+
+    bool AllBlank = true;
+    for (char C : TemplateVar) {
+      if (!isspace(C))
+        AllBlank = false;
+    }
+
+    auto TemplateVarAdd = std::string(", ") + TemplateVar;
+    Printer = Printer.substr(0, Start);
+    // Return a default `0` for null template
+    if (AllBlank)
+      return ", 0";
+    // Try delegate
+    if (TemplateVar == "int8_t" || TemplateVar == "int16_t" ||
+        TemplateVar == "int32_t" || TemplateVar == "uint8_t" ||
+        TemplateVar == "uint16_t" || TemplateVar == "uint32_t") {
+      Printer += "32";
+      return "";
+    }
+    if (TemplateVar == "int64_t" || TemplateVar == "uint64_t") {
+      Printer += "64";
+      return "";
+    }
+    return TemplateVarAdd;
+  } // dummy patch for default value
+  if (Printer.find("printPrefetchOp") != std::string::npos)
+    return ", false";
+  // dummy patch for default value - sparc
+  if (Printer.find("printMemOperand") != std::string::npos && Op.empty())
+    return ", \"\"";
+
+  return "";
+}
+
+std::string getCode(const AsmWriterOperand &Op, bool PassSubtarget) {
+  if (Op.OperandType == Op.isLiteralTextOperand) {
+    return "SStream_concat0(O, \"" + Op.Str + "\");";
+  }
+
+  if (Op.OperandType == Op.isLiteralStatementOperand)
+    return Op.Str;
+
+  std::string StrBase = Op.Str;
+
+  // quite a lot consequences!
+  //
+  // consequences
+  //  if (Op.Str.find("printUImm") != std::string::npos)
+  //    StrBase = "printUnsignedImm";
+
+  auto Comment = std::string("/* ") + StrBase + " (+ " + Op.MiModifier + ") */";
+
+  std::string Template =
+      extractTemplate(StrBase, Op.MiModifier.empty() ? "" : Op.MiModifier);
+
+  std::string Result = StrBase + Comment + "(MI";
+  // FIXME is this correct ?
+  //  if (Op.PCRel)
+  //    Result += ", Address";
+  if (Op.MIOpNo != ~0U)
+    Result += ", " + utostr(Op.MIOpNo);
+  //  if (PassSubtarget)
+  //    Result += ", STI";
+  Result += ", O";
+  if (!Op.MiModifier.empty())
+    Result += ", \"" + Op.MiModifier + '"';
+  return Result + Template + ");";
+}
+
+void PrintCases(std::vector<std::pair<std::string, AsmWriterOperand>> &OpsToPrint,
+           raw_ostream &O, bool PassSubtarget) {
+  O << "    case " << OpsToPrint.back().first << ":";
+  AsmWriterOperand TheOp = OpsToPrint.back().second;
+  OpsToPrint.pop_back();
+
+  // Check to see if any other operands are identical in this list, and if so,
+  // emit a case label for them.
+  for (unsigned i = OpsToPrint.size(); i != 0; --i)
+    if (OpsToPrint[i - 1].second == TheOp) {
+      O << "\n    case " << OpsToPrint[i - 1].first << ":";
+      OpsToPrint.erase(OpsToPrint.begin() + i - 1);
+    }
+
+  // Finally, emit the code.
+  O << "\n      " << getCode(TheOp, PassSubtarget);
+  O << "\n      break;\n";
+}
+
+/// EmitInstructions - Emit the last instruction in the vector and any other
+/// instructions that are suitably similar to it.
+void EmitInstructions(std::vector<AsmWriterInst> &Insts, raw_ostream &O,
+                             bool PassSubtarget) {
+  AsmWriterInst FirstInst = Insts.back();
+  Insts.pop_back();
+
+  std::vector<AsmWriterInst> SimilarInsts;
+  unsigned DifferingOperand = ~0;
+  for (unsigned i = Insts.size(); i != 0; --i) {
+    unsigned DiffOp = Insts[i - 1].MatchesAllButOneOp(FirstInst);
+    if (DiffOp != ~1U) {
+      if (DifferingOperand == ~0U) // First match!
+        DifferingOperand = DiffOp;
+
+      // If this differs in the same operand as the rest of the instructions in
+      // this class, move it to the SimilarInsts list.
+      if (DifferingOperand == DiffOp || DiffOp == ~0U) {
+        SimilarInsts.push_back(Insts[i - 1]);
+        Insts.erase(Insts.begin() + i - 1);
+      }
+    }
+  }
+
+  O << "  case " << FirstInst.CGI->Namespace << "_"
+    << FirstInst.CGI->TheDef->getName() << ":\n";
+  for (const AsmWriterInst &AWI : SimilarInsts)
+    O << "  case " << AWI.CGI->Namespace << "_" << AWI.CGI->TheDef->getName()
+      << ":\n";
+  for (unsigned i = 0, e = FirstInst.Operands.size(); i != e; ++i) {
+    if (i != DifferingOperand) {
+      // If the operand is the same for all instructions, just print it.
+      O << "    " << getCode(FirstInst.Operands[i], PassSubtarget);
+    } else {
+      // If this is the operand that varies between all of the instructions,
+      // emit a switch for just this operand now.
+      O << "    switch (MCInst_getOpcode(MI)) {\n";
+      O << "    default: llvm_unreachable(\"Unexpected opcode.\");\n";
+      std::vector<std::pair<std::string, AsmWriterOperand>> OpsToPrint;
+      OpsToPrint.push_back(
+          std::make_pair(FirstInst.CGI->Namespace.str() + "_" +
+                             FirstInst.CGI->TheDef->getName().str(),
+                         FirstInst.Operands[i]));
+
+      for (const AsmWriterInst &AWI : SimilarInsts) {
+        OpsToPrint.push_back(std::make_pair(
+            AWI.CGI->Namespace.str() + "_" + AWI.CGI->TheDef->getName().str(),
+            AWI.Operands[i]));
+      }
+      std::reverse(OpsToPrint.begin(), OpsToPrint.end());
+      while (!OpsToPrint.empty())
+        PrintCases(OpsToPrint, O, PassSubtarget);
+      O << "    }";
+    }
+    O << "\n";
+  }
+  O << "    break;\n";
+}
+
+void UnescapeString(std::string &Str) {
+  for (unsigned i = 0; i != Str.size(); ++i) {
+    if (Str[i] == '\\' && i != Str.size() - 1) {
+      switch (Str[i + 1]) {
+      default:
+        continue; // Don't execute the code after the switch.
+      case 'a':
+        Str[i] = '\a';
+        break;
+      case 'b':
+        Str[i] = '\b';
+        break;
+      case 'e':
+        Str[i] = 27;
+        break;
+      case 'f':
+        Str[i] = '\f';
+        break;
+      case 'n':
+        Str[i] = '\n';
+        break;
+      case 'r':
+        Str[i] = '\r';
+        break;
+      case 't':
+        Str[i] = '\t';
+        break;
+      case 'v':
+        Str[i] = '\v';
+        break;
+      case '"':
+        Str[i] = '\"';
+        break;
+      case '\'':
+        Str[i] = '\'';
+        break;
+      case '\\':
+        Str[i] = '\\';
+        break;
+      }
+      // Nuke the second character.
+      Str.erase(Str.begin() + i + 1);
+    }
+  }
+}
+
+/// UnescapeAliasString - Supports literal braces in InstAlias asm string which
+/// are escaped with '\\' to avoid being interpreted as variants. Braces must
+/// be unescaped before c++ code is generated as (e.g.):
+///
+///   AsmString = "foo \{$\x01\}";
+///
+/// causes non-standard escape character warnings.
+void UnescapeAliasString(std::string &Str) {
+  for (unsigned i = 0; i != Str.size(); ++i) {
+    if (Str[i] == '\\' && i != Str.size() - 1) {
+      switch (Str[i + 1]) {
+      default:
+        continue; // Don't execute the code after the switch.
+      case '{':
+        Str[i] = '{';
+        break;
+      case '}':
+        Str[i] = '}';
+        break;
+      }
+      // Nuke the second character.
+      Str.erase(Str.begin() + i + 1);
+    }
+  }
+}
+
+unsigned CountNumOperands(StringRef AsmString, unsigned Variant) {
+  return AsmString.count(' ') + AsmString.count('\t');
+}
+

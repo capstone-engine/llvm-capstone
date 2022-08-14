@@ -39,5 +39,13 @@ template <typename Iter>
 DiffVec &diffEncode(DiffVec &V, unsigned InitVal, Iter Begin, Iter End);
 void printSubRegIndex(raw_ostream &OS, const CodeGenSubRegIndex *Idx);
 void printBitVectorAsHex(raw_ostream &OS, const BitVector &Bits, unsigned Width);
+void emitRegisterNameString(raw_ostream &O, StringRef AltName, const std::deque<CodeGenRegister> &Registers);
+std::string extractTemplate(std::string &Printer, std::string Op);
+std::string getCode(const AsmWriterOperand &Op, bool PassSubtarget);
+void PrintCases(std::vector<std::pair<std::string, AsmWriterOperand>> &OpsToPrint, raw_ostream &O, bool PassSubtarget);
+void EmitInstructions(std::vector<AsmWriterInst> &Insts, raw_ostream &O, bool PassSubtarget);
+void UnescapeString(std::string &Str);
+void UnescapeAliasString(std::string &Str);
+unsigned CountNumOperands(StringRef AsmString, unsigned Variant);
 
 #endif // LLVM_UTILS_TABLEGEN_CAPSTONEHELPER_H
