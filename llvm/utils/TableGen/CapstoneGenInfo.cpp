@@ -1,13 +1,8 @@
-//===------------ FixedLenDecoderEmitter.cpp - Decoder Generator ----------===//
+//===------------ CapstoneGenInfo.cpp - Decoder Generator ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// It contains the tablegen backend that emits the decoder functions for
-// targets with fixed length instruction set.
 //
 //===----------------------------------------------------------------------===//
 

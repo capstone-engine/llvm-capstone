@@ -1,4 +1,11 @@
+//===-- CapstoneGenMCDesc.h - MC Descritpion Generation Module -\*- C++ -\*-===//
 //
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 // Created by Phosphorus15 on 2021/5/14.
 // Machine Code Description Module
 //
