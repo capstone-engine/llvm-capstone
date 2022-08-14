@@ -95,6 +95,9 @@ struct EncodingIDAndOpcode {
       : EncodingID(EncodingID), Opcode(Opcode) {}
 };
 
+const unsigned MAX_SUBTARGET_WORDS = 4;
+const unsigned MAX_SUBTARGET_FEATURES = MAX_SUBTARGET_WORDS * 64;
+
 class CapstoneGenInfo {
   typedef std::map<std::vector<std::string>, unsigned> OperandInfoMapTy;
   RecordKeeper &RK;
