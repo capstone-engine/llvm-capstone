@@ -15,8 +15,10 @@
 
 #include "../AsmWriterInst.h"
 #include "../Types.h"
-#include "CodeGenInstruction.h"
 #include "CapstoneGenInfo.h"
+
+#include "CodeGenInstruction.h"
+
 
 #include "llvm/ADT/StringExtras.h"
 #include <llvm/Support/FormatVariadic.h>
@@ -25,8 +27,6 @@
 
 
 using namespace llvm;
-
-namespace {
 
 // IAPrinter - Holds information about an InstAlias. Two InstAliases match if
 // they both have the same conditionals. In which case, we cannot print out the
@@ -49,11 +49,7 @@ public:
   ArrayRef<std::string> getConds() const { return Conds; }
   size_t getCondCount() const { return Conds.size(); }
 
-  void addOperand(StringRef Op, int OpIdx, int PrintMethodIdx = -1) {
-    assert(OpIdx >= 0 && OpIdx < 0xFE && "Idx out of range");
-    assert(PrintMethodIdx >= -1 && PrintMethodIdx < 0xFF && "Idx out of range");
-    OpMap[Op] = std::make_pair(OpIdx, PrintMethodIdx);
-  }
+  void addOperand(StringRef Op, int OpIdx, int PrintMethodIdx);
 
   unsigned getNumMIOps() { return NumMIOps; }
 
@@ -64,82 +60,12 @@ public:
   std::pair<int, int> &getOpData(StringRef Op) { return OpMap[Op]; }
 
   std::pair<StringRef, StringRef::iterator> parseName(StringRef::iterator Start,
-                                                      StringRef::iterator End) {
-    StringRef::iterator I = Start;
-    StringRef::iterator Next;
-    if (*I == '{') {
-      // ${some_name}
-      Start = ++I;
-      while (I != End && *I != '}')
-        ++I;
-      Next = I;
-      // eat the final '}'
-      if (Next != End)
-        ++Next;
-    } else {
-      // $name, just eat the usual suspects.
-      while (I != End && (isAlnum(*I) || *I == '_'))
-        ++I;
-      Next = I;
-    }
+                                                      StringRef::iterator End);
 
-    return std::make_pair(StringRef(Start, I - Start), Next);
-  }
+  std::string formatAliasString(uint32_t &UnescapedSize);
 
-  std::string formatAliasString(uint32_t &UnescapedSize) {
-    // Directly mangle mapped operands into the string. Each operand is
-    // identified by a '$' sign followed by a byte identifying the number of the
-    // operand. We add one to the index to avoid zero bytes.
-    StringRef ASM(AsmString);
-    std::string OutString;
-    raw_string_ostream OS(OutString);
-    for (StringRef::iterator I = ASM.begin(), E = ASM.end(); I != E;) {
-      OS << *I;
-      ++UnescapedSize;
-      if (*I == '$') {
-        StringRef Name;
-        std::tie(Name, I) = parseName(++I, E);
-        assert(isOpMapped(Name) && "Unmapped operand!");
-
-        int OpIndex, PrintIndex;
-        std::tie(OpIndex, PrintIndex) = getOpData(Name);
-        if (PrintIndex == -1) {
-          // Can use the default printOperand route.
-          OS << format("\\x%02X", (unsigned char)OpIndex + 1);
-          ++UnescapedSize;
-        } else {
-          // 3 bytes if a PrintMethod is needed: 0xFF, the MCInst operand
-          // number, and which of our pre-detected Methods to call.
-          OS << format("\\xFF\\x%02X\\x%02X", OpIndex + 1, PrintIndex + 1);
-          UnescapedSize += 3;
-        }
-      } else {
-        ++I;
-      }
-    }
-
-    OS.flush();
-    return OutString;
-  }
-
-  bool operator==(const IAPrinter &RHS) const {
-    if (NumMIOps != RHS.NumMIOps)
-      return false;
-    if (Conds.size() != RHS.Conds.size())
-      return false;
-
-    unsigned Idx = 0;
-    for (const auto &str : Conds)
-      if (str != RHS.Conds[Idx++])
-        return false;
-
-    return true;
-  }
+  bool operator==(const IAPrinter &RHS) const;
 };
-
-} // end anonymous namespace
-
-namespace {
 
 struct AliasPriorityComparator {
   typedef std::pair<CodeGenInstAlias, int> ValueType;
@@ -154,7 +80,5 @@ struct AliasPriorityComparator {
     return LHS.second > RHS.second;
   }
 };
-
-} // end anonymous namespace
 
 #endif // LLVM_UTILS_TABLEGEN_CAPSTONEGENPRINTER_H
