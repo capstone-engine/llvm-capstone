@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../SequenceToOffsetTable.h"
 #include "CapstoneGenInfo.h"
 #include "CapstoneHelper.h"
 
@@ -583,4 +584,55 @@ void emitDecodeInstruction(formatted_raw_ostream &OS) {
         "  /* llvm_unreachable(\"bogosity detected in disassembler state "
         "machine!\");*/  \\\n"
         "}\n";
+}
+
+DiffVec &diffEncode(DiffVec &V, unsigned InitVal, SparseBitVector<> List) {
+  assert(V.empty() && "Clear DiffVec before diffEncode.");
+  uint16_t Val = uint16_t(InitVal);
+
+  for (uint16_t Cur : List) {
+    V.push_back(Cur - Val);
+    Val = Cur;
+  }
+  return V;
+}
+
+template <typename Iter>
+DiffVec &diffEncode(DiffVec &V, unsigned InitVal, Iter Begin, Iter End) {
+  assert(V.empty() && "Clear DiffVec before diffEncode.");
+  uint16_t Val = uint16_t(InitVal);
+  for (Iter I = Begin; I != End; ++I) {
+    uint16_t Cur = (*I)->EnumValue;
+    V.push_back(Cur - Val);
+    Val = Cur;
+  }
+  return V;
+}
+
+void printDiff16(raw_ostream &OS, uint16_t Val) { OS << Val; }
+
+void printSubRegIndex(raw_ostream &OS, const CodeGenSubRegIndex *Idx) {
+  OS << Idx->EnumValue;
+}
+
+void printBitVectorAsHex(raw_ostream &OS, const BitVector &Bits,
+                                unsigned Width) {
+  assert(Width <= 32 && "Width too large");
+  unsigned Digits = (Width + 3) / 4;
+  for (unsigned i = 0, e = Bits.size(); i < e; i += Width) {
+    unsigned Value = 0;
+    for (unsigned j = 0; j != Width && i + j != e; ++j)
+      Value |= Bits.test(i + j) << j;
+    OS << format("0x%0*x, ", Digits, Value);
+  }
+}
+
+void BitVectorEmitter::add(unsigned v) {
+  if (v >= Values.size())
+    Values.resize(((v / 8) + 1) * 8); // Round up to the next byte.
+  Values[v] = true;
+}
+
+void BitVectorEmitter::print(raw_ostream &OS) {
+  printBitVectorAsHex(OS, Values, 8);
 }
