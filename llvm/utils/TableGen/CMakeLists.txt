@@ -9,7 +9,6 @@ add_tablegen(llvm-tblgen LLVM
   Attributes.cpp
   CallingConvEmitter.cpp
   CapstoneGenInfo.cpp
-  CodeBeadsGen.cpp
   CodeEmitterGen.cpp
   CodeGenDAGPatterns.cpp
   CodeGenHwModes.cpp
