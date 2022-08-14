@@ -3,8 +3,26 @@
 // Machine Code Description Module
 //
 
+#ifndef LLVM_UTILS_TABLEGEN_CAPSTONEGENMCDESC_H
+#define LLVM_UTILS_TABLEGEN_CAPSTONEGENMCDESC_H
+
+#include "CodeGenRegisters.h"
+#include "CapstoneGenInfo.h"
+
+#include "CodeGenTarget.h"
+
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SparseBitVector.h"
+#include "llvm/MC/LaneBitmask.h"
+
+#include <cstdint>
+
+
+using namespace llvm;
+
 typedef SmallVector<uint16_t, 4> DiffVec;
 typedef SmallVector<LaneBitmask, 4> MaskVec;
+
 #include "../SequenceToOffsetTable.h"
 
 static DiffVec &diffEncode(DiffVec &V, unsigned InitVal,
@@ -326,3 +344,5 @@ void CapstoneGenInfo::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
   //  OS << "} // end namespace llvm\n\n";
   OS << "#endif // GET_REGINFO_MC_DESC\n\n";
 }
+
+#endif // LLVM_UTILS_TABLEGEN_CAPSTONEGENMCDESC_H

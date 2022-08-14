@@ -3,9 +3,21 @@
 // Assembly Printer Module
 //
 
+#ifndef LLVM_UTILS_TABLEGEN_CAPSTONEGENPRINTER_H
+#define LLVM_UTILS_TABLEGEN_CAPSTONEGENPRINTER_H
+
 #include "../AsmWriterInst.h"
 #include "../Types.h"
+#include "CodeGenInstruction.h"
+#include "CapstoneGenInfo.h"
+
+#include "llvm/ADT/StringExtras.h"
 #include <llvm/Support/FormatVariadic.h>
+
+#include "llvm/TableGen/Record.h"
+
+
+using namespace llvm;
 
 std::string extractTemplate(std::string &Printer, std::string Op = "") {
   if (Printer.find('<') != std::string::npos) {
@@ -1304,3 +1316,5 @@ void CapstoneGenInfo::EmitPrintAliasInstruction(raw_ostream &O) {
 
   O << "#endif // PRINT_ALIAS_INSTR\n";
 }
+
+#endif // LLVM_UTILS_TABLEGEN_CAPSTONEGENPRINTER_H

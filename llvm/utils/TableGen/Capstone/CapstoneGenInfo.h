@@ -2,12 +2,19 @@
 // Created by Phosphorus15 on 2021/5/14.
 //
 
-#ifndef LLVM_CAPSTONEGENINFO_H
-#define LLVM_CAPSTONEGENINFO_H
+#ifndef LLVM_UTILS_TABLEGEN_CAPSTONE_GEN_INFO_H
+#define LLVM_UTILS_TABLEGEN_CAPSTONE_GEN_INFO_H
 
 #include "../AsmWriterInst.h"
 #include "../CodeGenDAGPatterns.h"
 #include "../CodeGenSchedule.h"
+#include "CodeGenInstruction.h"
+#include "llvm/ADT/CachedHashString.h"
+#include "llvm/ADT/Statistic.h"
+#include "llvm/MC/MCDecoderOps.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/LEB128.h"
 
 using namespace llvm;
 
@@ -2729,4 +2736,4 @@ void CapstoneGenInfo::run(raw_ostream &o) {
   OS << "#endif // GET_INSTRINFO_MC_DESC\n\n";
 }
 
-#endif // LLVM_CAPSTONEGENINFO_H
+#endif // LLVM_UTILS_TABLEGEN_CAPSTONE_GEN_INFO_H

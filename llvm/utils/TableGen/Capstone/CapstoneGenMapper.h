@@ -2,9 +2,10 @@
 // Created by Phosphorus15 on 2021/6/3.
 //
 
-#ifndef LLVM_CAPSTONEGENMAPPER_H
-#define LLVM_CAPSTONEGENMAPPER_H
+#ifndef LLVM_UTILS_TABLEGEN_CAPSTONEGENMAPPER_H
+#define LLVM_UTILS_TABLEGEN_CAPSTONEGENMAPPER_H
 
+#include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
 #include "SubtargetFeatureInfo.h"
 #include "Types.h"
@@ -1878,4 +1879,4 @@ void CapstoneGenMapper::run(raw_ostream &O) {
 
 } // namespace
 
-#endif // LLVM_CAPSTONEGENMAPPER_H
+#endif // LLVM_UTILS_TABLEGEN_CAPSTONEGENMAPPER_H

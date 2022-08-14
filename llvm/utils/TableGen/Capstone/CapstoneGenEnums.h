@@ -1,5 +1,13 @@
 // Enums Generation Module
 // TODO use `typedef enum`s instead of macros
+
+#ifndef LLVM_UTILS_TABLEGEN_CAPSTONEGENENUMS_H
+#define LLVM_UTILS_TABLEGEN_CAPSTONEGENENUMS_H
+
+#include "CapstoneGenInfo.h"
+#include "CodeGenInstruction.h"
+#include "llvm/TableGen/Error.h"
+
 const unsigned MAX_SUBTARGET_WORDS = 4;
 const unsigned MAX_SUBTARGET_FEATURES = MAX_SUBTARGET_WORDS * 64;
 
@@ -113,3 +121,5 @@ void CapstoneGenInfo::runEnums(raw_ostream &OS, CodeGenTarget &Target,
 
   OS << "#endif // GET_REGINFO_EXTRA\n\n";
 }
+
+#endif // LLVM_UTILS_TABLEGEN_CAPSTONEGENENUMS_H
