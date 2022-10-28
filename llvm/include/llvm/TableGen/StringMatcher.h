@@ -13,6 +13,7 @@
 #ifndef LLVM_TABLEGEN_STRINGMATCHER_H
 #define LLVM_TABLEGEN_STRINGMATCHER_H
 
+#include "PrinterTypes.h"
 #include "llvm/ADT/StringRef.h"
 #include <string>
 #include <utility>
@@ -35,16 +36,24 @@ private:
   StringRef StrVariableName;
   const std::vector<StringPair> &Matches;
   raw_ostream &OS;
+  PrinterLanguage PL;
 
 public:
   StringMatcher(StringRef strVariableName,
                 const std::vector<StringPair> &matches, raw_ostream &os)
-    : StrVariableName(strVariableName), Matches(matches), OS(os) {}
+    : StrVariableName(strVariableName), Matches(matches), OS(os), PL(PRINTER_LANG_CPP) {}
+  StringMatcher(StringRef strVariableName,
+                const std::vector<StringPair> &matches, raw_ostream &os, PrinterLanguage PL)
+    : StrVariableName(strVariableName), Matches(matches), OS(os), PL(PL) {}
 
   void Emit(unsigned Indent = 0, bool IgnoreDuplicates = false) const;
+  void EmitCPP(unsigned Indent = 0, bool IgnoreDuplicates = false) const;
 
 private:
   bool EmitStringMatcherForChar(const std::vector<const StringPair *> &Matches,
+                                unsigned CharNo, unsigned IndentCount,
+                                bool IgnoreDuplicates) const;
+  bool EmitStringMatcherForCharCPP(const std::vector<const StringPair *> &Matches,
                                 unsigned CharNo, unsigned IndentCount,
                                 bool IgnoreDuplicates) const;
 };
