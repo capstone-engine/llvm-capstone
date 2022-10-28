@@ -151,7 +151,7 @@
 #define LLVM_ATTRIBUTE_USED
 #endif
 
-#if defined(__clang__)
+#if defined(__clang__) && !defined(__INTELLISENSE__)
 #define LLVM_DEPRECATED(MSG, FIX) __attribute__((deprecated(MSG, FIX)))
 #else
 #define LLVM_DEPRECATED(MSG, FIX) [[deprecated(MSG)]]

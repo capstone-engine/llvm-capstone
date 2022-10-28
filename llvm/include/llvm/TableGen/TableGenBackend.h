@@ -13,9 +13,11 @@
 #ifndef LLVM_TABLEGEN_TABLEGENBACKEND_H
 #define LLVM_TABLEGEN_TABLEGENBACKEND_H
 
+#include "Printer.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
+#include <memory>
 
 namespace llvm {
 
@@ -23,6 +25,7 @@ class RecordKeeper;
 class raw_ostream;
 
 namespace TableGen::Emitter {
+std::unique_ptr<PrinterLLVM> PI;
 using FnT = void (*)(RecordKeeper &Records, raw_ostream &OS);
 
 struct OptCreatorT {
@@ -40,7 +43,22 @@ struct Opt {
 };
 
 template <class EmitterC> class OptClass : Opt {
-  static void run(RecordKeeper &RK, raw_ostream &OS) { EmitterC(RK).run(OS); }
+  static void run(RecordKeeper &RK, raw_ostream &OS) {
+  EmitterC E = EmitterC(RK);
+
+  CodeGenTarget CGTarget(RK);
+  PrinterLanguage const PL = PrinterLLVM::getLanguage();
+
+  formatted_raw_ostream FOS(OS);
+  if (PL == PRINTER_LANG_CPP) {
+    E.PI = new PrinterLLVM(FOS, CGTarget.getName().str());
+  } else if (PL == PRINTER_LANG_CAPSTONE_C) {
+    E.PI = new PrinterCapstone(FOS, CGTarget.getName().str());
+  } else {
+    llvm_unreachable("AsmWriterEmitter does not support the given output language.");
+  }
+  E.run(OS);
+}
 
 public:
   OptClass(StringRef Name, StringRef Desc) : Opt(Name, run, Desc) {}

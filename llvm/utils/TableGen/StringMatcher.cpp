@@ -10,10 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Printer.h"
 #include "llvm/TableGen/StringMatcher.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Error.h"
 #include <cassert>
 #include <map>
 #include <string>
@@ -47,6 +49,18 @@ FindFirstNonCommonLetter(const std::vector<const
 ///
 /// \return - True if control can leave the emitted code fragment.
 bool StringMatcher::EmitStringMatcherForChar(
+    const std::vector<const StringPair *> &Matches, unsigned CharNo,
+    unsigned IndentCount, bool IgnoreDuplicates) const {
+  switch(PrinterLLVM::getLanguage()) {
+  default:
+    PrintFatalNote("Printer language not known to StringMatcher.");
+  case PRINTER_LANG_CPP:
+    return EmitStringMatcherForCharCPP(Matches, CharNo, IndentCount, IgnoreDuplicates);
+  }
+  return false;
+}
+
+bool StringMatcher::EmitStringMatcherForCharCPP(
     const std::vector<const StringPair *> &Matches, unsigned CharNo,
     unsigned IndentCount, bool IgnoreDuplicates) const {
   assert(!Matches.empty() && "Must have at least one string to match!");
@@ -129,6 +143,16 @@ bool StringMatcher::EmitStringMatcherForChar(
 /// Emit - Top level entry point.
 ///
 void StringMatcher::Emit(unsigned Indent, bool IgnoreDuplicates) const {
+  switch(PrinterLLVM::getLanguage()) {
+  default:
+    PrintFatalNote("Printer language not known to StringMatcher.");
+  case PRINTER_LANG_CPP:
+    EmitCPP(Indent, IgnoreDuplicates);
+    break;
+  }
+}
+
+void StringMatcher::EmitCPP(unsigned Indent, bool IgnoreDuplicates) const {
   // If nothing to match, just fall through.
   if (Matches.empty()) return;
 

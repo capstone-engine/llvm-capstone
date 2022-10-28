@@ -694,39 +694,66 @@ def PDForm : ComplexPattern<iPTR, 2, "SelectPDForm",   [], [SDNPWantParent]>;
 
 //===----------------------------------------------------------------------===//
 // PowerPC Instruction Predicate Definitions.
-def In32BitMode  : Predicate<"!Subtarget->isPPC64()">;
-def In64BitMode  : Predicate<"Subtarget->isPPC64()">;
-def IsBookE  : Predicate<"Subtarget->isBookE()">;
-def IsNotBookE  : Predicate<"!Subtarget->isBookE()">;
-def HasOnlyMSYNC : Predicate<"Subtarget->hasOnlyMSYNC()">;
-def HasSYNC   : Predicate<"!Subtarget->hasOnlyMSYNC()">;
-def IsPPC4xx  : Predicate<"Subtarget->isPPC4xx()">;
-def IsPPC6xx  : Predicate<"Subtarget->isPPC6xx()">;
-def IsE500  : Predicate<"Subtarget->isE500()">;
-def HasSPE  : Predicate<"Subtarget->hasSPE()">;
-def HasICBT : Predicate<"Subtarget->hasICBT()">;
-def HasPartwordAtomics : Predicate<"Subtarget->hasPartwordAtomics()">;
-def HasQuadwordAtomics : Predicate<"Subtarget->hasQuadwordAtomics()">;
+def In32BitMode  : Predicate<"!Subtarget->isPPC64()">,
+  AssemblerPredicate<(all_of (not Feature64Bit)), "64bit">;
+def In64BitMode  : Predicate<"Subtarget->isPPC64()">,
+  AssemblerPredicate<(all_of Feature64Bit), "64bit">;
+def IsBookE  : Predicate<"Subtarget->isBookE()">,
+  AssemblerPredicate<(all_of FeatureBookE), "booke">;
+def IsNotBookE  : Predicate<"!Subtarget->isBookE()">,
+  AssemblerPredicate<(all_of (not FeatureBookE)), "notbooke">;
+def HasOnlyMSYNC : Predicate<"Subtarget->hasOnlyMSYNC()">,
+  AssemblerPredicate<(all_of FeatureMSYNC), "msync">;
+def HasSYNC   : Predicate<"!Subtarget->hasOnlyMSYNC()">,
+  AssemblerPredicate<(all_of (not FeatureMSYNC)), "sync">;
+def IsPPC4xx  : Predicate<"Subtarget->isPPC4xx()">,
+  AssemblerPredicate<(all_of FeaturePPC4xx), "ppc4xx">;
+def IsPPC6xx  : Predicate<"Subtarget->isPPC6xx()">,
+  AssemblerPredicate<(all_of FeaturePPC6xx), "ppc6xx">;
+def IsE500  : Predicate<"Subtarget->isE500()">,
+  AssemblerPredicate<(all_of FeatureE500), "e500">;
+def HasSPE  : Predicate<"Subtarget->hasSPE()">,
+  AssemblerPredicate<(all_of FeatureSPE), "spe">;
+def HasICBT : Predicate<"Subtarget->hasICBT()">,
+  AssemblerPredicate<(all_of FeatureICBT), "icbt">;
+def HasPartwordAtomics : Predicate<"Subtarget->hasPartwordAtomics()">,
+  AssemblerPredicate<(all_of FeaturePartwordAtomic), "partwordatomic">;
+def HasQuadwordAtomics : Predicate<"Subtarget->hasQuadwordAtomics()">,
+  AssemblerPredicate<(all_of FeatureQuadwordAtomic), "quadwordatomic">;
 def NoNaNsFPMath
-    : Predicate<"Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
+    : Predicate<"Subtarget->getTargetMachine().Options.NoNaNsFPMath">,
+  AssemblerPredicate<(all_of (not FeatureFPU)), "notfpu">;
 def NaNsFPMath
-    : Predicate<"!Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
-def HasBPERMD : Predicate<"Subtarget->hasBPERMD()">;
-def HasExtDiv : Predicate<"Subtarget->hasExtDiv()">;
-def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">;
-def IsISA2_07 : Predicate<"Subtarget->isISA2_07()">;
-def IsISA3_0 : Predicate<"Subtarget->isISA3_0()">;
-def HasFPU : Predicate<"Subtarget->hasFPU()">;
-def PCRelativeMemops : Predicate<"Subtarget->hasPCRelativeMemops()">;
-def IsNotISA3_1 : Predicate<"!Subtarget->isISA3_1()">;
+    : Predicate<"!Subtarget->getTargetMachine().Options.NoNaNsFPMath">,
+  AssemblerPredicate<(all_of FeatureFPU), "fpu">;
+def HasBPERMD : Predicate<"Subtarget->hasBPERMD()">,
+  AssemblerPredicate<(all_of FeatureBPERMD), "bpermd">;
+def HasExtDiv : Predicate<"Subtarget->hasExtDiv()">,
+  AssemblerPredicate<(all_of FeatureFPU), "fpu">;
+def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">,
+  AssemblerPredicate<(all_of FeatureBPERMD), "bpermd">;
+def IsISA2_07 : Predicate<"Subtarget->isISA2_07()">,
+  AssemblerPredicate<(all_of FeatureExtDiv), "extdiv">;
+def IsISA3_0 : Predicate<"Subtarget->isISA3_0()">,
+  AssemblerPredicate<(all_of FeatureISA2_06), "isa2_06">;
+def HasFPU : Predicate<"Subtarget->hasFPU()">,
+  AssemblerPredicate<(all_of FeatureISA2_07), "isa2_07">;
+def PCRelativeMemops : Predicate<"Subtarget->hasPCRelativeMemops()">,
+  AssemblerPredicate<(all_of FeatureISA3_0), "isa3_0">;
+def IsNotISA3_1 : Predicate<"!Subtarget->isISA3_1()">,
+  AssemblerPredicate<(all_of (not FeatureISA3_1)), "notisa3_1">;
 
 // AIX assembler may not be modern enough to support some extended mne.
-def ModernAs: Predicate<"!Subtarget->isAIXABI() || Subtarget->HasModernAIXAs">, 
+def ModernAs: Predicate<"!Subtarget->isAIXABI() || Subtarget->HasModernAIXAs">,
                  AssemblerPredicate<(any_of (not AIXOS), FeatureModernAIXAs)>;
-def IsAIX : Predicate<"Subtarget->isAIXABI()">;
-def NotAIX : Predicate<"!Subtarget->isAIXABI()">;
-def IsISAFuture : Predicate<"Subtarget->isISAFuture()">;
-def IsNotISAFuture : Predicate<"!Subtarget->isISAFuture()">;
+def IsAIX : Predicate<"Subtarget->isAIXABI()">,
+  AssemblerPredicate<(all_of AIXOS), "aix">;
+def NotAIX : Predicate<"!Subtarget->isAIXABI()">,
+  AssemblerPredicate<(all_of (not AIXOS)), "notaix">;
+def IsISAFuture : Predicate<"Subtarget->isISAFuture()">,
+  AssemblerPredicate<(all_of FeatureISAFuture), "isafuture">;
+def IsNotISAFuture : Predicate<"!Subtarget->isISAFuture()">,
+  AssemblerPredicate<(all_of (not FeatureISAFuture)), "notisafuture">;
 
 //===----------------------------------------------------------------------===//
 // PowerPC Multiclass Definitions.
@@ -1383,48 +1410,6 @@ let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7,
                              "bclr 4, $BI, 0", IIC_BrB, []>;
     }
   }
-
-  let isReturn = 1, Defs = [CTR], Uses = [CTR, LR, RM] in {
-   def BDZLR  : XLForm_2_ext<19, 16, 18, 0, 0, (outs), (ins),
-                             "bdzlr", IIC_BrB, []>;
-   def BDNZLR : XLForm_2_ext<19, 16, 16, 0, 0, (outs), (ins),
-                             "bdnzlr", IIC_BrB, []>;
-   def BDZLRp : XLForm_2_ext<19, 16, 27, 0, 0, (outs), (ins),
-                             "bdzlr+", IIC_BrB, []>;
-   def BDNZLRp: XLForm_2_ext<19, 16, 25, 0, 0, (outs), (ins),
-                             "bdnzlr+", IIC_BrB, []>;
-   def BDZLRm : XLForm_2_ext<19, 16, 26, 0, 0, (outs), (ins),
-                             "bdzlr-", IIC_BrB, []>;
-   def BDNZLRm: XLForm_2_ext<19, 16, 24, 0, 0, (outs), (ins),
-                             "bdnzlr-", IIC_BrB, []>;
-  }
-
-  let Defs = [CTR], Uses = [CTR] in {
-    def BDZ  : BForm_1<16, 18, 0, 0, (outs), (ins condbrtarget:$BD),
-                       "bdz $BD">;
-    def BDNZ : BForm_1<16, 16, 0, 0, (outs), (ins condbrtarget:$BD),
-                       "bdnz $BD">;
-    def BDZA  : BForm_1<16, 18, 1, 0, (outs), (ins abscondbrtarget:$BD),
-                        "bdza $BD">;
-    def BDNZA : BForm_1<16, 16, 1, 0, (outs), (ins abscondbrtarget:$BD),
-                        "bdnza $BD">;
-    def BDZp : BForm_1<16, 27, 0, 0, (outs), (ins condbrtarget:$BD),
-                       "bdz+ $BD">;
-    def BDNZp: BForm_1<16, 25, 0, 0, (outs), (ins condbrtarget:$BD),
-                       "bdnz+ $BD">;
-    def BDZAp : BForm_1<16, 27, 1, 0, (outs), (ins abscondbrtarget:$BD),
-                        "bdza+ $BD">;
-    def BDNZAp: BForm_1<16, 25, 1, 0, (outs), (ins abscondbrtarget:$BD),
-                        "bdnza+ $BD">;
-    def BDZm : BForm_1<16, 26, 0, 0, (outs), (ins condbrtarget:$BD),
-                       "bdz- $BD">;
-    def BDNZm: BForm_1<16, 24, 0, 0, (outs), (ins condbrtarget:$BD),
-                       "bdnz- $BD">;
-    def BDZAm : BForm_1<16, 26, 1, 0, (outs), (ins abscondbrtarget:$BD),
-                        "bdza- $BD">;
-    def BDNZAm: BForm_1<16, 24, 1, 0, (outs), (ins abscondbrtarget:$BD),
-                        "bdnza- $BD">;
-  }
 }
 
 // The unconditional BCL used by the SjLj setjmp code.
@@ -1494,46 +1479,6 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR] in {
       def BCLRLn : XLForm_2_br2<19, 16, 4, 1, (outs), (ins crbitrc:$BI),
                                 "bclrl 4, $BI, 0", IIC_BrB, []>;
     }
-  }
-  let Defs = [CTR], Uses = [CTR, RM] in {
-    def BDZL  : BForm_1<16, 18, 0, 1, (outs), (ins condbrtarget:$BD),
-                        "bdzl $BD">;
-    def BDNZL : BForm_1<16, 16, 0, 1, (outs), (ins condbrtarget:$BD),
-                        "bdnzl $BD">;
-    def BDZLA  : BForm_1<16, 18, 1, 1, (outs), (ins abscondbrtarget:$BD),
-                         "bdzla $BD">;
-    def BDNZLA : BForm_1<16, 16, 1, 1, (outs), (ins abscondbrtarget:$BD),
-                         "bdnzla $BD">;
-    def BDZLp : BForm_1<16, 27, 0, 1, (outs), (ins condbrtarget:$BD),
-                        "bdzl+ $BD">;
-    def BDNZLp: BForm_1<16, 25, 0, 1, (outs), (ins condbrtarget:$BD),
-                        "bdnzl+ $BD">;
-    def BDZLAp : BForm_1<16, 27, 1, 1, (outs), (ins abscondbrtarget:$BD),
-                         "bdzla+ $BD">;
-    def BDNZLAp: BForm_1<16, 25, 1, 1, (outs), (ins abscondbrtarget:$BD),
-                         "bdnzla+ $BD">;
-    def BDZLm : BForm_1<16, 26, 0, 1, (outs), (ins condbrtarget:$BD),
-                        "bdzl- $BD">;
-    def BDNZLm: BForm_1<16, 24, 0, 1, (outs), (ins condbrtarget:$BD),
-                        "bdnzl- $BD">;
-    def BDZLAm : BForm_1<16, 26, 1, 1, (outs), (ins abscondbrtarget:$BD),
-                         "bdzla- $BD">;
-    def BDNZLAm: BForm_1<16, 24, 1, 1, (outs), (ins abscondbrtarget:$BD),
-                         "bdnzla- $BD">;
-  }
-  let Defs = [CTR], Uses = [CTR, LR, RM] in {
-    def BDZLRL  : XLForm_2_ext<19, 16, 18, 0, 1, (outs), (ins),
-                               "bdzlrl", IIC_BrB, []>;
-    def BDNZLRL : XLForm_2_ext<19, 16, 16, 0, 1, (outs), (ins),
-                               "bdnzlrl", IIC_BrB, []>;
-    def BDZLRLp : XLForm_2_ext<19, 16, 27, 0, 1, (outs), (ins),
-                               "bdzlrl+", IIC_BrB, []>;
-    def BDNZLRLp: XLForm_2_ext<19, 16, 25, 0, 1, (outs), (ins),
-                               "bdnzlrl+", IIC_BrB, []>;
-    def BDZLRLm : XLForm_2_ext<19, 16, 26, 0, 1, (outs), (ins),
-                               "bdzlrl-", IIC_BrB, []>;
-    def BDNZLRLm: XLForm_2_ext<19, 16, 24, 0, 1, (outs), (ins),
-                               "bdnzlrl-", IIC_BrB, []>;
   }
 }
 
@@ -1672,16 +1617,20 @@ def DCBA   : DCB_Form<758, 0, (outs), (ins (memrr $RA, $RB):$addr), "dcba $addr"
 def DCBI   : DCB_Form<470, 0, (outs), (ins (memrr $RA, $RB):$addr), "dcbi $addr",
                       IIC_LdStDCBF, [(int_ppc_dcbi xoaddr:$addr)]>,
                       PPC970_DGroup_Single;
+let mayLoad = 1 in
 def DCBST  : DCB_Form<54, 0, (outs), (ins (memrr $RA, $RB):$addr), "dcbst $addr",
                       IIC_LdStDCBF, [(int_ppc_dcbst xoaddr:$addr)]>,
                       PPC970_DGroup_Single;
+let mayStore = 1 in {
 def DCBZ   : DCB_Form<1014, 0, (outs), (ins (memrr $RA, $RB):$addr), "dcbz $addr",
                       IIC_LdStDCBF, [(int_ppc_dcbz xoaddr:$addr)]>,
                       PPC970_DGroup_Single;
 def DCBZL  : DCB_Form<1014, 1, (outs), (ins (memrr $RA, $RB):$addr), "dcbzl $addr",
                       IIC_LdStDCBF, [(int_ppc_dcbzl xoaddr:$addr)]>,
                       PPC970_DGroup_Single;
+}
 
+let mayLoad = 1 in
 def DCBF   : DCB_Form_hint<86, (outs), (ins u3imm:$TH, (memrr $RA, $RB):$addr),
                       "dcbf $addr, $TH", IIC_LdStDCBF, []>,
                       PPC970_DGroup_Single;
@@ -1699,10 +1648,12 @@ def ICBLC  : XForm_icbt<31, 230, (outs), (ins u4imm:$CT, (memrr $RA, $RB):$addr)
                        "icblc $CT, $addr", IIC_LdStStore>, Requires<[HasICBT]>;
 def ICBLQ  : XForm_icbt<31, 198, (outs), (ins u4imm:$CT, (memrr $RA, $RB):$addr),
                        "icblq. $CT, $addr", IIC_LdStLoad>, Requires<[HasICBT]>;
+let mayLoad = 1 in {
 def ICBT  : XForm_icbt<31, 22, (outs), (ins u4imm:$CT, (memrr $RA, $RB):$addr),
                        "icbt $CT, $addr", IIC_LdStLoad>, Requires<[HasICBT]>;
 def ICBTLS : XForm_icbt<31, 486, (outs), (ins u4imm:$CT, (memrr $RA, $RB):$addr),
                        "icbtls $CT, $addr", IIC_LdStLoad>, Requires<[HasICBT]>;
+}
 
 def : Pat<(int_ppc_dcbt xoaddr:$dst),
           (DCBT 0, xoaddr:$dst)>;
@@ -1930,7 +1881,7 @@ def ADDG6S : XOForm_1<31, 74, 0, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB),
 //
 
 // Unindexed (r+i) Loads.
-let PPC970_Unit = 2 in {
+let PPC970_Unit = 2, mayLoad = 1 in {
 def LBZ : DForm_1<34, (outs gprc:$RST), (ins (memri $D, $RA):$addr),
                   "lbz $RST, $addr", IIC_LdStLoad,
                   [(set i32:$RST, (zextloadi8 DForm:$addr))]>, ZExt32To64,
@@ -2140,7 +2091,7 @@ def : Pat<(pre_store f64:$rS, iPTR:$ptrreg, iaddroff:$ptroff),
           (STFDU $rS, iaddroff:$ptroff, $ptrreg)>;
 
 // Indexed (r+r) Stores.
-let PPC970_Unit = 2 in {
+let PPC970_Unit = 2, mayStore = 1 in {
 def STBX  : XForm_8_memOp<31, 215, (outs), (ins gprc:$RST, (memrr $RA, $RB):$addr),
                    "stbx $RST, $addr", IIC_LdStStore,
                    [(truncstorei8 i32:$RST, XForm:$addr)]>,
@@ -2297,7 +2248,7 @@ def SUBFIC : DForm_2< 8, (outs gprc:$RST), (ins gprc:$RA, s16imm:$D),
                      "subfic $RST, $RA, $D", IIC_IntGeneral,
                      [(set i32:$RST, (subc imm32SExt16:$D, i32:$RA))]>;
 
-let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1 in {
+let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1, isCodeGenOnly=1 in {
   def LI  : DForm_2_r0<14, (outs gprc:$RST), (ins s16imm:$D),
                        "li $RST, $D", IIC_IntSimple,
                        [(set i32:$RST, imm32SExt16:$D)]>, SExt32To64;
@@ -4179,18 +4130,19 @@ def : Pat<(int_ppc_frsqrtes f4rc:$frB), (FRSQRTES $frB)>;
 // FIXME: For B=0 or B > 8, the registers following RT are used.
 // WARNING: Do not add patterns for this instruction without fixing this.
 def LSWI  : XForm_base_r3xo_memOp<31, 597, (outs gprc:$RST),
-                                  (ins gprc:$RA, u5imm:$RB),
+                                  (ins ptr_rc_nor0:$RA, u5imm:$RB),
                                   "lswi $RST, $RA, $RB", IIC_LdStLoad, []>;
 
 // FIXME: For B=0 or B > 8, the registers following RT are used.
 // WARNING: Do not add patterns for this instruction without fixing this.
 def STSWI : XForm_base_r3xo_memOp<31, 725, (outs),
-                                  (ins gprc:$RST, gprc:$RA, u5imm:$RB),
+                                  (ins ptr_rc_nor0:$RST, gprc:$RA, u5imm:$RB),
                                   "stswi $RST, $RA, $RB", IIC_LdStLoad, []>;
 
 def ISYNC : XLForm_2_ext<19, 150, 0, 0, 0, (outs), (ins),
                          "isync", IIC_SprISYNC, []>;
 
+let mayLoad = 1 in
 def ICBI : XForm_1a<31, 982, (outs), (ins (memrr $RA, $RB):$addr),
                     "icbi $addr", IIC_LdStICBI, []>;
 
@@ -4362,34 +4314,38 @@ def NAP   : XLForm_1_np<19, 434, (outs), (ins), "nap", IIC_BrB, []>;
 
 def ATTN : XForm_attn<0, 256, (outs), (ins), "attn", IIC_BrB>;
 
+let mayLoad = 1 in {
 def LBZCIX : XForm_base_r3xo_memOp<31, 853, (outs gprc:$RST),
-                                  (ins gprc:$RA, gprc:$RB),
+                                  (ins ptr_rc_nor0:$RA, ptr_rc_idx:$RB),
                                   "lbzcix $RST, $RA, $RB", IIC_LdStLoad, []>;
 def LHZCIX : XForm_base_r3xo_memOp<31, 821, (outs gprc:$RST),
-                                  (ins gprc:$RA, gprc:$RB),
+                                  (ins ptr_rc_nor0:$RA, ptr_rc_idx:$RB),
                                   "lhzcix $RST, $RA, $RB", IIC_LdStLoad, []>;
 def LWZCIX : XForm_base_r3xo_memOp<31, 789, (outs gprc:$RST),
-                                  (ins gprc:$RA, gprc:$RB),
+                                  (ins ptr_rc_nor0:$RA, ptr_rc_idx:$RB),
                                   "lwzcix $RST, $RA, $RB", IIC_LdStLoad, []>;
 def LDCIX :  XForm_base_r3xo_memOp<31, 885, (outs gprc:$RST),
-                                  (ins gprc:$RA, gprc:$RB),
+                                  (ins ptr_rc_nor0:$RA, ptr_rc_idx:$RB),
                                   "ldcix $RST, $RA, $RB", IIC_LdStLoad, []>;
+}
 
+let mayStore = 1 in {
 def STBCIX : XForm_base_r3xo_memOp<31, 981, (outs),
-                                  (ins gprc:$RST, gprc:$RA, gprc:$RB),
+                                  (ins gprc:$RST, ptr_rc_nor0:$RA, ptr_rc_idx:$RB),
                                   "stbcix $RST, $RA, $RB", IIC_LdStLoad, []>;
 def STHCIX : XForm_base_r3xo_memOp<31, 949, (outs),
-                                  (ins gprc:$RST, gprc:$RA, gprc:$RB),
+                                  (ins gprc:$RST, ptr_rc_nor0:$RA, ptr_rc_idx:$RB),
                                   "sthcix $RST, $RA, $RB", IIC_LdStLoad, []>;
 def STWCIX : XForm_base_r3xo_memOp<31, 917, (outs),
-                                  (ins gprc:$RST, gprc:$RA, gprc:$RB),
+                                  (ins gprc:$RST, ptr_rc_nor0:$RA, ptr_rc_idx:$RB),
                                   "stwcix $RST, $RA, $RB", IIC_LdStLoad, []>;
 def STDCIX : XForm_base_r3xo_memOp<31, 1013, (outs),
-                                  (ins gprc:$RST, gprc:$RA, gprc:$RB),
+                                  (ins gprc:$RST, ptr_rc_nor0:$RA, ptr_rc_idx:$RB),
                                   "stdcix $RST, $RA, $RB", IIC_LdStLoad, []>;
 
 // External PID Load Store Instructions
 
+let mayLoad = 1 in {
 def LBEPX   : XForm_1<31, 95, (outs gprc:$RST), (ins (memrr $RA, $RB):$addr),
                       "lbepx $RST, $addr", IIC_LdStLoad, []>,
                       Requires<[IsE500]>;
@@ -4405,7 +4361,9 @@ def LHEPX   : XForm_1<31, 287, (outs gprc:$RST), (ins (memrr $RA, $RB):$addr),
 def LWEPX   : XForm_1<31, 31, (outs gprc:$RST), (ins (memrr $RA, $RB):$addr),
                       "lwepx $RST, $addr", IIC_LdStLoad, []>,
                       Requires<[IsE500]>;
+}
 
+let mayStore = 1 in {
 def STBEPX  : XForm_8<31, 223, (outs), (ins gprc:$RST, (memrr $RA, $RB):$addr),
                       "stbepx $RST, $addr", IIC_LdStStore, []>,
                       Requires<[IsE500]>;
@@ -4421,6 +4379,7 @@ def STHEPX  : XForm_8<31, 415, (outs), (ins gprc:$RST, (memrr $RA, $RB):$addr),
 def STWEPX  : XForm_8<31, 159, (outs), (ins gprc:$RST, (memrr $RA, $RB):$addr),
                       "stwepx $RST, $addr", IIC_LdStStore, []>,
                       Requires<[IsE500]>;
+}
 
 def DCBFEP  : DCB_Form<127, 0, (outs), (ins (memrr $RA, $RB):$addr), "dcbfep $addr",
                       IIC_LdStDCBF, []>, Requires<[IsE500]>;
@@ -4442,6 +4401,7 @@ def DCBZEP  : DCB_Form<1023, 0, (outs), (ins (memrr $RA, $RB):$addr), "dcbzep $a
 def DCBZLEP : DCB_Form<1023, 1, (outs), (ins (memrr $RA, $RB):$addr), "dcbzlep $addr",
                       IIC_LdStDCBF, []>, Requires<[IsE500]>;
 
+let mayLoad = 1 in
 def ICBIEP  : XForm_1a<31, 991, (outs), (ins (memrr $RA, $RB):$addr), "icbiep $addr",
                       IIC_LdStICBI, []>, Requires<[IsE500]>;
 
@@ -4491,9 +4451,11 @@ def DCBTSTCT : PPCAsmPseudo<"dcbtstct $dst, $TH", (ins memrr:$dst, u5imm:$TH)>;
 def DCBTSTDS : PPCAsmPseudo<"dcbtstds $dst, $TH", (ins memrr:$dst, u5imm:$TH)>;
 def DCBTSTT  : PPCAsmPseudo<"dcbtstt $dst", (ins memrr:$dst)>;
 
+let mayLoad = 1 in {
 def DCBFx  : PPCAsmPseudo<"dcbf $dst", (ins memrr:$dst)>;
 def DCBFL  : PPCAsmPseudo<"dcbfl $dst", (ins memrr:$dst)>;
 def DCBFLP : PPCAsmPseudo<"dcbflp $dst", (ins memrr:$dst)>;
+}
 
 def : Pat<(int_ppc_isync),  (ISYNC)>;
 def : Pat<(int_ppc_dcbfl xoaddr:$dst),
@@ -4689,6 +4651,7 @@ def : InstAlias<"tlbilxva $RA, $RB", (TLBILX 3, gprc:$RA, gprc:$RB)>,
                 Requires<[IsBookE]>;
 def : InstAlias<"tlbilxva $RB", (TLBILX 3, R0, gprc:$RB)>, Requires<[IsBookE]>;
 
+let mayLoad = 1 in
 def LAx : PPCAsmPseudo<"la $rA, $addr", (ins gprc:$rA, memri:$addr)>;
 
 def SUBI : PPCAsmPseudo<"subi $rA, $rB, $imm",
@@ -4888,11 +4851,6 @@ multiclass BranchSimpleMnemonicAT<string pm, int at> {
 defm : BranchSimpleMnemonicAT<"+", 3>;
 defm : BranchSimpleMnemonicAT<"-", 2>;
 
-def : InstAlias<"bclr $bo, $bi", (gBCLR u5imm:$bo, crbitrc:$bi, 0)>;
-def : InstAlias<"bclrl $bo, $bi", (gBCLRL u5imm:$bo, crbitrc:$bi, 0)>;
-def : InstAlias<"bcctr $bo, $bi", (gBCCTR u5imm:$bo, crbitrc:$bi, 0)>;
-def : InstAlias<"bcctrl $bo, $bi", (gBCCTRL u5imm:$bo, crbitrc:$bi, 0)>;
-
 multiclass BranchSimpleMnemonic1<string name, string pm, int bo> {
   def : InstAlias<"b"#name#pm#" $bi, $dst", (gBC bo, crbitrc:$bi, condbrtarget:$dst)>;
   def : InstAlias<"b"#name#"a"#pm#" $bi, $dst", (gBCA bo, crbitrc:$bi, abscondbrtarget:$dst)>;
@@ -4901,21 +4859,63 @@ multiclass BranchSimpleMnemonic1<string name, string pm, int bo> {
   def : InstAlias<"b"#name#"la"#pm#" $bi, $dst", (gBCLA bo, crbitrc:$bi, abscondbrtarget:$dst)>;
   def : InstAlias<"b"#name#"lrl"#pm#" $bi", (gBCLRL bo, crbitrc:$bi, 0)>;
 }
+
+/// No CTR decement, check CR T/F, branch to CTR, save/don't save LR
 multiclass BranchSimpleMnemonic2<string name, string pm, int bo>
   : BranchSimpleMnemonic1<name, pm, bo> {
   def : InstAlias<"b"#name#"ctr"#pm#" $bi", (gBCCTR bo, crbitrc:$bi, 0)>;
   def : InstAlias<"b"#name#"ctrl"#pm#" $bi", (gBCCTRL bo, crbitrc:$bi, 0)>;
 }
+
+/// CTR decrement, no CR check, branch to LR, save/don't save LR
+multiclass BranchSimpleMnemonic3<string name, string pm, int bo> {
+  def : InstAlias<"b"#name#"lr"#pm, (gBCLR bo, CR0LT, 0)>;
+  def : InstAlias<"b"#name#"lrl"#pm, (gBCLRL bo, CR0LT, 0)>;
+}
+
+/// CTR decrement, no CR check, save/don't save LR, branch relative/absolute alias.
+multiclass BranchSimpleMnemonic4<string name, string pm, int at, int bo> {
+  def : InstAlias<"b"#name#"l"#pm#" $dst", (gBCLat bo, at, CR0LT, condbrtarget:$dst)>;
+  def : InstAlias<"b"#name#"la"#pm#" $dst", (gBCLAat bo, at, CR0LT, abscondbrtarget:$dst)>;
+  def : InstAlias<"b"#name#""#pm#" $dst", (gBCat bo, at, CR0LT, condbrtarget:$dst)>;
+  def : InstAlias<"b"#name#""#pm#" $dst", (gBCAat bo, at, CR0LT, abscondbrtarget:$dst)>;
+}
+
+defm : BranchSimpleMnemonic4<"dz", "", 0, 18>;
+defm : BranchSimpleMnemonic4<"dnz", "", 0, 16>;
+defm : BranchSimpleMnemonic4<"dz", "+", 3, 27>;
+defm : BranchSimpleMnemonic4<"dnz", "+", 3, 25>;
+defm : BranchSimpleMnemonic4<"dz", "-", 2, 26>;
+defm : BranchSimpleMnemonic4<"dnz", "-", 2, 24>;
+
+defm : BranchSimpleMnemonic3<"dz", "", 18>;
+defm : BranchSimpleMnemonic3<"dnz", "", 16>;
+defm : BranchSimpleMnemonic3<"dz", "+", 27>;
+defm : BranchSimpleMnemonic3<"dnz", "+", 25>;
+defm : BranchSimpleMnemonic3<"dz", "-", 26>;
+defm : BranchSimpleMnemonic3<"dnz", "-", 24>;
+
 defm : BranchSimpleMnemonic2<"t", "", 12>;
 defm : BranchSimpleMnemonic2<"f", "", 4>;
 defm : BranchSimpleMnemonic2<"t", "-", 14>;
 defm : BranchSimpleMnemonic2<"f", "-", 6>;
 defm : BranchSimpleMnemonic2<"t", "+", 15>;
 defm : BranchSimpleMnemonic2<"f", "+", 7>;
+
 defm : BranchSimpleMnemonic1<"dnzt", "", 8>;
 defm : BranchSimpleMnemonic1<"dnzf", "", 0>;
 defm : BranchSimpleMnemonic1<"dzt", "", 10>;
 defm : BranchSimpleMnemonic1<"dzf", "", 2>;
+
+/// Conditional branches which branch always
+def : InstAlias<"b $dst", (gBC 20, CR0LT, condbrtarget:$dst)>;
+def : InstAlias<"ba $dst", (gBCA 20, CR0LT, abscondbrtarget:$dst)>;
+def : InstAlias<"bl $dst", (gBCL 20, CR0LT, condbrtarget:$dst)>;
+def : InstAlias<"bla $dst", (gBCLA 20, CR0LT, abscondbrtarget:$dst)>;
+def : InstAlias<"blr", (gBCLR 20, CR0LT, 0)>;
+def : InstAlias<"blrl", (gBCLRL 20, CR0LT, 0)>;
+def : InstAlias<"bctr", (gBCCTR 20, CR0LT, 0)>;
+def : InstAlias<"bctrl", (gBCCTRL 20, CR0LT, 0)>;
 
 multiclass BranchExtendedMnemonicPM<string name, string pm, int bibo> {
   def : InstAlias<"b"#name#pm#" $cc, $dst",
@@ -5304,3 +5304,10 @@ def : Pat<(int_ppc_dcbtt ForceXForm:$dst),
 
 def : Pat<(int_ppc_stfiw ForceXForm:$dst, f64:$XT),
           (STFIWX f64:$XT, ForceXForm:$dst)>;
+
+#define CAPSTONE_DEPR_INTRINSICS
+include "PPCDeprecated.td"
+#define CAPSTONE_DEPR_INSTR
+#define CAPSTONE_PS_INSTR
+include "PPCDeprecated.td"
+include "PPCInstrPairedSingle.td"
