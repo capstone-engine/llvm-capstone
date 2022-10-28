@@ -15,6 +15,7 @@
 #ifndef LLVM_UTILS_TABLEGEN_TABLEGENBACKENDS_H
 #define LLVM_UTILS_TABLEGEN_TABLEGENBACKENDS_H
 
+#include "CodeGenTarget.h"
 #include <string>
 
 // A TableGen backend is a function that looks like
@@ -67,7 +68,7 @@ void EmitMapTable(RecordKeeper &RK, raw_ostream &OS);
 
 // Defined in DecoderEmitter.cpp
 void EmitDecoder(RecordKeeper &RK, raw_ostream &OS,
-                 const std::string &PredicateNamespace);
+                 CodeGenTarget &Target);
 
 } // namespace llvm
 
