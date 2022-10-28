@@ -698,6 +698,7 @@ def tLDRpci : T1pIs<(outs tGPR:$Rt), (ins t_addrmode_pc:$addr), IIC_iLoad_i,
   bits<8> addr;
   let Inst{10-8} = Rt;
   let Inst{7-0}  = addr;
+  let mayLoad = 1;
 }
 
 // SP-relative loads should be matched before standard immediate-offset loads as
@@ -711,6 +712,7 @@ def tLDRspi : T1pIs<(outs tGPR:$Rt), (ins t_addrmode_sp:$addr), IIC_iLoad_i,
   bits<8> addr;
   let Inst{10-8} = Rt;
   let Inst{7-0} = addr;
+  let mayLoad = 1;
 }
 
 // Loads: reg/reg and reg/imm5
@@ -794,6 +796,7 @@ def tSTRspi : T1pIs<(outs), (ins tGPR:$Rt, t_addrmode_sp:$addr), IIC_iStore_i,
   bits<8> addr;
   let Inst{10-8} = Rt;
   let Inst{7-0} = addr;
+  let mayStore = 1;
 }
 
 // A8.6.194 & A8.6.192

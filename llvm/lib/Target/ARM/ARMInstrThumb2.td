@@ -1572,6 +1572,7 @@ def t2LDRSH_POST : T2Ipostldst<1, 0b01, 1, 0, (outs GPR:$Rt, GPR:$Rn_wb),
 // F5.1.72 LDR (immediate) T4
 // .w suffixes; Constraints can't be used on t2InstAlias to describe
 // "$Rn =  $Rn_wb" on POST or "$addr.base = $Rn_wb" on PRE.
+let mayLoad = 1 in {
 def t2LDR_PRE_imm : t2AsmPseudo<"ldr${p}.w $Rt, $addr!",
                          (ins GPR:$Rt, t2addrmode_imm8_pre:$addr, pred:$p)>;
 def t2LDR_POST_imm : t2AsmPseudo<"ldr${p}.w $Rt, $Rn, $imm",
@@ -1633,13 +1634,16 @@ def t2LDAB : T2Ildacq<0b1101, 0b00, (outs rGPR:$Rt),
 def t2LDAH : T2Ildacq<0b1101, 0b01, (outs rGPR:$Rt),
                       (ins addr_offset_none:$addr), "ldah", "\t$Rt, $addr", []>,
             Sched<[WriteLd]>;
+} // mayLoad = 1
 
+let mayStore = 1 in {
 // Store
 defm t2STR :T2I_st<0b10,"str", IIC_iStore_i, IIC_iStore_si, GPR, store>;
 defm t2STRB:T2I_st<0b00,"strb", IIC_iStore_bh_i, IIC_iStore_bh_si,
                    rGPR, truncstorei8>;
 defm t2STRH:T2I_st<0b01,"strh", IIC_iStore_bh_i, IIC_iStore_bh_si,
                    rGPR, truncstorei16>;
+}
 
 // Store doubleword
 let mayStore = 1, hasSideEffects = 0, hasExtraSrcRegAllocReq = 1 in
@@ -1674,6 +1678,7 @@ def t2STRB_PRE  : T2Ipreldst<0, 0b00, 0, 1, (outs GPRnopc:$Rn_wb),
             Sched<[WriteST]>;
 } // mayStore = 1, hasSideEffects = 0
 
+let mayStore = 1 in {
 def t2STR_POST : T2Ipostldst<0, 0b10, 0, 0, (outs GPRnopc:$Rn_wb),
                             (ins GPRnopc:$Rt, addr_offset_none:$Rn,
                                  t2am_imm8_offset:$offset),
@@ -1768,6 +1773,7 @@ class T2IstT<bits<2> type, string opc, InstrItinClass ii>
 def t2STRT   : T2IstT<0b10, "strt", IIC_iStore_i>;
 def t2STRBT  : T2IstT<0b00, "strbt", IIC_iStore_bh_i>;
 def t2STRHT  : T2IstT<0b01, "strht", IIC_iStore_bh_i>;
+} // mayStore = 1
 
 // ldrd / strd pre / post variants
 
@@ -1800,6 +1806,7 @@ def t2STRD_POST : T2Ii8s4post<0, 1, 0, (outs GPR:$wb),
                  IIC_iStore_d_ru, "strd", "\t$Rt, $Rt2, $addr$imm",
                  "$addr.base = $wb", []>, Sched<[WriteST]>;
 
+let mayStore = 1 in {
 class T2Istrrel<bits<2> bit54, dag oops, dag iops,
                 string opc, string asm, list<dag> pattern>
   : Thumb2I<oops, iops, AddrModeNone, 4, NoItinerary, opc,
@@ -1825,6 +1832,7 @@ def t2STLB : T2Istrrel<0b00, (outs), (ins rGPR:$Rt, addr_offset_none:$addr),
                        "stlb", "\t$Rt, $addr", []>;
 def t2STLH : T2Istrrel<0b01, (outs), (ins rGPR:$Rt, addr_offset_none:$addr),
                        "stlh", "\t$Rt, $addr", []>;
+} // mayStore = 1
 
 // T2Ipl (Preload Data/Instruction) signals the memory system of possible future
 // data/instruction access.
@@ -1893,9 +1901,11 @@ multiclass T2Ipl<bits<1> write, bits<1> instr, string opc> {
   }
 }
 
+let mayLoad = 1 in {
 defm t2PLD    : T2Ipl<0, 0, "pld">,  Requires<[IsThumb2]>;
 defm t2PLDW   : T2Ipl<1, 0, "pldw">, Requires<[IsThumb2,HasV7,HasMP]>;
 defm t2PLI    : T2Ipl<0, 1, "pli">,  Requires<[IsThumb2,HasV7]>;
+} // mayLoad = 1
 
 // PLD/PLDW/PLI aliases w/ the optional .w suffix
 def : t2InstAlias<"pld${p}.w\t$addr",
@@ -1927,6 +1937,7 @@ def : InstAlias<"pli${p}.w\t$addr",
 
 // pci variant is very similar to i12, but supports negative offsets
 // from the PC. Only PLD and PLI have pci variants (not PLDW)
+let mayLoad = 1 in {
 class T2Iplpci<bits<1> inst, string opc> : T2Ipc<(outs), (ins t2ldrlabel:$addr),
                IIC_Preload, opc, "\t$addr",
                [(ARMPreload (ARMWrapper tconstpool:$addr),
@@ -1946,6 +1957,7 @@ class T2Iplpci<bits<1> inst, string opc> : T2Ipc<(outs), (ins t2ldrlabel:$addr),
 
 def t2PLDpci : T2Iplpci<0, "pld">,  Requires<[IsThumb2]>;
 def t2PLIpci : T2Iplpci<1, "pli">,  Requires<[IsThumb2,HasV7]>;
+} // mayLoad = 1
 
 def : t2InstAlias<"pld${p}.w $addr",
                   (t2PLDpci t2ldrlabel:$addr, pred:$p)>;
@@ -1969,6 +1981,7 @@ def : InstAlias<"pli${p}.w $addr",
 //  Load / store multiple Instructions.
 //
 
+let mayLoad = 1 in
 multiclass thumb2_ld_mult<string asm, InstrItinClass itin,
                             InstrItinClass itin_upd, bit L_bit> {
   def IA :
