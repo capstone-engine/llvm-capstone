@@ -27,7 +27,8 @@ static void emitDefaultSourceFileHeader(raw_ostream &OS) {
   OS << "/* Capstone Disassembly Engine, http://www.capstone-engine.org */\n"
      << "/* By Nguyen Anh Quynh <aquynh@gmail.com>, 2013-2022, */\n"
      << "/*    Rot127 <unisono@quyllur.org> 2022-2023 */\n"
-     << "/* Automatically generated file by Capstone's LLVM TableGen Disassembler "
+     << "/* Automatically generated file by Capstone's LLVM TableGen "
+        "Disassembler "
         "Backend. */\n\n"
      << "/* LLVM-commit: <commit> */\n"
      << "/* LLVM-tag: <tag> */\n\n"
@@ -142,22 +143,23 @@ void PrinterCapstone::regInfoEmitEnums(CodeGenTarget const &Target,
   assert(Registers.size() <= 0xffff && "Too many regs to fit in tables");
 
   emitIncludeToggle("GET_REGINFO_ENUM", true);
-  StringRef TargetName = Target.getName().upper();
+  StringRef TargetName = Target.getName();
+  std::string TargetNameU = TargetName.upper();
 
-  OS << "enum {\n  " << TargetName << "_NoRegister,\n";
-  CSRegEnum << "\t" << TargetName << "_REG_INVALID = 0,\n";
+  OS << "enum {\n  " << TargetNameU << "_NoRegister,\n";
+  CSRegEnum << "\t" << TargetNameU << "_REG_INVALID = 0,\n";
 
   for (const auto &Reg : Registers) {
-    OS << "  " << TargetName << "_" << Reg.getName() << " = " << Reg.EnumValue
+    OS << "  " << TargetNameU << "_" << Reg.getName() << " = " << Reg.EnumValue
        << ",\n";
-    CSRegEnum << "\t" << TargetName << "_REG_" << Reg.getName() << " = "
+    CSRegEnum << "\t" << TargetNameU << "_REG_" << Reg.getName() << " = "
               << Reg.EnumValue << ",\n";
   }
   assert(Registers.size() == Registers.back().EnumValue &&
          "Register enum value mismatch!");
   OS << "  NUM_TARGET_REGS // " << Registers.size() + 1 << "\n";
   OS << "};\n";
-  CSRegEnum << "\t" << TargetName << "_REG_ENDING, // " << Registers.size() + 1
+  CSRegEnum << "\t" << TargetNameU << "_REG_ENDING, // " << Registers.size() + 1
             << "\n";
 
   writeFile(TargetName.str() + "GenCSRegEnum.inc", CSRegEnumStr);
@@ -2515,8 +2517,7 @@ uint8_t getOpAccess(CodeGenInstruction const *CGI, std::string OperandType,
   if (OperandType.find("CS_OP_MEM") != std::string::npos) {
     if (CGI->mayLoad_Unset && CGI->mayStore_Unset) {
       return 0;
-    }
-    else if (CGI->mayLoad && CGI->mayStore)
+    } else if (CGI->mayLoad && CGI->mayStore)
       return 3;
     else if (CGI->mayLoad)
       return 1;
@@ -2526,9 +2527,9 @@ uint8_t getOpAccess(CodeGenInstruction const *CGI, std::string OperandType,
   return IsOutOp ? 2 : 1;
 }
 
-void addComplexOperand(CodeGenInstruction const *CGI,
-                       Record const *ComplexOp, StringRef const &ArgName,
-                       bool IsOutOp, std::vector<OpData> &InsOps) {
+void addComplexOperand(CodeGenInstruction const *CGI, Record const *ComplexOp,
+                       StringRef const &ArgName, bool IsOutOp,
+                       std::vector<OpData> &InsOps) {
   DagInit *SubOps = ComplexOp->getValueAsDag("MIOperandInfo");
 
   unsigned E = SubOps->getNumArgs();
@@ -2678,7 +2679,8 @@ void printFeatureEnumEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
       Features.emplace(Feature);
 
       // Enum
-      EnumName = TargetName.upper() + "_FEATURE_" + STF->TheDef->getName().str();
+      EnumName =
+          TargetName.upper() + "_FEATURE_" + STF->TheDef->getName().str();
       FeatureEnum << EnumName;
       if (Features.size() == 1)
         FeatureEnum << " = 128";
@@ -2703,8 +2705,9 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
   static std::set<std::string> OpGroups;
   if (OpGroups.empty()) {
     for (auto OpGroup : Exceptions) {
-      OpGroupEnum.indent(2) << TargetName.upper() + "_OP_GROUP_" + OpGroup + " = "
-                            << OpGroups.size() << ",\n";
+      OpGroupEnum.indent(2)
+          << TargetName.upper() + "_OP_GROUP_" + OpGroup + " = "
+          << OpGroups.size() << ",\n";
       OpGroups.emplace(OpGroup);
     }
   }
@@ -2773,7 +2776,8 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
     UseMI = MIMap.find(CGI->AsmString) != MIMap.end();
     if (UseMI)
       MI = MIMap[CGI->AsmString];
-    printInsnNameMapEnumEntry(Target.getName().upper(), *MI, InsnNameMap, InsnEnum);
+    printInsnNameMapEnumEntry(Target.getName().upper(), *MI, InsnNameMap,
+                              InsnEnum);
     printFeatureEnumEntry(Target.getName().upper(), Info, CGI, FeatureEnum,
                           FeatureNameArray);
     printOpPrintGroupEnum(Target.getName().upper(), CGI, OpGroups);
