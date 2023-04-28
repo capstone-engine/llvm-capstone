@@ -23,27 +23,17 @@
 #include <algorithm>
 #include <unordered_map>
 
-static void emitDefaultSourceFileHeader(formatted_raw_ostream &OS) {
-  OS << "/* Capstone Disassembly Engine, http://www.capstone-engine.org */\n";
-  OS << "/* By Nguyen Anh Quynh <aquynh@gmail.com>, 2013-2022, */\n";
-  OS << "/*    Rot127 <unisono@quyllur.org> 2022-2023 */\n";
-  OS << "/* Automatically generated file by the LLVM TableGen Disassembler "
-        "Backend. */\n";
-  OS << "/* Do not edit. */\n\n";
-}
-
-static void addHeader(raw_string_ostream &Stream) {
-  std::string HeaderComment =
-      "/* Capstone Disassembly Engine, https://www.capstone-engine.org */\n"
-      "/* By Nguyen Anh Quynh <aquynh@gmail.com>, 2013-2019 */\n"
-      "/* By Rot127 <unisono@quyllur.org>, 2023 */\n"
-      "\n"
-      "/* Auto generated file. Do not edit. */\n"
-      "/* Code generator: "
-      "https://github.com/capstone-engine/capstone/tree/next/suite/auto-sync "
-      "*/\n\n";
-
-  Stream << HeaderComment;
+static void emitDefaultSourceFileHeader(raw_ostream &OS) {
+  OS << "/* Capstone Disassembly Engine, http://www.capstone-engine.org */\n"
+     << "/* By Nguyen Anh Quynh <aquynh@gmail.com>, 2013-2022, */\n"
+     << "/*    Rot127 <unisono@quyllur.org> 2022-2023 */\n"
+     << "/* Automatically generated file by Capstone's LLVM TableGen Disassembler "
+        "Backend. */\n\n"
+     << "/* LLVM-commit: <commit> */\n"
+     << "/* LLVM-tag: <tag> */\n\n"
+     << "/* Do not edit. */\n\n"
+     << "/* Capstone's LLVM TableGen Backends: */\n"
+     << "/* https://github.com/capstone-engine/llvm-capstone */\n\n";
 }
 
 namespace llvm {
@@ -144,7 +134,7 @@ void PrinterCapstone::regInfoEmitEnums(CodeGenTarget const &Target,
                                        CodeGenRegBank const &Bank) const {
   std::string CSRegEnumStr;
   raw_string_ostream CSRegEnum(CSRegEnumStr);
-  addHeader(CSRegEnum);
+  emitDefaultSourceFileHeader(CSRegEnum);
 
   const auto &Registers = Bank.getRegisters();
 
@@ -2753,13 +2743,13 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   raw_string_ostream FeatureEnum(FeatureEnumStr);
   raw_string_ostream FeatureNameArray(FeatureNameArrayStr);
   raw_string_ostream OpGroups(OpGroupStr);
-  addHeader(InsnMap);
-  addHeader(InsnOpMap);
-  addHeader(InsnNameMap);
-  addHeader(InsnEnum);
-  addHeader(FeatureEnum);
-  addHeader(FeatureNameArray);
-  addHeader(OpGroups);
+  emitDefaultSourceFileHeader(InsnMap);
+  emitDefaultSourceFileHeader(InsnOpMap);
+  emitDefaultSourceFileHeader(InsnNameMap);
+  emitDefaultSourceFileHeader(InsnEnum);
+  emitDefaultSourceFileHeader(FeatureEnum);
+  emitDefaultSourceFileHeader(FeatureNameArray);
+  emitDefaultSourceFileHeader(OpGroups);
 
   // Currently we ignore any other Asm variant then the primary.
   Record *AsmVariant = Target.getAsmParserVariant(0);
@@ -2956,7 +2946,7 @@ void PrinterCapstone::searchableTablesWriteFiles() const {
   std::string Filename = "__ARCH__GenSystemRegister.inc";
   std::string HeaderStr;
   raw_string_ostream Header(HeaderStr);
-  addHeader(Header);
+  emitDefaultSourceFileHeader(Header);
   raw_string_ostream &Decl = searchableTablesGetOS(ST_DECL_OS);
   raw_string_ostream &Impl = searchableTablesGetOS(ST_IMPL_OS);
   writeFile(Filename, Header.str() + Decl.str() + Impl.str());
