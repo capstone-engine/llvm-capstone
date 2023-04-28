@@ -142,7 +142,7 @@ void PrinterCapstone::regInfoEmitEnums(CodeGenTarget const &Target,
   assert(Registers.size() <= 0xffff && "Too many regs to fit in tables");
 
   emitIncludeToggle("GET_REGINFO_ENUM", true);
-  std::string const TargetName = Target.getName().str();
+  StringRef TargetName = Target.getName().upper();
 
   OS << "enum {\n  " << TargetName << "_NoRegister,\n";
   CSRegEnum << "\t" << TargetName << "_REG_INVALID = 0,\n";
@@ -160,7 +160,7 @@ void PrinterCapstone::regInfoEmitEnums(CodeGenTarget const &Target,
   CSRegEnum << "\t" << TargetName << "_REG_ENDING, // " << Registers.size() + 1
             << "\n";
 
-  writeFile(TargetName + "GenCSRegEnum.inc", CSRegEnumStr);
+  writeFile(TargetName.str() + "GenCSRegEnum.inc", CSRegEnumStr);
 
   const auto &RegisterClasses = Bank.getRegClasses();
   if (!RegisterClasses.empty()) {
@@ -1705,6 +1705,7 @@ void PrinterCapstone::subtargetEmitSourceFileHeader() const {
 void PrinterCapstone::subtargetEmitFeatureEnum(
     DenseMap<Record *, unsigned> &FeatureMap,
     std::vector<Record *> const &DefList, unsigned N) const {
+  StringRef TN = StringRef(TargetName).upper();
   // Open enumeration.
   OS << "enum {\n";
 
@@ -1714,13 +1715,13 @@ void PrinterCapstone::subtargetEmitFeatureEnum(
     Record *Def = DefList[I];
 
     // Get and emit name
-    OS << "  " << TargetName << "_" << Def->getName() << " = " << I << ",\n";
+    OS << "  " << TN << "_" << Def->getName() << " = " << I << ",\n";
 
     // Save the index for this feature.
     FeatureMap[Def] = I;
   }
 
-  OS << "  " << TargetName << "_"
+  OS << "  " << TN << "_"
      << "NumSubtargetFeatures = " << N << "\n";
 
   // Close enumeration and namespace
@@ -2284,7 +2285,7 @@ void PrinterCapstone::instrInfoEmitEnums(
   unsigned Num = 0;
   OS << "  enum {\n";
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue())
-    OS << "    " << Namespace.str() << "_" << Inst->TheDef->getName()
+    OS << "    " << Namespace.upper() << "_" << Inst->TheDef->getName()
        << "\t= " << Num++ << ",\n";
   OS << "    INSTRUCTION_LIST_END = " << Num << "\n";
   OS << "  };\n\n";
@@ -2374,7 +2375,7 @@ std::string getReqFeatures(StringRef const &TargetName, AsmMatcherInfo &AMI,
 std::string getLLVMInstEnumName(StringRef const &TargetName,
                                 CodeGenInstruction const *CGI) {
   std::string UniqueName = CGI->TheDef->getName().str();
-  std::string Enum = TargetName.str() + "_" + UniqueName;
+  std::string Enum = TargetName.upper() + "_" + UniqueName;
   return Enum;
 }
 
@@ -2385,13 +2386,13 @@ void printInsnMapEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
   InsnMap << "{\n";
   InsnMap.indent(2) << getLLVMInstEnumName(TargetName, CGI) << " /* " << InsnNum
                     << " */";
-  InsnMap << ", " << TargetName << "_INS_"
+  InsnMap << ", " << TargetName.upper() << "_INS_"
           << (UseMI ? getNormalMnemonic(MI) : "INVALID") << ",\n";
   InsnMap.indent(2) << "#ifndef CAPSTONE_DIET\n";
   if (UseMI) {
-    InsnMap.indent(4) << getImplicitUses(TargetName, CGI) << ", ";
-    InsnMap << getImplicitDefs(TargetName, CGI) << ", ";
-    InsnMap << getReqFeatures(TargetName, AMI, MI, UseMI, CGI) << ", ";
+    InsnMap.indent(4) << getImplicitUses(TargetName.upper(), CGI) << ", ";
+    InsnMap << getImplicitDefs(TargetName.upper(), CGI) << ", ";
+    InsnMap << getReqFeatures(TargetName.upper(), AMI, MI, UseMI, CGI) << ", ";
     InsnMap << (CGI->isBranch ? "1" : "0") << ", ";
     InsnMap << (CGI->isIndirectBranch ? "1" : "0") << "\n";
   } else {
@@ -2566,13 +2567,13 @@ void printInsnOpMapEntry(CodeGenTarget const &Target,
 
   // Instruction without mnemonic.
   if (!UseMI) {
-    std::string LLVMEnum = getLLVMInstEnumName(TargetName, CGI);
+    std::string LLVMEnum = getLLVMInstEnumName(TargetName.upper(), CGI);
     // Write the C struct of the Instruction operands.
     // The many braces are necessary because of this bug from
     // medieval times:
     // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53119
     InsnOpMap << "{{{ /* " + LLVMEnum + " (" << InsnNum
-              << ") - " + TargetName + "_INS_" +
+              << ") - " + TargetName.upper() + "_INS_" +
                      (UseMI ? getNormalMnemonic(MI) : "INVALID") + " - " +
                      CGI->AsmString + " */\n";
     InsnOpMap << " 0 \n";
@@ -2680,7 +2681,7 @@ void printFeatureEnumEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
       Features.emplace(Feature);
 
       // Enum
-      EnumName = TargetName.str() + "_FEATURE_" + STF->TheDef->getName().str();
+      EnumName = TargetName.upper() + "_FEATURE_" + STF->TheDef->getName().str();
       FeatureEnum << EnumName;
       if (Features.size() == 1)
         FeatureEnum << " = 128";
@@ -2705,7 +2706,7 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
   static std::set<std::string> OpGroups;
   if (OpGroups.empty()) {
     for (auto OpGroup : Exceptions) {
-      OpGroupEnum.indent(2) << TargetName + "_OP_GROUP_" + OpGroup + " = "
+      OpGroupEnum.indent(2) << TargetName.upper() + "_OP_GROUP_" + OpGroup + " = "
                             << OpGroups.size() << ",\n";
       OpGroups.emplace(OpGroup);
     }
@@ -2715,7 +2716,7 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
     std::string OpGroup = resolveTemplateCall(Op.PrinterMethodName).substr(5);
     if (OpGroups.find(OpGroup) != OpGroups.end())
       continue;
-    OpGroupEnum.indent(2) << TargetName + "_OP_GROUP_" + OpGroup + " = "
+    OpGroupEnum.indent(2) << TargetName.upper() + "_OP_GROUP_" + OpGroup + " = "
                           << OpGroups.size() << ",\n";
     OpGroups.emplace(OpGroup);
   }
@@ -2775,13 +2776,13 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
     UseMI = MIMap.find(CGI->AsmString) != MIMap.end();
     if (UseMI)
       MI = MIMap[CGI->AsmString];
-    printInsnNameMapEnumEntry(Target.getName(), *MI, InsnNameMap, InsnEnum);
-    printFeatureEnumEntry(Target.getName(), Info, CGI, FeatureEnum,
+    printInsnNameMapEnumEntry(Target.getName().upper(), *MI, InsnNameMap, InsnEnum);
+    printFeatureEnumEntry(Target.getName().upper(), Info, CGI, FeatureEnum,
                           FeatureNameArray);
-    printOpPrintGroupEnum(Target.getName(), CGI, OpGroups);
+    printOpPrintGroupEnum(Target.getName().upper(), CGI, OpGroups);
 
     printInsnOpMapEntry(Target, *MI, UseMI, CGI, InsnOpMap, InsnNum);
-    printInsnMapEntry(Target.getName(), Info, *MI, UseMI, CGI, InsnMap,
+    printInsnMapEntry(Target.getName().upper(), Info, *MI, UseMI, CGI, InsnMap,
                       InsnNum);
 
     ++InsnNum;
