@@ -686,8 +686,11 @@ bool PrinterCapstone::decoderEmitterEmitPredicateMatchAux(
   if (auto *D = dyn_cast<DefInit>(&Val)) {
     if (!D->getDef()->isSubClassOf("SubtargetFeature"))
       return true;
+
+    std::string Subtarget =
+        StringRef(PredicateNamespace).upper() + "_" + D->getAsString();
     PredOS << PredicateNamespace << "_getFeatureBits(Inst->csh->mode, "
-           << PredicateNamespace << "_" << D->getAsString() << ")";
+           << Subtarget << ")";
     return false;
   }
   if (auto *D = dyn_cast<DagInit>(&Val)) {
