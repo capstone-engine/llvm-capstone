@@ -3205,6 +3205,12 @@ void PrinterCapstone::searchableTablesEmitMapIII(const GenericTable &Table,
   OutS << LS;
   std::string Repr = searchableTablesPrimaryRepresentation(
       Table.Locs[0], Field, Entry->getValueInit(Field.Name), IntrinsicEnum);
+  if (Repr.find("\"") != std::string::npos) {
+    std::string RegName = Repr;
+    while (RegName.find("\"") != std::string::npos)
+      RegName = Regex("\"").sub("", RegName);
+    Repr = "\"" + RegName + "\", ##ARCH##_SYSREG_" + StringRef(RegName).upper();
+  }
   OutS << Regex("{}").sub("{0}", Repr);
 }
 
