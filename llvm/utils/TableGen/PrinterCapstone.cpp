@@ -282,7 +282,7 @@ static std::string getQualifiedNameCCS(const Record *R) {
     Namespace = std::string(R->getValueAsString("Namespace"));
   if (Namespace.empty())
     return std::string(R->getName());
-  return Namespace + "_" + R->getName().str();
+  return StringRef(Namespace).upper() + "_" + R->getName().str();
 }
 
 void PrinterCapstone::regInfoEmitRegClasses(
