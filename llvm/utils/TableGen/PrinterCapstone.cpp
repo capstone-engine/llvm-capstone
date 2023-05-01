@@ -1607,7 +1607,8 @@ void PrinterCapstone::asmWriterEmitPrintAliasInstrBody(
      << "  char *substr = malloc(I+1);\n"
      << "  memcpy(substr, AsmString, I);\n"
      << "  substr[I] = '\\0';\n"
-     << "  SStream_concat0(OS, substr);\n";
+     << "  SStream_concat0(OS, substr);\n"
+     << "  free(substr);\n";
 
   OS << "  if (AsmString[I] != '\\0') {\n";
   OS << "    if (AsmString[I] == ' ' || AsmString[I] == '\\t') {\n";
