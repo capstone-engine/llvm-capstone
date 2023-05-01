@@ -577,19 +577,21 @@ void InstrInfoEmitter::run() {
   Records.startTimer("Emit operand info");
   EmitOperandInfo(OperandInfoIDs);
 
-  // Emit all of the MCInstrDesc records in reverse ENUM ordering.
+  // Emit all of the MCInstrDesc records in ascending ENUM ordering.
   Records.startTimer("Emit InstrDesc records");
   PI.instrInfoEmitMCInstrDescHdr(TargetName);
   ArrayRef<const CodeGenInstruction*> NumberedInstructions =
     Target.getInstructionsByEnumValue();
 
   SequenceToOffsetTable<std::string> InstrNames;
-  unsigned Num = NumberedInstructions.size();
-  for (const CodeGenInstruction *Inst : reverse(NumberedInstructions)) {
+  // CAPSTONE: Do not reverse NumberedInstructions
+  // Our we access it via opcode. It must be ascending for this.
+  unsigned Num = 0;
+  for (const CodeGenInstruction *Inst : NumberedInstructions) {
     // Keep a list of the instruction names.
     InstrNames.add(std::string(Inst->TheDef->getName()));
     // Emit the record into the table.
-    emitRecord(*Inst, --Num, InstrInfo, EmittedLists, OperandInfoIDs);
+    emitRecord(*Inst, Num++, InstrInfo, EmittedLists, OperandInfoIDs);
   }
   PI.instrInfoEmitMCInstrDescEnd();
   // Emit the array of instruction names.
