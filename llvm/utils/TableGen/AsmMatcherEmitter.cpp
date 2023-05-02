@@ -676,7 +676,13 @@ bool MatchableInfo::validate(StringRef CommentDelimiter, bool IsAlias) const {
                << "ignoring instruction with tied operand '"
                << Tok << "'\n";
       });
-      return false;
+      // Capstone: There are ARM instructions like:
+      // vst2${p}.32 {$Vd[$lane], $src2[$lane]}, $Rn$Rm
+      // The $lane operand would prevent this instruction to be added to a
+      // Matchable. This would mean that these instructions
+      // get no mappable info.
+      // So we only care about this.
+      return true;
     }
   }
 
