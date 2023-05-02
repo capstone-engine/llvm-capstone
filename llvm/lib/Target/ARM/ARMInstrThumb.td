@@ -688,6 +688,7 @@ def tTRAP : TI<(outs), (ins), IIC_Br,
 // PC-relative loads need to be matched first as constant pool accesses need to
 // always be PC-relative. We do this using AddedComplexity, as the pattern is
 // simpler than the patterns of the other load instructions.
+let mayLoad = 1 in {
 let canFoldAsLoad = 1, isReMaterializable = 1, AddedComplexity = 10 in
 def tLDRpci : T1pIs<(outs tGPR:$Rt), (ins t_addrmode_pc:$addr), IIC_iLoad_i,
                   "ldr", "\t$Rt, $addr",
@@ -786,8 +787,10 @@ def tLDRSH :                    // A8.6.84
                  AddrModeT1_2, IIC_iLoad_bh_r,
                  "ldrsh", "\t$Rt, $addr",
                  [(set tGPR:$Rt, (sextloadi16 t_addrmode_rr_sext:$addr))]>, Sched<[WriteLd]>;
+} // mayLoad = 1
 
 
+let mayStore = 1 in {
 def tSTRspi : T1pIs<(outs), (ins tGPR:$Rt, t_addrmode_sp:$addr), IIC_iStore_i,
                     "str", "\t$Rt, $addr",
                     [(store tGPR:$Rt, t_addrmode_sp:$addr)]>,
@@ -816,6 +819,7 @@ defm tSTRH : thumb_st_rr_ri_enc<0b001, 0b1000, t_addrmode_rr,
                                t_addrmode_is2, AddrModeT1_2,
                                IIC_iStore_bh_r, IIC_iStore_bh_i, "strh",
                                truncstorei16>, Sched<[WriteST]>;
+} // mayStore = 1
 
 
 //===----------------------------------------------------------------------===//
