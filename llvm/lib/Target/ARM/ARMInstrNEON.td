@@ -1031,7 +1031,7 @@ class VLD1LN<bits<4> op11_8, bits<4> op7_4, string Dt, ValueType Ty,
              PatFrag LoadOp>
   : NLdStLn<1, 0b10, op11_8, op7_4, (outs DPR:$Vd),
           (ins addrmode6:$Rn, DPR:$src, nohash_imm:$lane),
-          IIC_VLD1ln, "vld1", Dt, "\\{$Vd\\}[$lane], $Rn",
+          IIC_VLD1ln, "vld1", Dt, "\\{$Vd[$lane]\\}, $Rn",
           "$src = $Vd",
           [(set DPR:$Vd, (vector_insert (Ty DPR:$src),
                                          (i32 (LoadOp addrmode6:$Rn)),
@@ -1043,7 +1043,7 @@ class VLD1LN32<bits<4> op11_8, bits<4> op7_4, string Dt, ValueType Ty,
              PatFrag LoadOp>
   : NLdStLn<1, 0b10, op11_8, op7_4, (outs DPR:$Vd),
           (ins addrmode6oneL32:$Rn, DPR:$src, nohash_imm:$lane),
-          IIC_VLD1ln, "vld1", Dt, "\\{$Vd\\}[$lane], $Rn",
+          IIC_VLD1ln, "vld1", Dt, "\\{$Vd[$lane]\\}, $Rn",
           "$src = $Vd",
           [(set DPR:$Vd, (vector_insert (Ty DPR:$src),
                                          (i32 (LoadOp addrmode6oneL32:$Rn)),
@@ -1119,7 +1119,7 @@ class VLD1LNWB<bits<4> op11_8, bits<4> op7_4, string Dt>
   : NLdStLn<1, 0b10, op11_8, op7_4, (outs DPR:$Vd, GPR:$wb),
           (ins addrmode6:$Rn, am6offset:$Rm,
            DPR:$src, nohash_imm:$lane), IIC_VLD1lnu, "vld1", Dt,
-          "\\{$Vd\\}[$lane], $Rn$Rm",
+          "\\{$Vd[$lane]\\}, $Rn$Rm",
           "$src = $Vd, $Rn.addr = $wb", []>, Sched<[WriteVLD1]> {
   let DecoderMethod = "DecodeVLD1LN";
 }
@@ -1145,18 +1145,8 @@ def VLD1LNq32Pseudo_UPD : VLDQLNWBPseudo<IIC_VLD1lnu>, Sched<[WriteVLD1]>;
 class VLD2LN<bits<4> op11_8, bits<4> op7_4, string Dt>
   : NLdStLn<1, 0b10, op11_8, op7_4, (outs DPR:$Vd, DPR:$dst2),
           (ins addrmode6:$Rn, DPR:$src1, DPR:$src2, nohash_imm:$lane),
-          IIC_VLD2ln, "vld2", Dt, "\\{$Vd, $dst2\\}[$lane], $Rn",
+          IIC_VLD2ln, "vld2", Dt, "\\{$Vd[$lane], $dst2[$lane]\\}, $Rn",
           "$src1 = $Vd, $src2 = $dst2", []>, Sched<[WriteVLD1]> {
-  let Rm = 0b1111;
-  let Inst{4}   = Rn{4};
-  let DecoderMethod = "DecodeVLD2LN";
-}
-
-class VLD2LNq<bits<4> op11_8, bits<4> op7_4, string Dt>
-  : NLdStLn<1, 0b10, op11_8, op7_4, (outs QPR:$Qd, QPR:$dst2),
-          (ins addrmode6:$Rn, QPR:$src1, QPR:$src2, nohash_imm:$lane),
-          IIC_VLD2ln, "vld2", Dt, "\\{$Qd, $dst2\\}[$lane], $Rn",
-          "$src1 = $Qd, $src2 = $dst2", []>, Sched<[WriteVLD1]> {
   let Rm = 0b1111;
   let Inst{4}   = Rn{4};
   let DecoderMethod = "DecodeVLD2LN";
@@ -1177,10 +1167,10 @@ def VLD2LNd16Pseudo : VLDQLNPseudo<IIC_VLD2ln>, Sched<[WriteVLD1]>;
 def VLD2LNd32Pseudo : VLDQLNPseudo<IIC_VLD2ln>, Sched<[WriteVLD1]>;
 
 // ...with double-spaced registers:
-def VLD2LNq16 : VLD2LNq<0b0101, {?,?,1,?}, "16"> {
+def VLD2LNq16 : VLD2LN<0b0101, {?,?,1,?}, "16"> {
   let Inst{7-6} = lane{1-0};
 }
-def VLD2LNq32 : VLD2LNq<0b1001, {?,1,0,?}, "32"> {
+def VLD2LNq32 : VLD2LN<0b1001, {?,1,0,?}, "32"> {
   let Inst{7} = lane{0};
 }
 
@@ -1192,18 +1182,8 @@ class VLD2LNWB<bits<4> op11_8, bits<4> op7_4, string Dt>
   : NLdStLn<1, 0b10, op11_8, op7_4, (outs DPR:$Vd, DPR:$dst2, GPR:$wb),
           (ins addrmode6:$Rn, am6offset:$Rm,
            DPR:$src1, DPR:$src2, nohash_imm:$lane), IIC_VLD2lnu, "vld2", Dt,
-          "\\{$Vd, $dst2\\}[$lane], $Rn$Rm",
+          "\\{$Vd[$lane], $dst2[$lane]\\}, $Rn$Rm",
           "$src1 = $Vd, $src2 = $dst2, $Rn.addr = $wb", []> {
-  let Inst{4}   = Rn{4};
-  let DecoderMethod = "DecodeVLD2LN";
-}
-
-class VLD2LNqWB<bits<4> op11_8, bits<4> op7_4, string Dt>
-  : NLdStLn<1, 0b10, op11_8, op7_4, (outs QPR:$Qd, QPR:$dst2, GPR:$wb),
-          (ins addrmode6:$Rn, am6offset:$Rm,
-           QPR:$src1, QPR:$src2, nohash_imm:$lane), IIC_VLD2lnu, "vld2", Dt,
-          "\\{$Qd, $dst2\\}[$lane], $Rn$Rm",
-          "$src1 = $Qd, $src2 = $dst2, $Rn.addr = $wb", []> {
   let Inst{4}   = Rn{4};
   let DecoderMethod = "DecodeVLD2LN";
 }
@@ -1222,10 +1202,10 @@ def VLD2LNd8Pseudo_UPD  : VLDQLNWBPseudo<IIC_VLD2lnu>, Sched<[WriteVLD1]>;
 def VLD2LNd16Pseudo_UPD : VLDQLNWBPseudo<IIC_VLD2lnu>, Sched<[WriteVLD1]>;
 def VLD2LNd32Pseudo_UPD : VLDQLNWBPseudo<IIC_VLD2lnu>, Sched<[WriteVLD1]>;
 
-def VLD2LNq16_UPD : VLD2LNqWB<0b0101, {?,?,1,?}, "16"> {
+def VLD2LNq16_UPD : VLD2LNWB<0b0101, {?,?,1,?}, "16"> {
   let Inst{7-6} = lane{1-0};
 }
-def VLD2LNq32_UPD : VLD2LNqWB<0b1001, {?,1,0,?}, "32"> {
+def VLD2LNq32_UPD : VLD2LNWB<0b1001, {?,1,0,?}, "32"> {
   let Inst{7} = lane{0};
 }
 
@@ -1237,18 +1217,8 @@ class VLD3LN<bits<4> op11_8, bits<4> op7_4, string Dt>
   : NLdStLn<1, 0b10, op11_8, op7_4, (outs DPR:$Vd, DPR:$dst2, DPR:$dst3),
           (ins addrmode6:$Rn, DPR:$src1, DPR:$src2, DPR:$src3,
           nohash_imm:$lane), IIC_VLD3ln, "vld3", Dt,
-          "\\{$Vd, $dst2, $dst3\\}[$lane], $Rn",
+          "\\{$Vd[$lane], $dst2[$lane], $dst3[$lane]\\}, $Rn",
           "$src1 = $Vd, $src2 = $dst2, $src3 = $dst3", []>, Sched<[WriteVLD2]> {
-  let Rm = 0b1111;
-  let DecoderMethod = "DecodeVLD3LN";
-}
-
-class VLD3LNq<bits<4> op11_8, bits<4> op7_4, string Dt>
-  : NLdStLn<1, 0b10, op11_8, op7_4, (outs QPR:$Qd, QPR:$dst2, DPR:$dst3),
-          (ins addrmode6:$Rn, QPR:$src1, QPR:$src2, QPR:$src3,
-          nohash_imm:$lane), IIC_VLD3ln, "vld3", Dt,
-          "\\{$Qd, $dst2, $dst3\\}[$lane], $Rn",
-          "$src1 = $Qd, $src2 = $dst2, $src3 = $dst3", []>, Sched<[WriteVLD2]> {
   let Rm = 0b1111;
   let DecoderMethod = "DecodeVLD3LN";
 }
@@ -1268,10 +1238,10 @@ def VLD3LNd16Pseudo : VLDQQLNPseudo<IIC_VLD3ln>, Sched<[WriteVLD2]>;
 def VLD3LNd32Pseudo : VLDQQLNPseudo<IIC_VLD3ln>, Sched<[WriteVLD2]>;
 
 // ...with double-spaced registers:
-def VLD3LNq16 : VLD3LNq<0b0110, {?,?,1,0}, "16"> {
+def VLD3LNq16 : VLD3LN<0b0110, {?,?,1,0}, "16"> {
   let Inst{7-6} = lane{1-0};
 }
-def VLD3LNq32 : VLD3LNq<0b1010, {?,1,0,0}, "32"> {
+def VLD3LNq32 : VLD3LN<0b1010, {?,1,0,0}, "32"> {
   let Inst{7}   = lane{0};
 }
 
@@ -1285,20 +1255,8 @@ class VLD3LNWB<bits<4> op11_8, bits<4> op7_4, string Dt>
           (ins addrmode6:$Rn, am6offset:$Rm,
            DPR:$src1, DPR:$src2, DPR:$src3, nohash_imm:$lane),
           IIC_VLD3lnu, "vld3", Dt,
-          "\\{$Vd, $dst2, $dst3\\}[$lane], $Rn$Rm",
+          "\\{$Vd[$lane], $dst2[$lane], $dst3[$lane]\\}, $Rn$Rm",
           "$src1 = $Vd, $src2 = $dst2, $src3 = $dst3, $Rn.addr = $wb",
-          []>, Sched<[WriteVLD2]> {
-  let DecoderMethod = "DecodeVLD3LN";
-}
-
-class VLD3LNqWB<bits<4> op11_8, bits<4> op7_4, string Dt>
-  : NLdStLn<1, 0b10, op11_8, op7_4,
-          (outs QPR:$Qd, QPR:$dst2, QPR:$dst3, GPR:$wb),
-          (ins addrmode6:$Rn, am6offset:$Rm,
-           QPR:$src1, QPR:$src2, QPR:$src3, nohash_imm:$lane),
-          IIC_VLD3lnu, "vld3", Dt,
-          "\\{$Qd, $dst2, $dst3\\}[$lane], $Rn$Rm",
-          "$src1 = $Qd, $src2 = $dst2, $src3 = $dst3, $Rn.addr = $wb",
           []>, Sched<[WriteVLD2]> {
   let DecoderMethod = "DecodeVLD3LN";
 }
@@ -1317,10 +1275,10 @@ def VLD3LNd8Pseudo_UPD  : VLDQQLNWBPseudo<IIC_VLD3lnu>, Sched<[WriteVLD2]>;
 def VLD3LNd16Pseudo_UPD : VLDQQLNWBPseudo<IIC_VLD3lnu>, Sched<[WriteVLD2]>;
 def VLD3LNd32Pseudo_UPD : VLDQQLNWBPseudo<IIC_VLD3lnu>, Sched<[WriteVLD2]>;
 
-def VLD3LNq16_UPD : VLD3LNqWB<0b0110, {?,?,1,0}, "16"> {
+def VLD3LNq16_UPD : VLD3LNWB<0b0110, {?,?,1,0}, "16"> {
   let Inst{7-6} = lane{1-0};
 }
-def VLD3LNq32_UPD : VLD3LNqWB<0b1010, {?,1,0,0}, "32"> {
+def VLD3LNq32_UPD : VLD3LNWB<0b1010, {?,1,0,0}, "32"> {
   let Inst{7} = lane{0};
 }
 
@@ -1333,21 +1291,8 @@ class VLD4LN<bits<4> op11_8, bits<4> op7_4, string Dt>
           (outs DPR:$Vd, DPR:$dst2, DPR:$dst3, DPR:$dst4),
           (ins addrmode6:$Rn, DPR:$src1, DPR:$src2, DPR:$src3, DPR:$src4,
           nohash_imm:$lane), IIC_VLD4ln, "vld4", Dt,
-          "\\{$Vd, $dst2, $dst3, $dst4\\}[$lane], $Rn",
+          "\\{$Vd[$lane], $dst2[$lane], $dst3[$lane], $dst4[$lane]\\}, $Rn",
           "$src1 = $Vd, $src2 = $dst2, $src3 = $dst3, $src4 = $dst4", []>,
-    Sched<[WriteVLD2]> {
-  let Rm = 0b1111;
-  let Inst{4} = Rn{4};
-  let DecoderMethod = "DecodeVLD4LN";
-}
-
-class VLD4LNq<bits<4> op11_8, bits<4> op7_4, string Dt>
-  : NLdStLn<1, 0b10, op11_8, op7_4,
-          (outs QPR:$Qd, QPR:$dst2, QPR:$dst3, QPR:$dst4),
-          (ins addrmode6:$Rn, QPR:$src1, QPR:$src2, QPR:$src3, QPR:$src4,
-          nohash_imm:$lane), IIC_VLD4ln, "vld4", Dt,
-          "\\{$Qd, $dst2, $dst3, $dst4\\}[$lane], $Rn",
-          "$src1 = $Qd, $src2 = $dst2, $src3 = $dst3, $src4 = $dst4", []>,
     Sched<[WriteVLD2]> {
   let Rm = 0b1111;
   let Inst{4} = Rn{4};
@@ -1370,10 +1315,10 @@ def VLD4LNd16Pseudo : VLDQQLNPseudo<IIC_VLD4ln>, Sched<[WriteVLD2]>;
 def VLD4LNd32Pseudo : VLDQQLNPseudo<IIC_VLD4ln>, Sched<[WriteVLD2]>;
 
 // ...with double-spaced registers:
-def VLD4LNq16 : VLD4LNq<0b0111, {?,?,1,?}, "16"> {
+def VLD4LNq16 : VLD4LN<0b0111, {?,?,1,?}, "16"> {
   let Inst{7-6} = lane{1-0};
 }
-def VLD4LNq32 : VLD4LNq<0b1011, {?,1,?,?}, "32"> {
+def VLD4LNq32 : VLD4LN<0b1011, {?,1,?,?}, "32"> {
   let Inst{7} = lane{0};
   let Inst{5} = Rn{5};
 }
@@ -1388,21 +1333,8 @@ class VLD4LNWB<bits<4> op11_8, bits<4> op7_4, string Dt>
           (ins addrmode6:$Rn, am6offset:$Rm,
            DPR:$src1, DPR:$src2, DPR:$src3, DPR:$src4, nohash_imm:$lane),
           IIC_VLD4lnu, "vld4", Dt,
-"\\{$Vd, $dst2, $dst3, $dst4\\}[$lane], $Rn$Rm",
+"\\{$Vd[$lane], $dst2[$lane], $dst3[$lane], $dst4[$lane]\\}, $Rn$Rm",
 "$src1 = $Vd, $src2 = $dst2, $src3 = $dst3, $src4 = $dst4, $Rn.addr = $wb",
-          []> {
-  let Inst{4}   = Rn{4};
-  let DecoderMethod = "DecodeVLD4LN"  ;
-}
-
-class VLD4LNqWB<bits<4> op11_8, bits<4> op7_4, string Dt>
-  : NLdStLn<1, 0b10, op11_8, op7_4,
-          (outs QPR:$Qd, QPR:$dst2, QPR:$dst3, QPR:$dst4, GPR:$wb),
-          (ins addrmode6:$Rn, am6offset:$Rm,
-           QPR:$src1, QPR:$src2, QPR:$src3, QPR:$src4, nohash_imm:$lane),
-          IIC_VLD4lnu, "vld4", Dt,
-"\\{$Qd, $dst2, $dst3, $dst4\\}[$lane], $Rn$Rm",
-"$src1 = $Qd, $src2 = $dst2, $src3 = $dst3, $src4 = $dst4, $Rn.addr = $wb",
           []> {
   let Inst{4}   = Rn{4};
   let DecoderMethod = "DecodeVLD4LN"  ;
@@ -1423,10 +1355,10 @@ def VLD4LNd8Pseudo_UPD  : VLDQQLNWBPseudo<IIC_VLD4lnu>, Sched<[WriteVLD2]>;
 def VLD4LNd16Pseudo_UPD : VLDQQLNWBPseudo<IIC_VLD4lnu>, Sched<[WriteVLD2]>;
 def VLD4LNd32Pseudo_UPD : VLDQQLNWBPseudo<IIC_VLD4lnu>, Sched<[WriteVLD2]>;
 
-def VLD4LNq16_UPD : VLD4LNqWB<0b0111, {?,?,1,?}, "16"> {
+def VLD4LNq16_UPD : VLD4LNWB<0b0111, {?,?,1,?}, "16"> {
   let Inst{7-6} = lane{1-0};
 }
-def VLD4LNq32_UPD : VLD4LNqWB<0b1011, {?,1,?,?}, "32"> {
+def VLD4LNq32_UPD : VLD4LNWB<0b1011, {?,1,?,?}, "32"> {
   let Inst{7} = lane{0};
   let Inst{5} = Rn{5};
 }
@@ -2226,7 +2158,7 @@ class VST1LN<bits<4> op11_8, bits<4> op7_4, string Dt, ValueType Ty,
              PatFrag StoreOp, SDNode ExtractOp, Operand AddrMode>
   : NLdStLn<1, 0b00, op11_8, op7_4, (outs),
           (ins AddrMode:$Rn, DPR:$Vd, nohash_imm:$lane),
-          IIC_VST1ln, "vst1", Dt, "\\{$Vd\\}[$lane], $Rn", "",
+          IIC_VST1ln, "vst1", Dt, "\\{$Vd[$lane]\\}, $Rn", "",
           [(StoreOp (ExtractOp (Ty DPR:$Vd), imm:$lane), AddrMode:$Rn)]>,
      Sched<[WriteVST1]> {
   let Rm = 0b1111;
@@ -2278,7 +2210,7 @@ class VST1LNWB<bits<4> op11_8, bits<4> op7_4, string Dt, ValueType Ty,
   : NLdStLn<1, 0b00, op11_8, op7_4, (outs GPR:$wb),
           (ins AdrMode:$Rn, am6offset:$Rm,
            DPR:$Vd, nohash_imm:$lane), IIC_VST1lnu, "vst1", Dt,
-          "\\{$Vd\\}[$lane], $Rn$Rm",
+          "\\{$Vd[$lane]\\}, $Rn$Rm",
           "$Rn.addr = $wb",
           [(set GPR:$wb, (StoreOp (ExtractOp (Ty DPR:$Vd), imm:$lane),
                                   AdrMode:$Rn, am6offset:$Rm))]>,
@@ -2317,18 +2249,7 @@ let mayStore = 1, hasSideEffects = 0, hasExtraSrcRegAllocReq = 1 in {
 class VST2LN<bits<4> op11_8, bits<4> op7_4, string Dt>
   : NLdStLn<1, 0b00, op11_8, op7_4, (outs),
           (ins addrmode6:$Rn, DPR:$Vd, DPR:$src2, nohash_imm:$lane),
-          IIC_VST2ln, "vst2", Dt, "\\{$Vd, $src2\\}[$lane], $Rn",
-          "", []>, Sched<[WriteVST1]> {
-  let Rm = 0b1111;
-  let Inst{4}   = Rn{4};
-  let DecoderMethod = "DecodeVST2LN";
-}
-
-// ...with double-spaced registers:
-class VST2LNq<bits<4> op11_8, bits<4> op7_4, string Dt>
-  : NLdStLn<1, 0b00, op11_8, op7_4, (outs),
-          (ins addrmode6:$Rn, QPR:$Qd, QPR:$src2, nohash_imm:$lane),
-          IIC_VST2ln, "vst2", Dt, "\\{$Qd, $src2\\}[$lane], $Rn",
+          IIC_VST2ln, "vst2", Dt, "\\{$Vd[$lane], $src2[$lane]\\}, $Rn",
           "", []>, Sched<[WriteVST1]> {
   let Rm = 0b1111;
   let Inst{4}   = Rn{4};
@@ -2350,11 +2271,11 @@ def VST2LNd16Pseudo : VSTQLNPseudo<IIC_VST2ln>, Sched<[WriteVST1]>;
 def VST2LNd32Pseudo : VSTQLNPseudo<IIC_VST2ln>, Sched<[WriteVST1]>;
 
 // ...with double-spaced registers:
-def VST2LNq16 : VST2LNq<0b0101, {?,?,1,?}, "16"> {
+def VST2LNq16 : VST2LN<0b0101, {?,?,1,?}, "16"> {
   let Inst{7-6} = lane{1-0};
   let Inst{4}   = Rn{4};
 }
-def VST2LNq32 : VST2LNq<0b1001, {?,1,0,?}, "32"> {
+def VST2LNq32 : VST2LN<0b1001, {?,1,0,?}, "32"> {
   let Inst{7}   = lane{0};
   let Inst{4}   = Rn{4};
 }
@@ -2367,18 +2288,7 @@ class VST2LNWB<bits<4> op11_8, bits<4> op7_4, string Dt>
   : NLdStLn<1, 0b00, op11_8, op7_4, (outs GPR:$wb),
           (ins addrmode6:$Rn, am6offset:$Rm,
            DPR:$Vd, DPR:$src2, nohash_imm:$lane), IIC_VST2lnu, "vst2", Dt,
-          "\\{$Vd, $src2\\}[$lane], $Rn$Rm",
-          "$Rn.addr = $wb", []> {
-  let Inst{4}   = Rn{4};
-  let DecoderMethod = "DecodeVST2LN";
-}
-
-// ...with double-spaced registers:
-class VST2LNqWB<bits<4> op11_8, bits<4> op7_4, string Dt>
-  : NLdStLn<1, 0b00, op11_8, op7_4, (outs GPR:$wb),
-          (ins addrmode6:$Rn, am6offset:$Rm,
-           QPR:$Qd, QPR:$src2, nohash_imm:$lane), IIC_VST2lnu, "vst2", Dt,
-          "\\{$Qd, $src2\\}[$lane], $Rn$Rm",
+          "\\{$Vd[$lane], $src2[$lane]\\}, $Rn$Rm",
           "$Rn.addr = $wb", []> {
   let Inst{4}   = Rn{4};
   let DecoderMethod = "DecodeVST2LN";
@@ -2398,10 +2308,10 @@ def VST2LNd8Pseudo_UPD  : VSTQLNWBPseudo<IIC_VST2lnu>, Sched<[WriteVST1]>;
 def VST2LNd16Pseudo_UPD : VSTQLNWBPseudo<IIC_VST2lnu>, Sched<[WriteVST1]>;
 def VST2LNd32Pseudo_UPD : VSTQLNWBPseudo<IIC_VST2lnu>, Sched<[WriteVST1]>;
 
-def VST2LNq16_UPD : VST2LNqWB<0b0101, {?,?,1,?}, "16"> {
+def VST2LNq16_UPD : VST2LNWB<0b0101, {?,?,1,?}, "16"> {
   let Inst{7-6} = lane{1-0};
 }
-def VST2LNq32_UPD : VST2LNqWB<0b1001, {?,1,0,?}, "32"> {
+def VST2LNq32_UPD : VST2LNWB<0b1001, {?,1,0,?}, "32"> {
   let Inst{7}   = lane{0};
 }
 
@@ -2413,18 +2323,7 @@ class VST3LN<bits<4> op11_8, bits<4> op7_4, string Dt>
   : NLdStLn<1, 0b00, op11_8, op7_4, (outs),
           (ins addrmode6:$Rn, DPR:$Vd, DPR:$src2, DPR:$src3,
            nohash_imm:$lane), IIC_VST3ln, "vst3", Dt,
-          "\\{$Vd, $src2, $src3\\}[$lane], $Rn", "", []>,
-    Sched<[WriteVST2]> {
-  let Rm = 0b1111;
-  let DecoderMethod = "DecodeVST3LN";
-}
-
-// ...with double-spaced registers:
-class VST3LNq<bits<4> op11_8, bits<4> op7_4, string Dt>
-  : NLdStLn<1, 0b00, op11_8, op7_4, (outs),
-          (ins addrmode6:$Rn, QPR:$Qd, QPR:$src2, QPR:$src3,
-           nohash_imm:$lane), IIC_VST3ln, "vst3", Dt,
-          "\\{$Qd, $src2, $src3\\}[$lane], $Rn", "", []>,
+          "\\{$Vd[$lane], $src2[$lane], $src3[$lane]\\}, $Rn", "", []>,
     Sched<[WriteVST2]> {
   let Rm = 0b1111;
   let DecoderMethod = "DecodeVST3LN";
@@ -2445,10 +2344,10 @@ def VST3LNd16Pseudo : VSTQQLNPseudo<IIC_VST3ln>, Sched<[WriteVST2]>;
 def VST3LNd32Pseudo : VSTQQLNPseudo<IIC_VST3ln>, Sched<[WriteVST2]>;
 
 // ...with double-spaced registers:
-def VST3LNq16 : VST3LNq<0b0110, {?,?,1,0}, "16"> {
+def VST3LNq16 : VST3LN<0b0110, {?,?,1,0}, "16"> {
   let Inst{7-6} = lane{1-0};
 }
-def VST3LNq32 : VST3LNq<0b1010, {?,1,0,0}, "32"> {
+def VST3LNq32 : VST3LN<0b1010, {?,1,0,0}, "32"> {
   let Inst{7}   = lane{0};
 }
 
@@ -2461,18 +2360,7 @@ class VST3LNWB<bits<4> op11_8, bits<4> op7_4, string Dt>
           (ins addrmode6:$Rn, am6offset:$Rm,
            DPR:$Vd, DPR:$src2, DPR:$src3, nohash_imm:$lane),
           IIC_VST3lnu, "vst3", Dt,
-          "\\{$Vd, $src2, $src3\\}[$lane], $Rn$Rm",
-          "$Rn.addr = $wb", []> {
-  let DecoderMethod = "DecodeVST3LN";
-}
-
-// ...with double-spaced registers:
-class VST3LNqWB<bits<4> op11_8, bits<4> op7_4, string Dt>
-  : NLdStLn<1, 0b00, op11_8, op7_4, (outs GPR:$wb),
-          (ins addrmode6:$Rn, am6offset:$Rm,
-           QPR:$Qd, QPR:$src2, QPR:$src3, nohash_imm:$lane),
-          IIC_VST3lnu, "vst3", Dt,
-          "\\{$Qd, $src2, $src3\\}[$lane], $Rn$Rm",
+          "\\{$Vd[$lane], $src2[$lane], $src3[$lane]\\}, $Rn$Rm",
           "$Rn.addr = $wb", []> {
   let DecoderMethod = "DecodeVST3LN";
 }
@@ -2491,10 +2379,10 @@ def VST3LNd8Pseudo_UPD  : VSTQQLNWBPseudo<IIC_VST3lnu>, Sched<[WriteVST2]>;
 def VST3LNd16Pseudo_UPD : VSTQQLNWBPseudo<IIC_VST3lnu>, Sched<[WriteVST2]>;
 def VST3LNd32Pseudo_UPD : VSTQQLNWBPseudo<IIC_VST3lnu>, Sched<[WriteVST2]>;
 
-def VST3LNq16_UPD : VST3LNqWB<0b0110, {?,?,1,0}, "16"> {
+def VST3LNq16_UPD : VST3LNWB<0b0110, {?,?,1,0}, "16"> {
   let Inst{7-6} = lane{1-0};
 }
-def VST3LNq32_UPD : VST3LNqWB<0b1010, {?,1,0,0}, "32"> {
+def VST3LNq32_UPD : VST3LNWB<0b1010, {?,1,0,0}, "32"> {
   let Inst{7}   = lane{0};
 }
 
@@ -2506,19 +2394,7 @@ class VST4LN<bits<4> op11_8, bits<4> op7_4, string Dt>
   : NLdStLn<1, 0b00, op11_8, op7_4, (outs),
           (ins addrmode6:$Rn, DPR:$Vd, DPR:$src2, DPR:$src3, DPR:$src4,
            nohash_imm:$lane), IIC_VST4ln, "vst4", Dt,
-          "\\{$Vd, $src2, $src3, $src4\\}[$lane], $Rn",
-          "", []>, Sched<[WriteVST2]> {
-  let Rm = 0b1111;
-  let Inst{4} = Rn{4};
-  let DecoderMethod = "DecodeVST4LN";
-}
-
-// ...with double-spaced registers:
-class VST4LNq<bits<4> op11_8, bits<4> op7_4, string Dt>
-  : NLdStLn<1, 0b00, op11_8, op7_4, (outs),
-          (ins addrmode6:$Rn, QPR:$Qd, QPR:$src2, QPR:$src3, QPR:$src4,
-           nohash_imm:$lane), IIC_VST4ln, "vst4", Dt,
-          "\\{$Qd, $src2, $src3, $src4\\}[$lane], $Rn",
+          "\\{$Vd[$lane], $src2[$lane], $src3[$lane], $src4[$lane]\\}, $Rn",
           "", []>, Sched<[WriteVST2]> {
   let Rm = 0b1111;
   let Inst{4} = Rn{4};
@@ -2541,10 +2417,10 @@ def VST4LNd16Pseudo : VSTQQLNPseudo<IIC_VST4ln>, Sched<[WriteVST2]>;
 def VST4LNd32Pseudo : VSTQQLNPseudo<IIC_VST4ln>, Sched<[WriteVST2]>;
 
 // ...with double-spaced registers:
-def VST4LNq16 : VST4LNq<0b0111, {?,?,1,?}, "16"> {
+def VST4LNq16 : VST4LN<0b0111, {?,?,1,?}, "16"> {
   let Inst{7-6} = lane{1-0};
 }
-def VST4LNq32 : VST4LNq<0b1011, {?,1,?,?}, "32"> {
+def VST4LNq32 : VST4LN<0b1011, {?,1,?,?}, "32"> {
   let Inst{7}   = lane{0};
   let Inst{5} = Rn{5};
 }
@@ -2558,19 +2434,7 @@ class VST4LNWB<bits<4> op11_8, bits<4> op7_4, string Dt>
           (ins addrmode6:$Rn, am6offset:$Rm,
            DPR:$Vd, DPR:$src2, DPR:$src3, DPR:$src4, nohash_imm:$lane),
           IIC_VST4lnu, "vst4", Dt,
-  "\\{$Vd, $src2, $src3, $src4\\}[$lane], $Rn$Rm",
-          "$Rn.addr = $wb", []> {
-  let Inst{4} = Rn{4};
-  let DecoderMethod = "DecodeVST4LN";
-}
-
-// ...with double-spaced registers:
-class VST4LNqWB<bits<4> op11_8, bits<4> op7_4, string Dt>
-  : NLdStLn<1, 0b00, op11_8, op7_4, (outs GPR:$wb),
-          (ins addrmode6:$Rn, am6offset:$Rm,
-           QPR:$Qd, QPR:$src2, QPR:$src3, QPR:$src4, nohash_imm:$lane),
-          IIC_VST4lnu, "vst4", Dt,
-  "\\{$Qd, $src2, $src3, $src4\\}[$lane], $Rn$Rm",
+  "\\{$Vd[$lane], $src2[$lane], $src3[$lane], $src4[$lane]\\}, $Rn$Rm",
           "$Rn.addr = $wb", []> {
   let Inst{4} = Rn{4};
   let DecoderMethod = "DecodeVST4LN";
@@ -2591,10 +2455,10 @@ def VST4LNd8Pseudo_UPD  : VSTQQLNWBPseudo<IIC_VST4lnu>, Sched<[WriteVST2]>;
 def VST4LNd16Pseudo_UPD : VSTQQLNWBPseudo<IIC_VST4lnu>, Sched<[WriteVST2]>;
 def VST4LNd32Pseudo_UPD : VSTQQLNWBPseudo<IIC_VST4lnu>, Sched<[WriteVST2]>;
 
-def VST4LNq16_UPD : VST4LNqWB<0b0111, {?,?,1,?}, "16"> {
+def VST4LNq16_UPD : VST4LNWB<0b0111, {?,?,1,?}, "16"> {
   let Inst{7-6} = lane{1-0};
 }
-def VST4LNq32_UPD : VST4LNqWB<0b1011, {?,1,?,?}, "32"> {
+def VST4LNq32_UPD : VST4LNWB<0b1011, {?,1,?,?}, "32"> {
   let Inst{7}   = lane{0};
   let Inst{5} = Rn{5};
 }
