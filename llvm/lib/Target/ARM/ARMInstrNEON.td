@@ -2128,6 +2128,7 @@ def VST4q32oddPseudo_UPD : VSTQQQQWBPseudo<IIC_VST4u>, Sched<[WriteVST4]>;
 
 } // mayStore = 1, hasSideEffects = 0, hasExtraSrcRegAllocReq = 1
 
+let mayStore = 1 in {
 // Classes for VST*LN pseudo-instructions with multi-register operands.
 // These are expanded to real instructions after register allocation.
 class VSTQLNPseudo<InstrItinClass itin>
@@ -2152,7 +2153,6 @@ class VSTQQQQLNWBPseudo<InstrItinClass itin>
                 (ins addrmode6:$addr, am6offset:$offset, QQQQPR:$src,
                  nohash_imm:$lane), itin, "$addr.addr = $wb">;
 
-let mayStore = 1 in {
 //   VST1LN   : Vector Store (single element from one lane)
 class VST1LN<bits<4> op11_8, bits<4> op7_4, string Dt, ValueType Ty,
              PatFrag StoreOp, SDNode ExtractOp, Operand AddrMode>

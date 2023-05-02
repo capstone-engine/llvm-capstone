@@ -6181,8 +6181,8 @@ class MVE_VLDRSTR_base<MVE_ldst_direction dir, bit U, bit P, bit W, bit opc,
   let Inst{12} = opc;
   let Inst{11-9} = 0b111;
 
-  let mayLoad = dir.load;
-  let mayStore = !eq(dir.load,0);
+  let mayLoad = !eq(dir, MVE_ld);
+  let mayStore = !eq(dir, MVE_st);
   let hasSideEffects = 0;
   let validForTailPredication = 1;
 }

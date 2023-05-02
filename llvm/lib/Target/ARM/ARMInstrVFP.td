@@ -2795,7 +2795,7 @@ def : VFP3InstAlias<"fconstd${p} $Dd, $val",
 def : VFP3InstAlias<"fconsts${p} $Sd, $val",
                     (FCONSTS SPR:$Sd, vfp_f32imm:$val, pred:$p)>;
 
-def VSCCLRMD : VFPXI<(outs), (ins pred:$p, fp_dreglist_with_vpr:$regs, variable_ops),
+def VSCCLRMD : VFPXI<(outs fp_dreglist_with_vpr:$regs), (ins pred:$p, variable_ops),
                       AddrModeNone, 4, IndexModeNone, VFPMiscFrm, NoItinerary,
                       "vscclrm{$p}\t$regs", "", []>, Sched<[]> {
   bits<13> regs;
@@ -2812,7 +2812,7 @@ def VSCCLRMD : VFPXI<(outs), (ins pred:$p, fp_dreglist_with_vpr:$regs, variable_
   list<Predicate> Predicates = [HasV8_1MMainline, Has8MSecExt];
 }
 
-def VSCCLRMS : VFPXI<(outs), (ins pred:$p, fp_sreglist_with_vpr:$regs, variable_ops),
+def VSCCLRMS : VFPXI<(outs fp_sreglist_with_vpr:$regs), (ins pred:$p, variable_ops),
                       AddrModeNone, 4, IndexModeNone, VFPMiscFrm, NoItinerary,
                       "vscclrm{$p}\t$regs", "", []>, Sched<[]> {
   bits<13> regs;

@@ -3901,6 +3901,7 @@ def t2BR_JT : t2basePseudoInst<(outs),
           Sched<[WriteBr]>;
 
 // FIXME: Add a case that can be predicated.
+let mayLoad = 1 in {
 def t2TBB_JT : t2PseudoInst<(outs),
         (ins GPR:$base, GPR:$index, i32imm:$jt, i32imm:$pclbl), 0, IIC_Br, []>,
         Sched<[WriteBr]>;
@@ -3934,6 +3935,7 @@ def t2TBH : T2I<(outs), (ins (addrmode_tbh $Rn, $Rm):$addr), IIC_Br,
 
   let DecoderMethod = "DecodeThumbTableBranch";
 }
+} // mayLoad
 } // isNotDuplicable, isIndirectBranch
 
 } // isBranch, isTerminator, isBarrier
@@ -4397,15 +4399,19 @@ multiclass t2LdStCop<bits<4> op31_28, bit load, bit Dbit, string asm, list<dag> 
 }
 
 let DecoderNamespace = "Thumb2CoProc" in {
+let mayLoad = 1 in {
 defm t2LDC   : t2LdStCop<0b1110, 1, 0, "ldc", [(int_arm_ldc timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm t2LDCL  : t2LdStCop<0b1110, 1, 1, "ldcl", [(int_arm_ldcl timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm t2LDC2  : t2LdStCop<0b1111, 1, 0, "ldc2", [(int_arm_ldc2 timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[PreV8,IsThumb2]>;
 defm t2LDC2L : t2LdStCop<0b1111, 1, 1, "ldc2l", [(int_arm_ldc2l timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[PreV8,IsThumb2]>;
+}
 
+let mayStore = 1 in {
 defm t2STC   : t2LdStCop<0b1110, 0, 0, "stc", [(int_arm_stc timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm t2STCL  : t2LdStCop<0b1110, 0, 1, "stcl", [(int_arm_stcl timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm t2STC2  : t2LdStCop<0b1111, 0, 0, "stc2", [(int_arm_stc2 timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[PreV8,IsThumb2]>;
 defm t2STC2L : t2LdStCop<0b1111, 0, 1, "stc2l", [(int_arm_stc2l timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[PreV8,IsThumb2]>;
+}
 }
 
 
