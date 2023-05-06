@@ -1,0 +1,82 @@
+name: Weekly LLVM Release Check
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "LLVM Version"
+        required: false
+  schedule:
+    - cron: "0 0 * * 1"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Get LLVM version
+      run: |
+        if [[ -z $github_event_inputs_tag_name ]]; then
+          tag_name=$(curl -sL https://api.github.com/repos/llvm/llvm-project/releases/latest | jq -r '.tag_name')
+        else
+          tag_name=$github.event.inputs.tag_name
+        fi
+
+        echo "Using version: $tag_name"       
+        echo "tag_name=${tag_name}" >> $GITHUB_ENV
+        version=$(echo $tag_name | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+')
+        echo "version=${version}" >> $GITHUB_ENV
+        major_version=$(echo $version | awk -F '.' '{print $1}')
+        echo "major_version=${major_version}" >> $GITHUB_ENV
+        branch_version='release/'$major_version'.x'
+        echo "branch_version=${branch_version}" >> $GITHUB_ENV
+        is_official_release=$(curl -sL https://api.github.com/repos/llvm/llvm-project/releases/latest | jq -r '.prerelease')
+        echo "is_official_release=${is_official_release}" >> $GITHUB_ENV
+
+    - name: Ensure official release
+      run: |
+        if [[ "${{ env.is_official_release }}" != "false" ]]; then
+          exit 0
+        fi
+
+    - name: Sparse checkout LLVM-project
+      run: |
+        cd ..; git clone --depth 1 --filter=blob:none --sparse --branch ${{env.branch_version}} https://github.com/llvm/llvm-project.git
+        cd llvm-project
+        git sparse-checkout set llvm/
+
+    - name: Checkout llvm-capstone
+      uses: actions/checkout@v3
+
+    - name: Commit new branch
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git checkout ${{ env.branch_version }} 2>/dev/null || git checkout -b ${{ env.branch_version }}
+
+        if git ls-remote --exit-code --heads origin ${{ env.branch_version }}; then
+          git config pull.rebase false
+          git pull origin ${{ env.branch_version }}
+        fi
+        
+        rm -r ../llvm-project/.git
+        cp -r ../llvm-project/* .
+        git add *
+        
+        if git ls-remote --exit-code --heads origin ${{ env.branch_version }}; then
+          if [[ `git status --porcelain` ]]; then
+            echo "Branch already exists, update."
+            git commit -m "Update LLVM ${{ env.branch_version }}"
+          else
+            echo "No changes to commit."
+            exit 0
+          fi
+        else
+          git commit -m "Add LLVM ${{ env.branch_version }}"
+        fi
+
+    - name: Push new branch
+      run: |
+        git push origin ${{ env.branch_version }}
+
