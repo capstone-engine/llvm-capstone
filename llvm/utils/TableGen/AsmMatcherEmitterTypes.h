@@ -376,9 +376,9 @@ struct MatchableInfo {
 
   void dump() const;
 
-private:
   void tokenizeAsmString(AsmMatcherInfo const &Info,
                          AsmVariantInfo const &Variant);
+private:
   void addAsmOperand(StringRef Token, bool IsIsolatedToken = false);
 };
 

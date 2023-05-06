@@ -2335,6 +2335,7 @@ static inline std::string normalizedMnemonic(StringRef const &Mn,
                                              const bool Upper = true) {
   auto Mnemonic = Upper ? Mn.upper() : Mn.str();
   std::replace(Mnemonic.begin(), Mnemonic.end(), '.', '_');
+  Mnemonic = StringRef(Regex("[{}]").sub("", Mnemonic));
   return Mnemonic;
 }
 
@@ -2386,6 +2387,7 @@ void printInsnMapEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
                        CodeGenInstruction const *CGI,
                        raw_string_ostream &InsnMap, unsigned InsnNum) {
   InsnMap << "{\n";
+  InsnMap.indent(2) << "/* " << (CGI->AsmString != "" ? CGI->AsmString : "<No AsmString>") << " */\n";
   InsnMap.indent(2) << getLLVMInstEnumName(TargetName, CGI) << " /* " << InsnNum
                     << " */";
   InsnMap << ", " << TargetName.upper() << "_INS_"
@@ -2577,7 +2579,7 @@ void printInsnOpMapEntry(CodeGenTarget const &Target,
               << ") - " + TargetName.upper() + "_INS_" +
                      (UseMI ? getNormalMnemonic(MI) : "INVALID") + " - " +
                      CGI->AsmString + " */\n";
-    InsnOpMap << " 0 \n";
+    InsnOpMap << " 0\n";
     InsnOpMap << "}}},\n";
     return;
   }
@@ -2654,13 +2656,14 @@ void printInsnNameMapEnumEntry(StringRef const &TargetName,
                                std::unique_ptr<MatchableInfo> const &MI,
                                raw_string_ostream &InsnNameMap,
                                raw_string_ostream &InsnEnum) {
-  static std::set<StringRef> MnemonicsSeen;
-  StringRef Mnemonic = MI->Mnemonic;
+  static std::set<std::string> MnemonicsSeen;
+
+  std::string Mnemonic = MI->Mnemonic.str();
   if (MnemonicsSeen.find(Mnemonic) != MnemonicsSeen.end())
     return;
 
   std::string EnumName =
-      TargetName.str() + "_INS_" + normalizedMnemonic(Mnemonic);
+      TargetName.str() + "_INS_" + normalizedMnemonic(StringRef(Mnemonic));
   InsnNameMap.indent(2) << "\"" + Mnemonic + "\", // " + EnumName + "\n";
   InsnEnum.indent(2) << EnumName + ",\n";
 
@@ -2757,36 +2760,41 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
 
   // Currently we ignore any other Asm variant then the primary.
   Record *AsmVariant = Target.getAsmParserVariant(0);
-  int AsmVariantNo = AsmVariant->getValueAsInt("Variant");
 
-  // Map AsmStrings to matchables.
-  // If Matchables have the same AsmString, the first is used.
-  std::map<std::string, const std::unique_ptr<MatchableInfo> *> MIMap;
-  const std::unique_ptr<MatchableInfo> *MI;
-  for (size_t I = 0; I < Info.Matchables.size(); ++I) {
-    MI = &Info.Matchables[I];
-    if (MI->get()->AsmVariantID != AsmVariantNo)
-      continue;
-    std::string AsmString = MI->get()->getResultInst()->AsmString;
-    MIMap.insert(make_pair(AsmString, MI));
-  }
+  AsmVariantInfo Variant;
+  Variant.RegisterPrefix = AsmVariant->getValueAsString("RegisterPrefix");
+  Variant.TokenizingCharacters =
+      AsmVariant->getValueAsString("TokenizingCharacters");
+  Variant.SeparatorCharacters =
+      AsmVariant->getValueAsString("SeparatorCharacters");
+  Variant.BreakCharacters =
+      AsmVariant->getValueAsString("BreakCharacters");
+  Variant.Name = AsmVariant->getValueAsString("Name");
+  Variant.AsmVariantNo = AsmVariant->getValueAsInt("Variant");
+  SmallPtrSet<Record*, 16> SingletonRegisters;
 
   // The CS mapping tables, for instructions and their operands,
   // need an entry for every CodeGenInstruction.
   unsigned InsnNum = 0;
-  bool UseMI = false;
   for (const CodeGenInstruction *CGI : Target.getInstructionsByEnumValue()) {
-    UseMI = MIMap.find(CGI->AsmString) != MIMap.end();
-    if (UseMI)
-      MI = MIMap[CGI->AsmString];
-    printInsnNameMapEnumEntry(Target.getName().upper(), *MI, InsnNameMap,
+    auto MI = std::make_unique<MatchableInfo>(*CGI);
+    bool UseMI = true;
+    MI->tokenizeAsmString(Info, Variant);
+
+    // Ignore "codegen only" instructions.
+    if (CGI->TheDef->getValueAsBit("isCodeGenOnly") || MI->AsmOperands.empty()) {
+      UseMI = false;
+      MI->Mnemonic = "invalid";
+    } else
+      MI->Mnemonic = MI->AsmOperands[0].Token;
+    printInsnNameMapEnumEntry(Target.getName().upper(), MI, InsnNameMap,
                               InsnEnum);
     printFeatureEnumEntry(Target.getName().upper(), Info, CGI, FeatureEnum,
                           FeatureNameArray);
     printOpPrintGroupEnum(Target.getName().upper(), CGI, OpGroups);
 
-    printInsnOpMapEntry(Target, *MI, UseMI, CGI, InsnOpMap, InsnNum);
-    printInsnMapEntry(Target.getName().upper(), Info, *MI, UseMI, CGI, InsnMap,
+    printInsnOpMapEntry(Target, MI, UseMI, CGI, InsnOpMap, InsnNum);
+    printInsnMapEntry(Target.getName().upper(), Info, MI, UseMI, CGI, InsnMap,
                       InsnNum);
 
     ++InsnNum;
