@@ -70,7 +70,7 @@ jobs:
         if [[ "${{ env.branch_exists }}" = true ]]; then
           git pull origin ${{ env.branch_version }}
           git push -u origin ${{ env.branch_version }}
-          rm -rf !(.git|.github)
+          rm -rf !\(.git\|.github\)
         fi
         cp -r ./llvm-project/* .
         git add .
