@@ -45,13 +45,12 @@ jobs:
       with:
         repository: 'llvm/llvm-project'
         ref: ${{ env.branch_version }}
+        fetch-depth: 1
 
     - name: Sparse checkout LLVM-project
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
-        branch_exists=$(git ls-remote --exit-code --heads llvm-capstone $branch_version)
-        echo "branch_exists=${branch_exists}" >> $GITHUB_ENV
         echo "sparse checkout"
         git sparse-checkout init --cone
         git sparse-checkout set llvm/ cmake/ third-party/
@@ -60,9 +59,13 @@ jobs:
 
     - name: Checkout LLVM-project ${{ env.branch_version }}
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 1
 
     - name: Add files
       run: |
+        branch_exists=$(git ls-remote --exit-code --heads origin $branch_version)
+        echo "branch_exists=${branch_exists}" >> $GITHUB_ENV
         git checkout ${{ env.branch_version }} 2>/dev/null || git checkout -b ${{ env.branch_version }}
         git branch --set-upstream-to=origin/${{ env.branch_version }} ${{ env.branch_version }}
         rm -rf !(.git|.github)
