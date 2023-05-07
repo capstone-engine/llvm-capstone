@@ -73,7 +73,7 @@ jobs:
         fi
 
     - name: Commit new branch ${{ env.branch_version }}
-      if: ! ${{ env.branch_exists }}
+      if: ${{ ! env.branch_exists }}
       run: |
         git commit -m "Add LLVM ${{ env.branch_version }}"
 
