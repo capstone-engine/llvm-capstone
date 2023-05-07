@@ -1,0 +1,35 @@
+name: LLVM-Tblgen-Build
+on:
+  workflow_dispatch:
+  push:
+    paths-ignore:
+      - "CONTRIBUTING.md"
+      - "README.md"
+      - "LICENSE.TXT"
+      - "SECURITY.md"
+    branches: 
+      - auto-sync*
+      - release/**
+  pull_request:
+    paths-ignore:
+      - "CONTRIBUTING.md"
+      - "README.md"
+      - "LICENSE.TXT"
+      - "SECURITY.md"
+    branches: 
+      - auto-sync*
+      - release/**
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout llvm-capstone
+        uses: actions/checkout@v3
+
+      - name: Build llvm tblgen
+        run: |
+          mkdir build
+          cd build
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug ../llvm
+          cmake --build . --target llvm-tblgen --config Debug

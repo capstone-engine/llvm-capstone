@@ -44,7 +44,7 @@ jobs:
       run: |
         cd ..; git clone --depth 1 --filter=blob:none --sparse --branch ${{env.branch_version}} https://github.com/llvm/llvm-project.git
         cd llvm-project
-        git sparse-checkout set llvm/
+        git sparse-checkout set llvm/ cmake/ third-party/
 
     - name: Checkout llvm-capstone
       uses: actions/checkout@v3
