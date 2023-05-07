@@ -62,39 +62,43 @@ jobs:
       with:
         fetch-depth: 1
 
-    - name: Add files to branch ${{ env.branch_version }}
-      run: |
-        branch_exists=$(git ls-remote --exit-code --heads origin ${{env.branch_version}})
-        echo "branch_exists=${branch_exists}" >> $GITHUB_ENV
-        git checkout ${{ env.branch_version }} 2>/dev/null || git checkout -b ${{ env.branch_version }}
-        if [[ "${{ env.branch_exists }}" = true ]]; then
-          git pull origin ${{ env.branch_version }}
-          git push -u origin ${{ env.branch_version }}
-          rm -rf !\(.git\|.github\)
-        fi
-        ls -la
-        pwd
-        ls ..
-        cp -r ../llvm-project/* .
-        git add .
+    - name: Debugging with tmate
+      uses: mxschmitt/action-tmate@v3.14
 
-    - name: Update branch ${{ env.branch_version }}
-      if: ${{ env.branch_exists }}
-      run: |
-        echo "Branch already exists, update."
-        if [[ `git status --porcelain` ]]; then
-          git commit -m "Update LLVM ${{ env.branch_version }}"
-        else
-          echo "No changes to commit."
-          exit 0
-        fi
 
-    - name: Commit new branch ${{ env.branch_version }}
-      if: ${{ ! env.branch_exists }}
-      run: |
-        git commit -m "Add LLVM ${{ env.branch_version }}"
+#     - name: Add files to branch ${{ env.branch_version }}
+#       run: |
+#         branch_exists=$(git ls-remote --exit-code --heads origin ${{env.branch_version}})
+#         echo "branch_exists=${branch_exists}" >> $GITHUB_ENV
+#         git checkout ${{ env.branch_version }} 2>/dev/null || git checkout -b ${{ env.branch_version }}
+#         if [[ "${{ env.branch_exists }}" = true ]]; then
+#           git pull origin ${{ env.branch_version }}
+#           git push -u origin ${{ env.branch_version }}
+#           rm -rf !\(.git\|.github\)
+#         fi
+#         ls -la
+#         pwd
+#         ls ..
+#         cp -r ../llvm-project/* .
+#         git add .
 
-    - name: Push new branch
-      run: |
-        git push origin ${{ env.branch_version }}
+#     - name: Update branch ${{ env.branch_version }}
+#       if: ${{ env.branch_exists }}
+#       run: |
+#         echo "Branch already exists, update."
+#         if [[ `git status --porcelain` ]]; then
+#           git commit -m "Update LLVM ${{ env.branch_version }}"
+#         else
+#           echo "No changes to commit."
+#           exit 0
+#         fi
+
+#     - name: Commit new branch ${{ env.branch_version }}
+#       if: ${{ ! env.branch_exists }}
+#       run: |
+#         git commit -m "Add LLVM ${{ env.branch_version }}"
+
+#     - name: Push new branch
+#       run: |
+#         git push origin ${{ env.branch_version }}
 
