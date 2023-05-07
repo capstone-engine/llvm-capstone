@@ -40,27 +40,20 @@ jobs:
           exit 0
         fi
 
-    - name: Checkout LLVM-project ${{ env.branch_version }}
-      uses: actions/checkout@v3
-      with:
-        repository: 'llvm/llvm-project'
-        ref: ${{ env.branch_version }}
-        fetch-depth: 1
-
-    - name: Sparse checkout LLVM-project
-      run: |
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git config --local user.name "github-actions[bot]"
-        echo "sparse checkout"
-        git sparse-checkout init --cone
-        git sparse-checkout set llvm/ cmake/ third-party/
-        rm -rf .git/ .github/
-        ls -la
-
     - name: Checkout LLVM-project
       uses: actions/checkout@v3
       with:
         fetch-depth: 1
+
+    - name: Sparse checkout LLVM-project
+      run: |
+        git clone --depth 1 --filter=blob:none --sparse --branch ${{ env.branch_version }} https://github.com/llvm/llvm-project.git ../llvm-project
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        echo "sparse checkout"
+        git sparse-checkout set llvm/ cmake/ third-party/
+        rm -rf .git/ .github/
+        ls -la
 
     - name: Debugging with tmate
       uses: mxschmitt/action-tmate@v3.14
