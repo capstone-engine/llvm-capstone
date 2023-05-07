@@ -82,6 +82,7 @@ jobs:
     - name: Push new branch
       run: |
         ls -la
+        git config pull.rebase true
         git pull -q --depth 1 llvm-capstone ${{ env.branch_version }}
         git push -u llvm-capstone ${{ env.branch_version }} -f
 
