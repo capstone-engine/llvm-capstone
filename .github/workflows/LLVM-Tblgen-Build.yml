@@ -21,7 +21,7 @@ on:
       - release/**
 
 jobs:
-  build:
+  build-llvm-tblgen:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout llvm-capstone
