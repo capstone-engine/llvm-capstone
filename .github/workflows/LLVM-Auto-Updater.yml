@@ -72,6 +72,7 @@ jobs:
           git push -u origin ${{ env.branch_version }}
           rm -rf !\(.git\|.github\)
         fi
+        ls -la
         cp -r ./llvm-project/* .
         git add .
 
