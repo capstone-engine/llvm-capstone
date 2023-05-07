@@ -54,9 +54,9 @@ jobs:
         branch_exists=$(git ls-remote --exit-code --heads llvm-capstone $branch_version)
         echo "branch_exists=${branch_exists}" >> $GITHUB_ENV
         echo "sparse checkout"
+        rm -rf .github/
         git sparse-checkout init --cone
         git sparse-checkout set llvm/ cmake/ third-party/
-        git rm -rf .github/
         git add *
         ls
 
