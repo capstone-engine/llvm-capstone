@@ -67,7 +67,7 @@ jobs:
         branch_exists=$(git ls-remote --exit-code --heads origin ${{env.branch_version}})
         echo "branch_exists=${branch_exists}" >> $GITHUB_ENV
         git checkout ${{ env.branch_version }} 2>/dev/null || git checkout -b ${{ env.branch_version }}
-        if [[ ${{ env.branch_exists }} = true ]]; then
+        if [[ "${{ env.branch_exists }}" = true ]]; then
           git pull origin ${{ env.branch_version }}
           git push -u origin ${{ env.branch_version }}
           rm -rf !(.git|.github)
