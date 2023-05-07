@@ -45,6 +45,7 @@ jobs:
         cd ..; git clone --depth 1 --filter=blob:none --sparse --branch ${{env.branch_version}} https://github.com/llvm/llvm-project.git
         cd llvm-project
         git sparse-checkout set llvm/ cmake/ third-party/
+        ls
 
     - name: Checkout llvm-capstone
       uses: actions/checkout@v3
@@ -55,10 +56,10 @@ jobs:
         git config --local user.name "github-actions[bot]"
         git checkout ${{ env.branch_version }} 2>/dev/null || git checkout -b ${{ env.branch_version }}
 
-        if git ls-remote --exit-code --heads origin ${{ env.branch_version }}; then
-          git config pull.rebase false
-          git pull origin ${{ env.branch_version }} --allow-unrelated-histories
-        fi
+        # if git ls-remote --exit-code --heads origin ${{ env.branch_version }}; then
+        #   git config pull.rebase false
+        #   git pull origin ${{ env.branch_version }} --allow-unrelated-histories
+        # fi
         
         rm -r ../llvm-project/.git
         cp -r ../llvm-project/* .
@@ -78,5 +79,5 @@ jobs:
 
     - name: Push new branch
       run: |
-        git push origin ${{ env.branch_version }}
+        git push --force-with-lease origin ${{ env.branch_version }}
 
