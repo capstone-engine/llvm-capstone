@@ -1,4 +1,4 @@
-name: Weekly LLVM Release Check
+name: Weekly LLVM Release Update
 on:
   workflow_dispatch:
     inputs:
@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  merge-llvm:
     runs-on: ubuntu-latest
     steps:
     - name: Get LLVM version
@@ -92,4 +92,3 @@ jobs:
     - name: Push new branch
       run: |
         git push origin ${{ env.branch_version }}
-
