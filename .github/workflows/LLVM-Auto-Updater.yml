@@ -57,7 +57,7 @@ jobs:
 
         if git ls-remote --exit-code --heads origin ${{ env.branch_version }}; then
           git config pull.rebase false
-          git pull origin ${{ env.branch_version }}
+          git pull origin ${{ env.branch_version }} --allow-unrelated-histories
         fi
         
         rm -r ../llvm-project/.git
