@@ -40,32 +40,44 @@ jobs:
           exit 0
         fi
 
-    - name: Sparse checkout LLVM-project
-      run: |
-        cd ..; git clone --depth 1 --filter=blob:none --sparse --branch ${{env.branch_version}} https://github.com/llvm/llvm-project.git
-        cd llvm-project
-        git sparse-checkout set llvm/ cmake/ third-party/
-        ls
+    # - name: Sparse checkout LLVM-project
+    #   run: |
+    #     cd ..; git clone --depth 1 --filter=blob:none --sparse --branch ${{env.branch_version}} https://github.com/llvm/llvm-project.git
+    #     cd llvm-project
+    #     git sparse-checkout set llvm/ cmake/ third-party/
+    #     ls
 
-    - name: Checkout llvm-capstone
+    - name: Checkout LLVM-project ${{ env.branch_version }}
       uses: actions/checkout@v3
+      with:
+        repository: llvm/llvm-project
+        path: ../llvm-project
+        ref: ${{ env.branch_version }}
+
+    # - name: Checkout llvm-capstone
+    #   uses: actions/checkout@v3
 
     - name: Commit new branch
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
-        git checkout ${{ env.branch_version }} 2>/dev/null || git checkout -b ${{ env.branch_version }}
+        git remote add llvm-capstone https://github.com/${{ github.repository }}
+        
+        # git checkout ${{ env.branch_version }} # 2>/dev/null || git checkout -b ${{ env.branch_version }}
 
         # if git ls-remote --exit-code --heads origin ${{ env.branch_version }}; then
         #   git config pull.rebase false
         #   git pull origin ${{ env.branch_version }} --allow-unrelated-histories
         # fi
         
-        rm -r ../llvm-project/.git
-        cp -r ../llvm-project/* .
+        # rm -r ../llvm-project/.git
+        # cp -r ../llvm-project/* .
+        git sparse-checkout init --cone
+        git sparse-checkout set llvm/ cmake/ third-party/
         git add *
+        ls
         
-        if git ls-remote --exit-code --heads origin ${{ env.branch_version }}; then
+        if git ls-remote --exit-code --heads llvm-capstone ${{ env.branch_version }}; then
           if [[ `git status --porcelain` ]]; then
             echo "Branch already exists, update."
             git commit -m "Update LLVM ${{ env.branch_version }}"
@@ -79,5 +91,5 @@ jobs:
 
     - name: Push new branch
       run: |
-        git push --force-with-lease origin ${{ env.branch_version }}
+        git push llvm-capstone ${{ env.branch_version }}
 
