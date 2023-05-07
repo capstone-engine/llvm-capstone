@@ -73,7 +73,9 @@ jobs:
           rm -rf !\(.git\|.github\)
         fi
         ls -la
-        cp -r ./llvm-project/* .
+        pwd
+        ls ..
+        cp -r ../llvm-project/* .
         git add .
 
     - name: Update branch ${{ env.branch_version }}
