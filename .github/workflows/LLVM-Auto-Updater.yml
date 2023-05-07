@@ -64,7 +64,7 @@ jobs:
 
     - name: Add files to branch ${{ env.branch_version }}
       run: |
-        branch_exists=$(git ls-remote --exit-code --heads origin $branch_version)
+        branch_exists=$(git ls-remote --exit-code --heads origin ${{env.branch_version}})
         echo "branch_exists=${branch_exists}" >> $GITHUB_ENV
         git checkout ${{ env.branch_version }} 2>/dev/null || git checkout -b ${{ env.branch_version }}
         if [[ ${{ env.branch_exists }} = true ]]; then
