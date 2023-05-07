@@ -65,7 +65,7 @@ jobs:
     #   if: ${{ env.branch_exists }}
     #   run: |
     #     # echo "fetch llvm-capstone ${{ env.branch_version }}"
-    #     # git fetch llvm-capstone ${{ env.branch_version }}
+    #     # git fetch --depth 1 llvm-capstone ${{ env.branch_version }}
     #     if [[ `git status --porcelain` ]]; then
     #       echo "Branch already exists, update."
     #       git commit -m "Update LLVM ${{ env.branch_version }}"
@@ -83,5 +83,5 @@ jobs:
 
     - name: Push new branch
       run: |
-        git push -u llvm-capstone ${{ env.branch_version }}
+        git push -u llvm-capstone ${{ env.branch_version }} -f
 
