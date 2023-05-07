@@ -50,7 +50,6 @@ jobs:
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
-        git remote add llvm-capstone https://github.com/${{ github.repository }}
         branch_exists=$(git ls-remote --exit-code --heads llvm-capstone $branch_version)
         echo "branch_exists=${branch_exists}" >> $GITHUB_ENV
         echo "sparse checkout"
@@ -65,7 +64,7 @@ jobs:
     - name: Add files
       run: |
         git checkout ${{ env.branch_version }} 2>/dev/null || git checkout -b ${{ env.branch_version }}
-        git pull
+        git branch --set-upstream-to=origin/${{ env.branch_version }} ${{ env.branch_version }}
         rm -rf !(.git|.github)
         cp -r ./llvm-project/* .
         git add .
@@ -88,5 +87,5 @@ jobs:
 
     - name: Push new branch
       run: |
-        git push llvm-capstone ${{ env.branch_version }}
+        git push origin ${{ env.branch_version }}
 
