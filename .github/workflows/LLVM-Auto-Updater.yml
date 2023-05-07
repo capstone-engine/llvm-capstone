@@ -1,4 +1,4 @@
-name: Weekly LLVM Release Update
+name: Weekly-LLVM-Release-Update
 on:
   workflow_dispatch:
     inputs:
