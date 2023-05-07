@@ -3,6 +3,7 @@ on:
   workflow_dispatch:
   push:
     paths-ignore:
+      - ".github/workflows/LLVM-Auto-Updater.yml"
       - "CONTRIBUTING.md"
       - "README.md"
       - "LICENSE.TXT"
@@ -12,6 +13,7 @@ on:
       - release/**
   pull_request:
     paths-ignore:
+      - ".github/workflows/LLVM-Auto-Updater.yml"
       - "CONTRIBUTING.md"
       - "README.md"
       - "LICENSE.TXT"
