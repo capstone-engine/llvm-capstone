@@ -58,13 +58,14 @@ jobs:
         git sparse-checkout init --cone
         git sparse-checkout set llvm/ cmake/ third-party/
         git add *
-        ls
+        git status
+        ls -la
 
     - name: Update branch ${{ env.branch_version }}
       if: ${{ env.branch_exists }}
       run: |
-        echo "fetch llvm-capstone ${{ env.branch_version }}"
-        git fetch llvm-capstone ${{ env.branch_version }}
+        # echo "fetch llvm-capstone ${{ env.branch_version }}"
+        # git fetch llvm-capstone ${{ env.branch_version }}
         if [[ `git status --porcelain` ]]; then
           echo "Branch already exists, update."
           git commit -m "Update LLVM ${{ env.branch_version }}"
@@ -73,14 +74,14 @@ jobs:
           exit 0
         fi
 
-    - name: Commit new branch ${{ env.branch_version }}
-      if: ${{ ! env.branch_exists }}
-      run: |
-        echo "fetch llvm-capstone"
-        git fetch llvm-capstone 
-        git commit -m "Add LLVM ${{ env.branch_version }}"
+    # - name: Commit new branch ${{ env.branch_version }}
+    #   if: ${{ ! env.branch_exists }}
+    #   run: |
+    #     echo "fetch llvm-capstone"
+    #     git fetch llvm-capstone 
+    #     git commit -m "Add LLVM ${{ env.branch_version }}"
 
-    - name: Push new branch
-      run: |
-        git push llvm-capstone ${{ env.branch_version }} --force
+    # - name: Push new branch
+    #   run: |
+    #     git push llvm-capstone ${{ env.branch_version }} --force
 
