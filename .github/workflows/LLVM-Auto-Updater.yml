@@ -33,8 +33,6 @@ jobs:
         echo "branch_version=${branch_version}" >> $GITHUB_ENV
         is_official_release=$(curl -sL https://api.github.com/repos/llvm/llvm-project/releases/latest | jq -r '.prerelease')
         echo "is_official_release=${is_official_release}" >> $GITHUB_ENV
-        branch_exists=$(git ls-remote --exit-code --heads llvm-capstone $branch_version)
-        echo "branch_exists=${branch_exists}" >> $GITHUB_ENV
 
     - name: Ensure official release
       run: |
@@ -53,6 +51,8 @@ jobs:
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
         git remote add llvm-capstone https://github.com/${{ github.repository }}
+        branch_exists=$(git ls-remote --exit-code --heads llvm-capstone $branch_version)
+        echo "branch_exists=${branch_exists}" >> $GITHUB_ENV
         echo "fetch llvm-capstone"
         git fetch llvm-capstone 
         echo "sparse checkout"
