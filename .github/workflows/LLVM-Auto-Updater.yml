@@ -50,30 +50,31 @@ jobs:
         git clone --depth 1 --filter=blob:none --sparse --branch ${{ env.branch_version }} https://github.com/llvm/llvm-project.git ../llvm-project
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
+        cd ../llvm-project
         echo "sparse checkout"
         git sparse-checkout set llvm/ cmake/ third-party/
         rm -rf .git/ .github/
         ls -la
+        cd -
+
+    - name: Add files to branch ${{ env.branch_version }}
+      run: |
+        branch_exists=$(git ls-remote --exit-code --heads origin ${{env.branch_version}})
+        echo "branch_exists=${branch_exists}" >> $GITHUB_ENV
+        git checkout ${{ env.branch_version }} 2>/dev/null || git checkout -b ${{ env.branch_version }}
+        if [[ "${{ env.branch_exists }}" = true ]]; then
+          git pull origin ${{ env.branch_version }}
+          git push -u origin ${{ env.branch_version }}
+          rm -rf !\(.git\|.github\)
+        fi
+        ls -la
+        pwd
+        ls ..
+        cp -r ../llvm-project/* .
+        git add .
 
     - name: Debugging with tmate
       uses: mxschmitt/action-tmate@v3.14
-
-
-#     - name: Add files to branch ${{ env.branch_version }}
-#       run: |
-#         branch_exists=$(git ls-remote --exit-code --heads origin ${{env.branch_version}})
-#         echo "branch_exists=${branch_exists}" >> $GITHUB_ENV
-#         git checkout ${{ env.branch_version }} 2>/dev/null || git checkout -b ${{ env.branch_version }}
-#         if [[ "${{ env.branch_exists }}" = true ]]; then
-#           git pull origin ${{ env.branch_version }}
-#           git push -u origin ${{ env.branch_version }}
-#           rm -rf !\(.git\|.github\)
-#         fi
-#         ls -la
-#         pwd
-#         ls ..
-#         cp -r ../llvm-project/* .
-#         git add .
 
 #     - name: Update branch ${{ env.branch_version }}
 #       if: ${{ env.branch_exists }}
