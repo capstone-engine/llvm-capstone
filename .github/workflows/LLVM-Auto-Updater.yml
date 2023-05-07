@@ -73,26 +73,23 @@ jobs:
         cp -r ../llvm-project/* .
         git add .
 
-    - name: Debugging with tmate
-      uses: mxschmitt/action-tmate@v3.14
+    - name: Update branch ${{ env.branch_version }}
+      if: ${{ env.branch_exists }}
+      run: |
+        echo "Branch already exists, update."
+        if [[ `git status --porcelain` ]]; then
+          git commit -m "Update LLVM ${{ env.branch_version }}"
+        else
+          echo "No changes to commit."
+          exit 0
+        fi
 
-#     - name: Update branch ${{ env.branch_version }}
-#       if: ${{ env.branch_exists }}
-#       run: |
-#         echo "Branch already exists, update."
-#         if [[ `git status --porcelain` ]]; then
-#           git commit -m "Update LLVM ${{ env.branch_version }}"
-#         else
-#           echo "No changes to commit."
-#           exit 0
-#         fi
+    - name: Commit new branch ${{ env.branch_version }}
+      if: ${{ ! env.branch_exists }}
+      run: |
+        git commit -m "Add LLVM ${{ env.branch_version }}"
 
-#     - name: Commit new branch ${{ env.branch_version }}
-#       if: ${{ ! env.branch_exists }}
-#       run: |
-#         git commit -m "Add LLVM ${{ env.branch_version }}"
-
-#     - name: Push new branch
-#       run: |
-#         git push origin ${{ env.branch_version }}
+    - name: Push new branch
+      run: |
+        git push origin ${{ env.branch_version }}
 
