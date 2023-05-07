@@ -57,17 +57,17 @@ jobs:
         rm -rf .git/ .github/
         ls -la
 
-    - name: Checkout LLVM-project ${{ env.branch_version }}
+    - name: Checkout LLVM-project
       uses: actions/checkout@v3
       with:
         fetch-depth: 1
 
-    - name: Add files
+    - name: Add files to branch ${{ env.branch_version }}
       run: |
         branch_exists=$(git ls-remote --exit-code --heads origin $branch_version)
         echo "branch_exists=${branch_exists}" >> $GITHUB_ENV
         git checkout ${{ env.branch_version }} 2>/dev/null || git checkout -b ${{ env.branch_version }}
-        git branch --set-upstream-to=origin/${{ env.branch_version }} ${{ env.branch_version }}
+        git push -u origin ${{ env.branch_version }}
         rm -rf !(.git|.github)
         cp -r ./llvm-project/* .
         git add .
