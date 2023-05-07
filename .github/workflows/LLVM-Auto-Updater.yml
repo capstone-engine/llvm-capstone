@@ -57,8 +57,6 @@ jobs:
         echo "sparse checkout"
         git sparse-checkout init --cone
         git sparse-checkout set llvm/ cmake/ third-party/
-        # git add *
-        # git status
         ls -la
 
     - name: Update branch ${{ env.branch_version }}
