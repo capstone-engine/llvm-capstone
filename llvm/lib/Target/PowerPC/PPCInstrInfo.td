@@ -5160,3 +5160,8 @@ def : Pat<(int_ppc_dcbtt ForceXForm:$dst),
 
 def : Pat<(int_ppc_stfiw ForceXForm:$dst, f64:$XT),
           (STFIWX f64:$XT, ForceXForm:$dst)>;
+
+#define CAPSTONE_DEPR_INTRINSICS
+include "PPCDeprecated.td"
+#define CAPSTONE_DEPR_INSTR
+include "PPCDeprecated.td"

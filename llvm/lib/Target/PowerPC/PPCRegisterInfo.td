@@ -1060,3 +1060,6 @@ def PPCRegDMRpRCAsmOperand : AsmOperandClass {
 def dmrp : RegisterOperand<DMRpRC> {
   let ParserMatchClass = PPCRegDMRpRCAsmOperand;
 }
+
+#define CAPSTONE_DEPR_REGS
+include "PPCDeprecated.td"
