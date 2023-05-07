@@ -101,6 +101,8 @@ jobs:
     env:
       branch_version: ${{ needs.merge-llvm.outputs.branch_version }}
     steps:
+      - uses: lukka/get-cmake@latest
+      
       - name: Checkout llvm-capstone
         uses: actions/checkout@v3
         with:
