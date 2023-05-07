@@ -46,15 +46,13 @@ jobs:
         repository: 'llvm/llvm-project'
         ref: ${{ env.branch_version }}
 
-    - name: Commit new branch
+    - name: Sparse checkout LLVM-project
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
         git remote add llvm-capstone https://github.com/${{ github.repository }}
         branch_exists=$(git ls-remote --exit-code --heads llvm-capstone $branch_version)
         echo "branch_exists=${branch_exists}" >> $GITHUB_ENV
-        echo "fetch llvm-capstone"
-        git fetch llvm-capstone 
         echo "sparse checkout"
         git sparse-checkout init --cone
         git sparse-checkout set llvm/ cmake/ third-party/
@@ -64,6 +62,8 @@ jobs:
     - name: Update branch ${{ env.branch_version }}
       if: ${{ env.branch_exists }}
       run: |
+        echo "fetch llvm-capstone ${{ env.branch_version }}"
+        git fetch llvm-capstone ${{ env.branch_version }}
         if [[ `git status --porcelain` ]]; then
           echo "Branch already exists, update."
           git commit -m "Update LLVM ${{ env.branch_version }}"
@@ -75,6 +75,8 @@ jobs:
     - name: Commit new branch ${{ env.branch_version }}
       if: ${{ ! env.branch_exists }}
       run: |
+        echo "fetch llvm-capstone"
+        git fetch llvm-capstone 
         git commit -m "Add LLVM ${{ env.branch_version }}"
 
     - name: Push new branch
