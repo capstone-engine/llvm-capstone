@@ -50,8 +50,7 @@ jobs:
     - name: Checkout LLVM-project ${{ env.branch_version }}
       uses: actions/checkout@v3
       with:
-        repository: llvm/llvm-project
-        path: ../llvm-project
+        repository: 'llvm/llvm-project'
         ref: ${{ env.branch_version }}
 
     # - name: Checkout llvm-capstone
