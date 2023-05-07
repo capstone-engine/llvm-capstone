@@ -69,7 +69,6 @@ jobs:
         if [[ "${{ env.branch_exists }}" = true ]]; then
           git pull origin ${{ env.branch_version }}
           git push -u origin ${{ env.branch_version }}
-          git pull
           rm -rf !\(.git\|.github\)
         fi
         cp -r ../llvm-project/* .
@@ -92,27 +91,24 @@ jobs:
       run: |
         git commit -m "Add LLVM ${{ env.branch_version }}"
 
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
+    - name: Push new branch
+      run: |
+        git push origin ${{ env.branch_version }} -f
 
-#     - name: Push new branch
-#       run: |
-#         git push origin ${{ env.branch_version }}
+  build-llvm-tblgen:
+    runs-on: ubuntu-latest
+    needs: merge-llvm
+    env:
+      branch_version: ${{ needs.merge-llvm.outputs.branch_version }}
+    steps:
+      - name: Checkout llvm-capstone
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ env.branch_version }}
 
-#   build-llvm-tblgen:
-#     runs-on: ubuntu-latest
-#     needs: merge-llvm
-#     env:
-#       branch_version: ${{ needs.merge-llvm.outputs.branch_version }}
-#     steps:
-#       - name: Checkout llvm-capstone
-#         uses: actions/checkout@v3
-#         with:
-#           ref: ${{ env.branch_version }}
-
-#       - name: Build llvm tblgen
-#         run: |
-#           mkdir build
-#           cd build
-#           cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug ../llvm
-#           cmake --build . --target llvm-tblgen --config Debug
+      - name: Build llvm tblgen
+        run: |
+          mkdir build
+          cd build
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug ../llvm
+          cmake --build . --target llvm-tblgen --config Debug
