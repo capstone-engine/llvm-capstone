@@ -56,33 +56,37 @@ jobs:
         echo "sparse checkout"
         git sparse-checkout init --cone
         git sparse-checkout set llvm/ cmake/ third-party/
+        rm -rf .git/ .github/
         ls -la
 
-    # - name: Update branch ${{ env.branch_version }}
-    #   if: ${{ env.branch_exists }}
-    #   run: |
-    #     echo "Branch already exists, update."
-    #     echo "pull llvm-capstone ${{ env.branch_version }}"
-    #     git pull -q --depth 1 llvm-capstone ${{ env.branch_version }}
-    #     # if [[ `git status --porcelain` ]]; then
-    #     #   git commit -m "Update LLVM ${{ env.branch_version }}"
-    #     # else
-    #     #   echo "No changes to commit."
-    #     #   exit 0
-    #     # fi
+    - name: Checkout LLVM-project ${{ env.branch_version }}
+      uses: actions/checkout@v3
 
-    # - name: Commit new branch ${{ env.branch_version }}
-    #   if: ${{ ! env.branch_exists }}
-    #   run: |
-    #     echo "pull llvm-capstone"
-    #     git pull --depth 1 llvm-capstone 
-    #     # git commit -m "Add LLVM ${{ env.branch_version }}"
+    - name: Add files
+      run: |
+        git checkout ${{ env.branch_version }} 2>/dev/null || git checkout -b ${{ env.branch_version }}
+        git pull
+        rm -rf !(.git|.github)
+        cp -r ./llvm-project/* .
+        git add .
+
+    - name: Update branch ${{ env.branch_version }}
+      if: ${{ env.branch_exists }}
+      run: |
+        echo "Branch already exists, update."
+        if [[ `git status --porcelain` ]]; then
+          git commit -m "Update LLVM ${{ env.branch_version }}"
+        else
+          echo "No changes to commit."
+          exit 0
+        fi
+
+    - name: Commit new branch ${{ env.branch_version }}
+      if: ${{ ! env.branch_exists }}
+      run: |
+        git commit -m "Add LLVM ${{ env.branch_version }}"
 
     - name: Push new branch
       run: |
-        ls -la
-        git stash
-        git pull --rebase -q --depth 1 llvm-capstone ${{ env.branch_version }}
-        git rm -rf .github/ 
-        git push -u llvm-capstone ${{ env.branch_version }} -f
+        git push llvm-capstone ${{ env.branch_version }}
 
