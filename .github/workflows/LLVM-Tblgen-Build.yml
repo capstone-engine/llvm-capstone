@@ -26,6 +26,8 @@ jobs:
   build-llvm-tblgen:
     runs-on: ubuntu-latest
     steps:
+      - uses: lukka/get-cmake@latest
+      
       - name: Checkout llvm-capstone
         uses: actions/checkout@v3
 
