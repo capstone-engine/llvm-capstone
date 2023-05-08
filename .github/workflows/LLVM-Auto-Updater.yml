@@ -1,4 +1,4 @@
-name: Weekly LLVM Release Check
+name: Weekly-LLVM-Release-Update
 on:
   workflow_dispatch:
     inputs:
@@ -12,10 +12,13 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  merge-llvm:
     runs-on: ubuntu-latest
+    outputs:
+      branch_version: ${{ steps.step1.outputs.branch_version }}
     steps:
     - name: Get LLVM version
+      id: step1
       run: |
         if [[ -z $github_event_inputs_tag_name ]]; then
           tag_name=$(curl -sL https://api.github.com/repos/llvm/llvm-project/releases/latest | jq -r '.tag_name')
@@ -33,6 +36,7 @@ jobs:
         echo "branch_version=${branch_version}" >> $GITHUB_ENV
         is_official_release=$(curl -sL https://api.github.com/repos/llvm/llvm-project/releases/latest | jq -r '.prerelease')
         echo "is_official_release=${is_official_release}" >> $GITHUB_ENV
+        echo "::set-output name=branch_version::${branch_version}"
 
     - name: Ensure official release
       run: |
@@ -40,43 +44,73 @@ jobs:
           exit 0
         fi
 
+    - name: Checkout LLVM-project
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 1
+
     - name: Sparse checkout LLVM-project
       run: |
-        cd ..; git clone --depth 1 --filter=blob:none --sparse --branch ${{env.branch_version}} https://github.com/llvm/llvm-project.git
-        cd llvm-project
-        git sparse-checkout set llvm/
-
-    - name: Checkout llvm-capstone
-      uses: actions/checkout@v3
-
-    - name: Commit new branch
-      run: |
+        git clone --depth 1 --filter=blob:none --sparse --branch ${{ env.branch_version }} https://github.com/llvm/llvm-project.git ../llvm-project
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
-        git checkout ${{ env.branch_version }} 2>/dev/null || git checkout -b ${{ env.branch_version }}
+        cd ../llvm-project
+        echo "sparse checkout"
+        git sparse-checkout set llvm/ cmake/ third-party/
+        rm -rf .git/ .github/
+        ls -la
+        cd -
 
-        if git ls-remote --exit-code --heads origin ${{ env.branch_version }}; then
-          git config pull.rebase false
+    - name: Add files to branch ${{ env.branch_version }}
+      run: |
+        branch_exists=$(git ls-remote --exit-code --heads origin ${{env.branch_version}})
+        echo "branch_exists=${branch_exists}" >> $GITHUB_ENV
+        git checkout ${{ env.branch_version }} 2>/dev/null || git checkout -b ${{ env.branch_version }}
+        if [[ "${{ env.branch_exists }}" = true ]]; then
           git pull origin ${{ env.branch_version }}
+          git push -u origin ${{ env.branch_version }}
+          rm -rf !\(.git\|.github\)
         fi
-        
-        rm -r ../llvm-project/.git
         cp -r ../llvm-project/* .
-        git add *
-        
-        if git ls-remote --exit-code --heads origin ${{ env.branch_version }}; then
-          if [[ `git status --porcelain` ]]; then
-            echo "Branch already exists, update."
-            git commit -m "Update LLVM ${{ env.branch_version }}"
-          else
-            echo "No changes to commit."
-            exit 0
-          fi
+        ls -la
+        git add .
+
+    - name: Update branch ${{ env.branch_version }}
+      if: ${{ env.branch_exists }}
+      run: |
+        echo "Branch already exists, update."
+        if [[ `git status --porcelain` ]]; then
+          git commit -m "Update LLVM ${{ env.branch_version }}"
         else
-          git commit -m "Add LLVM ${{ env.branch_version }}"
+          echo "No changes to commit."
+          exit 0
         fi
+
+    - name: Commit new branch ${{ env.branch_version }}
+      if: ${{ ! env.branch_exists }}
+      run: |
+        git commit -m "Add LLVM ${{ env.branch_version }}"
 
     - name: Push new branch
       run: |
-        git push origin ${{ env.branch_version }}
+        git push origin ${{ env.branch_version }} -f
 
+  build-llvm-tblgen:
+    runs-on: ubuntu-latest
+    needs: merge-llvm
+    env:
+      branch_version: ${{ needs.merge-llvm.outputs.branch_version }}
+    steps:
+      - uses: lukka/get-cmake@latest
+      
+      - name: Checkout llvm-capstone
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ env.branch_version }}
+
+      - name: Build llvm tblgen
+        run: |
+          mkdir build
+          cd build
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug ../llvm
+          cmake --build . --target llvm-tblgen --config Debug
