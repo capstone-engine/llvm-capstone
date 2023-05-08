@@ -10,7 +10,6 @@ on:
       - "SECURITY.md"
     branches: 
       - auto-sync*
-      - release/**
   pull_request:
     paths-ignore:
       - ".github/workflows/LLVM-Auto-Updater.yml"
