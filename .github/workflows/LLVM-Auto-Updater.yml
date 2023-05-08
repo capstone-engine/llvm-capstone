@@ -36,7 +36,7 @@ jobs:
         echo "branch_version=${branch_version}" >> $GITHUB_ENV
         is_official_release=$(curl -sL https://api.github.com/repos/llvm/llvm-project/releases/latest | jq -r '.prerelease')
         echo "is_official_release=${is_official_release}" >> $GITHUB_ENV
-        echo "::set-output name=branch_version::${branch_version}"
+        echo "branch_version=${branch_version}" >> $GITHUB_OUTPUT
 
     - name: Ensure official release
       run: |
