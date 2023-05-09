@@ -2335,6 +2335,8 @@ static inline std::string normalizedMnemonic(StringRef const &Mn,
                                              const bool Upper = true) {
   auto Mnemonic = Upper ? Mn.upper() : Mn.str();
   std::replace(Mnemonic.begin(), Mnemonic.end(), '.', '_');
+  std::replace(Mnemonic.begin(), Mnemonic.end(), '+', 'p');
+  std::replace(Mnemonic.begin(), Mnemonic.end(), '-', 'm');
   Mnemonic = StringRef(Regex("[{}]").sub("", Mnemonic));
   return Mnemonic;
 }
