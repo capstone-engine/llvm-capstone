@@ -351,6 +351,21 @@ void PrinterCapstone::regInfoEmitMCRegClassesTable(
 void PrinterCapstone::regInfoEmitRegEncodingTable(
     std::string const TargetName,
     std::deque<CodeGenRegister> const &Regs) const {
+  OS << "const uint16_t " << TargetName;
+  OS << "RegEncodingTable[] = {\n";
+  // Add entry for NoRegister
+  OS << "  0,\n";
+  for (const auto &RE : Regs) {
+    Record *Reg = RE.TheDef;
+    BitsInit *BI = Reg->getValueAsBitsInit("HWEncoding");
+    uint64_t Value = 0;
+    for (unsigned I = 0, Ie = BI->getNumBits(); I != Ie; ++I) {
+      if (BitInit *B = dyn_cast<BitInit>(BI->getBit(I)))
+        Value |= (uint64_t)B->getValue() << I;
+    }
+    OS << "  " << Value << ",\n";
+  }
+  OS << "};\n"; // End of HW encoding table
   return;
 }
 
