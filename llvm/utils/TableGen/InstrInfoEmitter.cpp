@@ -584,8 +584,8 @@ void InstrInfoEmitter::run() {
     Target.getInstructionsByEnumValue();
 
   SequenceToOffsetTable<std::string> InstrNames;
-  // CAPSTONE: Do not reverse NumberedInstructions
-  // Our we access it via opcode. It must be ascending for this.
+  // CAPSTONE: Do not reverse NumberedInstructions.
+  // We access them via the opcode. They must ascend for this.
   unsigned Num = 0;
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
     // Keep a list of the instruction names.
