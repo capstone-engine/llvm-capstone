@@ -174,7 +174,8 @@ let FastIselShouldIgnore = 1 in // FastIsel should ignore all u12 instrs.
 //===----------------------------------------------------------------------===//
 // Instruction Definitions.
 
-def HasQPX : Predicate<"Subtarget->hasQPX()">;
+def HasQPX : Predicate<"Subtarget->hasQPX()">,
+  AssemblerPredicate<(all_of FeatureQPX), "">;
 let Predicates = [HasQPX] in {
 let DecoderNamespace = "QPX" in {
 let hasSideEffects = 0 in { // QPX instructions don't have side effects.

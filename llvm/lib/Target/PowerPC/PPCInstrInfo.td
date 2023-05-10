@@ -697,39 +697,66 @@ def PDForm : ComplexPattern<iPTR, 2, "SelectPDForm",   [], [SDNPWantParent]>;
 
 //===----------------------------------------------------------------------===//
 // PowerPC Instruction Predicate Definitions.
-def In32BitMode  : Predicate<"!Subtarget->isPPC64()">;
-def In64BitMode  : Predicate<"Subtarget->isPPC64()">;
-def IsBookE  : Predicate<"Subtarget->isBookE()">;
-def IsNotBookE  : Predicate<"!Subtarget->isBookE()">;
-def HasOnlyMSYNC : Predicate<"Subtarget->hasOnlyMSYNC()">;
-def HasSYNC   : Predicate<"!Subtarget->hasOnlyMSYNC()">;
-def IsPPC4xx  : Predicate<"Subtarget->isPPC4xx()">;
-def IsPPC6xx  : Predicate<"Subtarget->isPPC6xx()">;
-def IsE500  : Predicate<"Subtarget->isE500()">;
-def HasSPE  : Predicate<"Subtarget->hasSPE()">;
-def HasICBT : Predicate<"Subtarget->hasICBT()">;
-def HasPartwordAtomics : Predicate<"Subtarget->hasPartwordAtomics()">;
-def HasQuadwordAtomics : Predicate<"Subtarget->hasQuadwordAtomics()">;
+def In32BitMode  : Predicate<"!Subtarget->isPPC64()">,
+  AssemblerPredicate<(all_of (not Feature64Bit)), "64bit">;
+def In64BitMode  : Predicate<"Subtarget->isPPC64()">,
+  AssemblerPredicate<(all_of Feature64Bit), "64bit">;
+def IsBookE  : Predicate<"Subtarget->isBookE()">,
+  AssemblerPredicate<(all_of FeatureBookE), "booke">;
+def IsNotBookE  : Predicate<"!Subtarget->isBookE()">,
+  AssemblerPredicate<(all_of (not FeatureBookE)), "notbooke">;
+def HasOnlyMSYNC : Predicate<"Subtarget->hasOnlyMSYNC()">,
+  AssemblerPredicate<(all_of FeatureMSYNC), "msync">;
+def HasSYNC   : Predicate<"!Subtarget->hasOnlyMSYNC()">,
+  AssemblerPredicate<(all_of (not FeatureMSYNC)), "sync">;
+def IsPPC4xx  : Predicate<"Subtarget->isPPC4xx()">,
+  AssemblerPredicate<(all_of FeaturePPC4xx), "ppc4xx">;
+def IsPPC6xx  : Predicate<"Subtarget->isPPC6xx()">,
+  AssemblerPredicate<(all_of FeaturePPC6xx), "ppc6xx">;
+def IsE500  : Predicate<"Subtarget->isE500()">,
+  AssemblerPredicate<(all_of FeatureE500), "e500">;
+def HasSPE  : Predicate<"Subtarget->hasSPE()">,
+  AssemblerPredicate<(all_of FeatureSPE), "spe">;
+def HasICBT : Predicate<"Subtarget->hasICBT()">,
+  AssemblerPredicate<(all_of FeatureICBT), "icbt">;
+def HasPartwordAtomics : Predicate<"Subtarget->hasPartwordAtomics()">,
+  AssemblerPredicate<(all_of FeaturePartwordAtomic), "partwordatomic">;
+def HasQuadwordAtomics : Predicate<"Subtarget->hasQuadwordAtomics()">,
+  AssemblerPredicate<(all_of FeatureQuadwordAtomic), "quadwordatomic">;
 def NoNaNsFPMath
-    : Predicate<"Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
+    : Predicate<"Subtarget->getTargetMachine().Options.NoNaNsFPMath">,
+  AssemblerPredicate<(all_of (not FeatureFPU)), "notfpu">;
 def NaNsFPMath
-    : Predicate<"!Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
-def HasBPERMD : Predicate<"Subtarget->hasBPERMD()">;
-def HasExtDiv : Predicate<"Subtarget->hasExtDiv()">;
-def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">;
-def IsISA2_07 : Predicate<"Subtarget->isISA2_07()">;
-def IsISA3_0 : Predicate<"Subtarget->isISA3_0()">;
-def HasFPU : Predicate<"Subtarget->hasFPU()">;
-def PCRelativeMemops : Predicate<"Subtarget->hasPCRelativeMemops()">;
-def IsNotISA3_1 : Predicate<"!Subtarget->isISA3_1()">;
+    : Predicate<"!Subtarget->getTargetMachine().Options.NoNaNsFPMath">,
+  AssemblerPredicate<(all_of FeatureFPU), "fpu">;
+def HasBPERMD : Predicate<"Subtarget->hasBPERMD()">,
+  AssemblerPredicate<(all_of FeatureBPERMD), "bpermd">;
+def HasExtDiv : Predicate<"Subtarget->hasExtDiv()">,
+  AssemblerPredicate<(all_of FeatureFPU), "fpu">;
+def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">,
+  AssemblerPredicate<(all_of FeatureBPERMD), "bpermd">;
+def IsISA2_07 : Predicate<"Subtarget->isISA2_07()">,
+  AssemblerPredicate<(all_of FeatureExtDiv), "extdiv">;
+def IsISA3_0 : Predicate<"Subtarget->isISA3_0()">,
+  AssemblerPredicate<(all_of FeatureISA2_06), "isa2_06">;
+def HasFPU : Predicate<"Subtarget->hasFPU()">,
+  AssemblerPredicate<(all_of FeatureISA2_07), "isa2_07">;
+def PCRelativeMemops : Predicate<"Subtarget->hasPCRelativeMemops()">,
+  AssemblerPredicate<(all_of FeatureISA3_0), "isa3_0">;
+def IsNotISA3_1 : Predicate<"!Subtarget->isISA3_1()">,
+  AssemblerPredicate<(all_of (not FeatureISA3_1)), "notisa3_1">;
 
 // AIX assembler may not be modern enough to support some extended mne.
-def ModernAs: Predicate<"!Subtarget->isAIXABI() || Subtarget->HasModernAIXAs">, 
+def ModernAs: Predicate<"!Subtarget->isAIXABI() || Subtarget->HasModernAIXAs">,
                  AssemblerPredicate<(any_of (not AIXOS), FeatureModernAIXAs)>;
-def IsAIX : Predicate<"Subtarget->isAIXABI()">;
-def NotAIX : Predicate<"!Subtarget->isAIXABI()">;
-def IsISAFuture : Predicate<"Subtarget->isISAFuture()">;
-def IsNotISAFuture : Predicate<"!Subtarget->isISAFuture()">;
+def IsAIX : Predicate<"Subtarget->isAIXABI()">,
+  AssemblerPredicate<(all_of AIXOS), "aix">;
+def NotAIX : Predicate<"!Subtarget->isAIXABI()">,
+  AssemblerPredicate<(all_of (not AIXOS)), "notaix">;
+def IsISAFuture : Predicate<"Subtarget->isISAFuture()">,
+  AssemblerPredicate<(all_of FeatureISAFuture), "isafuture">;
+def IsNotISAFuture : Predicate<"!Subtarget->isISAFuture()">,
+  AssemblerPredicate<(all_of (not FeatureISAFuture)), "notisafuture">;
 
 //===----------------------------------------------------------------------===//
 // PowerPC Multiclass Definitions.
