@@ -2441,11 +2441,11 @@ std::string getPrimaryCSOperandType(Record const *OpRec) {
   if (OpRec->isSubClassOf("PredicateOperand"))
     return "CS_OP_PRED";
 
-  if (OpRec->isSubClassOf("Operand") || OpRec->isSubClassOf("RegisterOperand"))
-    OperandType = std::string(OpRec->getValueAsString("OperandType"));
-  else if (OpRec->isSubClassOf("RegisterClass") ||
+  if (OpRec->isSubClassOf("RegisterClass") ||
            OpRec->isSubClassOf("PointerLikeRegClass"))
     OperandType = "OPERAND_REGISTER";
+  else if (OpRec->isSubClassOf("Operand") || OpRec->isSubClassOf("RegisterOperand"))
+    OperandType = std::string(OpRec->getValueAsString("OperandType"));
   else
     return "CS_OP_INVALID";
 
@@ -2480,13 +2480,16 @@ std::string getOperandDataTypes(Record const *Op, std::string &OperandType) {
   MVT::SimpleValueType VT;
   std::vector<Record *> OpDataTypes;
 
-  if (!Op->getValue("RegTypes") && OperandType == "CS_OP_REG")
+  if (!Op->getValue("RegTypes") &&
+      Op->getValue("RegClass") &&
+      OperandType == "CS_OP_REG")
     Op = Op->getValueAsDef("RegClass");
 
   if (!(Op->getValue("Type") || Op->getValue("RegTypes")))
     return "{ CS_DATA_TYPE_LAST }";
 
-  if (OperandType == "CS_OP_REG") {
+  if (OperandType == "CS_OP_REG" &&
+      Op->getValue("RegTypes")) {
     OpDataTypes = Op->getValueAsListOfDefs("RegTypes");
   } else {
     Record *OpType = Op->getValueAsDef("Type");
