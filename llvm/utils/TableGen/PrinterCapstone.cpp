@@ -2094,7 +2094,8 @@ void PrinterCapstone::instrInfoSetOperandInfoStr(
     Res += "CONSTRAINT_MCOI_EARLY_CLOBBER";
   else {
     assert(Constraint.isTied());
-    Res += "CONSTRAINT_MCOI_TIED_TO(" + utostr(Constraint.getTiedOperand()) + ")";
+    Res +=
+        "CONSTRAINT_MCOI_TIED_TO(" + utostr(Constraint.getTiedOperand()) + ")";
   }
 }
 
@@ -2399,12 +2400,56 @@ std::string getLLVMInstEnumName(StringRef const &TargetName,
   return Enum;
 }
 
+std::string getArchSupplInfoPPC(StringRef const &TargetName,
+                                CodeGenInstruction const *CGI,
+                                raw_string_ostream &PPCFormatEnum) {
+  static std::set<std::string> Formats;
+  // Get instruction format
+  ArrayRef<std::pair<Record *, SMRange>> SCs = CGI->TheDef->getSuperClasses();
+  if (SCs.empty()) {
+    llvm_unreachable("A CGI without superclass should not exist.");
+  }
+
+  // Get base instruction format class "I"
+  const Record *PrevSC = nullptr;
+  // Superclasses are in post-order. So we go through them backwards.
+  // The class before the "I" class is the format class.
+  for (int I = SCs.size() - 1; I >= 0; --I) {
+    const Record *SC = SCs[I].first;
+    if (SC->getName() == "I") {
+      if (!PrevSC)
+        llvm_unreachable("I class has no predecessor.");
+      std::string Format = "PPC_INSN_FORM_" + PrevSC->getName().upper();
+      if (Formats.find(Format) == Formats.end()) {
+        PPCFormatEnum << Format + ",\n";
+      }
+      Formats.emplace(Format);
+      return "{ " + Format + " }";
+    }
+    PrevSC = SC;
+  }
+  // Pseudo instructions
+  return "{ 0 }";
+}
+
+std::string getArchSupplInfo(StringRef const &TargetName,
+                             CodeGenInstruction const *CGI,
+                             raw_string_ostream &PPCFormatEnum) {
+  if (TargetName == "PPC")
+    return getArchSupplInfoPPC(TargetName, CGI, PPCFormatEnum);
+  return "{ 0 }";
+}
+
 void printInsnMapEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
                        std::unique_ptr<MatchableInfo> const &MI, bool UseMI,
                        CodeGenInstruction const *CGI,
-                       raw_string_ostream &InsnMap, unsigned InsnNum) {
+                       raw_string_ostream &InsnMap, unsigned InsnNum,
+                       raw_string_ostream &PPCFormatEnum) {
   InsnMap << "{\n";
-  InsnMap.indent(2) << "/* " << (CGI->AsmString != "" ? CGI->AsmString : "<No AsmString>") << " */\n";
+  InsnMap.indent(2) << "/* "
+                    << (CGI->AsmString != "" ? CGI->AsmString
+                                             : "<No AsmString>")
+                    << " */\n";
   InsnMap.indent(2) << getLLVMInstEnumName(TargetName, CGI) << " /* " << InsnNum
                     << " */";
   InsnMap << ", " << TargetName.upper() << "_INS_"
@@ -2415,9 +2460,11 @@ void printInsnMapEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
     InsnMap << getImplicitDefs(TargetName.upper(), CGI) << ", ";
     InsnMap << getReqFeatures(TargetName.upper(), AMI, MI, UseMI, CGI) << ", ";
     InsnMap << (CGI->isBranch ? "1" : "0") << ", ";
-    InsnMap << (CGI->isIndirectBranch ? "1" : "0") << "\n";
+    InsnMap << (CGI->isIndirectBranch ? "1" : "0") << ", ";
+    InsnMap << getArchSupplInfo(TargetName, CGI, PPCFormatEnum);
+    InsnMap << "\n";
   } else {
-    InsnMap.indent(4) << "{ 0 }, { 0 }, { 0 }, 0, 0\n";
+    InsnMap.indent(4) << "{ 0 }, { 0 }, { 0 }, 0, 0, { 0 }\n";
   }
   InsnMap.indent(2) << "#endif\n";
   InsnMap << "},\n";
@@ -2442,9 +2489,10 @@ std::string getPrimaryCSOperandType(Record const *OpRec) {
     return "CS_OP_PRED";
 
   if (OpRec->isSubClassOf("RegisterClass") ||
-           OpRec->isSubClassOf("PointerLikeRegClass"))
+      OpRec->isSubClassOf("PointerLikeRegClass"))
     OperandType = "OPERAND_REGISTER";
-  else if (OpRec->isSubClassOf("Operand") || OpRec->isSubClassOf("RegisterOperand"))
+  else if (OpRec->isSubClassOf("Operand") ||
+           OpRec->isSubClassOf("RegisterOperand"))
     OperandType = std::string(OpRec->getValueAsString("OperandType"));
   else
     return "CS_OP_INVALID";
@@ -2480,16 +2528,14 @@ std::string getOperandDataTypes(Record const *Op, std::string &OperandType) {
   MVT::SimpleValueType VT;
   std::vector<Record *> OpDataTypes;
 
-  if (!Op->getValue("RegTypes") &&
-      Op->getValue("RegClass") &&
+  if (!Op->getValue("RegTypes") && Op->getValue("RegClass") &&
       OperandType == "CS_OP_REG")
     Op = Op->getValueAsDef("RegClass");
 
   if (!(Op->getValue("Type") || Op->getValue("RegTypes")))
     return "{ CS_DATA_TYPE_LAST }";
 
-  if (OperandType == "CS_OP_REG" &&
-      Op->getValue("RegTypes")) {
+  if (OperandType == "CS_OP_REG" && Op->getValue("RegTypes")) {
     OpDataTypes = Op->getValueAsListOfDefs("RegTypes");
   } else {
     Record *OpType = Op->getValueAsDef("Type");
@@ -2763,6 +2809,7 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   std::string FeatureEnumStr;
   std::string FeatureNameArrayStr;
   std::string OpGroupStr;
+  std::string PPCFormatEnumStr;
   raw_string_ostream InsnMap(InsnMapStr);
   raw_string_ostream InsnOpMap(InsnOpMapStr);
   raw_string_ostream InsnNameMap(InsnNameMapStr);
@@ -2770,6 +2817,7 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   raw_string_ostream FeatureEnum(FeatureEnumStr);
   raw_string_ostream FeatureNameArray(FeatureNameArrayStr);
   raw_string_ostream OpGroups(OpGroupStr);
+  raw_string_ostream PPCFormatEnum(PPCFormatEnumStr);
   emitDefaultSourceFileHeader(InsnMap);
   emitDefaultSourceFileHeader(InsnOpMap);
   emitDefaultSourceFileHeader(InsnNameMap);
@@ -2777,6 +2825,7 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   emitDefaultSourceFileHeader(FeatureEnum);
   emitDefaultSourceFileHeader(FeatureNameArray);
   emitDefaultSourceFileHeader(OpGroups);
+  emitDefaultSourceFileHeader(PPCFormatEnum);
 
   // Currently we ignore any other Asm variant then the primary.
   Record *AsmVariant = Target.getAsmParserVariant(0);
@@ -2787,11 +2836,10 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
       AsmVariant->getValueAsString("TokenizingCharacters");
   Variant.SeparatorCharacters =
       AsmVariant->getValueAsString("SeparatorCharacters");
-  Variant.BreakCharacters =
-      AsmVariant->getValueAsString("BreakCharacters");
+  Variant.BreakCharacters = AsmVariant->getValueAsString("BreakCharacters");
   Variant.Name = AsmVariant->getValueAsString("Name");
   Variant.AsmVariantNo = AsmVariant->getValueAsInt("Variant");
-  SmallPtrSet<Record*, 16> SingletonRegisters;
+  SmallPtrSet<Record *, 16> SingletonRegisters;
 
   // The CS mapping tables, for instructions and their operands,
   // need an entry for every CodeGenInstruction.
@@ -2802,7 +2850,8 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
     MI->tokenizeAsmString(Info, Variant);
 
     // Ignore "codegen only" instructions.
-    if (CGI->TheDef->getValueAsBit("isCodeGenOnly") || MI->AsmOperands.empty()) {
+    if (CGI->TheDef->getValueAsBit("isCodeGenOnly") ||
+        MI->AsmOperands.empty()) {
       UseMI = false;
       MI->Mnemonic = "invalid";
     } else
@@ -2815,7 +2864,7 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
 
     printInsnOpMapEntry(Target, MI, UseMI, CGI, InsnOpMap, InsnNum);
     printInsnMapEntry(Target.getName().upper(), Info, MI, UseMI, CGI, InsnMap,
-                      InsnNum);
+                      InsnNum, PPCFormatEnum);
 
     ++InsnNum;
   }
@@ -2835,6 +2884,10 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   writeFile(InsnMapFilename, FeatureNameArrayStr);
   InsnMapFilename = TName + "GenCSOpGroup.inc";
   writeFile(InsnMapFilename, OpGroupStr);
+  if (TName == "PPC") {
+    InsnMapFilename = "PPCGenCSInsnFormatsEnum.inc";
+    writeFile(InsnMapFilename, PPCFormatEnumStr);
+  }
 }
 
 void PrinterCapstone::asmMatcherEmitSourceFileHeader(
