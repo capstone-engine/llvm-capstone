@@ -801,6 +801,7 @@ def PPCDispRI34Operand : AsmOperandClass {
 }
 def dispRI34 : Operand<iPTR> {
   let ParserMatchClass = PPCDispRI34Operand;
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 def memri34 : Operand<iPTR> { // memri, imm is a 34-bit value.
   let PrintMethod = "printMemRegImm34";
@@ -852,6 +853,7 @@ def PPCDispRIX16Operand : AsmOperandClass {
 }
 def dispRIX16 : Operand<iPTR> {
   let ParserMatchClass = PPCDispRIX16Operand;
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCDispSPE8Operand : AsmOperandClass {
  let Name = "DispSPE8"; let PredicateMethod = "isU8ImmX8";
