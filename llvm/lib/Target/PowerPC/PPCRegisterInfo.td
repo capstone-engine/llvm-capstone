@@ -761,6 +761,7 @@ def abscondbrtarget : Operand<OtherVT> {
   let PrintMethod = "printAbsBranchOperand";
   let EncoderMethod = "getAbsCondBrEncoding";
   let ParserMatchClass = PPCCondBrAsmOperand;
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 def calltarget : Operand<iPTR> {
   let PrintMethod = "printBranchOperand";
@@ -773,6 +774,7 @@ def abscalltarget : Operand<iPTR> {
   let PrintMethod = "printAbsBranchOperand";
   let EncoderMethod = "getAbsDirectBrEncoding";
   let ParserMatchClass = PPCDirectBrAsmOperand;
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCCRBitMaskOperand : AsmOperandClass {
  let Name = "CRBitMask"; let PredicateMethod = "isCRBitMask";
