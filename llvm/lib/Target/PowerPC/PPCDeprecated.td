@@ -683,7 +683,6 @@ let Uses = [RM] in {
     def QVLFIWZXA : XForm_1<31, 839,
                         (outs qfrc:$FRT), (ins memrr:$src),
                         "qvlfiwzxa $FRT, $src", IIC_LdStLFD, []>;
-  }
 
 
   def QVLPCLDX : XForm_1<31, 582,
@@ -702,6 +701,7 @@ let Uses = [RM] in {
   def QVLPCRSX : XForm_1<31, 6,
                       (outs qfrc:$FRT), (ins memrr:$src),
                       "qvlpcrsx $FRT, $src", IIC_LdStLFD, []>;
+  }
 
   // Store indexed instructions
   let mayStore = 1 in {
