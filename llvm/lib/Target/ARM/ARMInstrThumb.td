@@ -688,6 +688,7 @@ def tTRAP : TI<(outs), (ins), IIC_Br,
 // PC-relative loads need to be matched first as constant pool accesses need to
 // always be PC-relative. We do this using AddedComplexity, as the pattern is
 // simpler than the patterns of the other load instructions.
+let mayLoad = 1 in {
 let canFoldAsLoad = 1, isReMaterializable = 1, AddedComplexity = 10 in
 def tLDRpci : T1pIs<(outs tGPR:$Rt), (ins t_addrmode_pc:$addr), IIC_iLoad_i,
                   "ldr", "\t$Rt, $addr",
@@ -698,6 +699,7 @@ def tLDRpci : T1pIs<(outs tGPR:$Rt), (ins t_addrmode_pc:$addr), IIC_iLoad_i,
   bits<8> addr;
   let Inst{10-8} = Rt;
   let Inst{7-0}  = addr;
+  let mayLoad = 1;
 }
 
 // SP-relative loads should be matched before standard immediate-offset loads as
@@ -711,6 +713,7 @@ def tLDRspi : T1pIs<(outs tGPR:$Rt), (ins t_addrmode_sp:$addr), IIC_iLoad_i,
   bits<8> addr;
   let Inst{10-8} = Rt;
   let Inst{7-0} = addr;
+  let mayLoad = 1;
 }
 
 // Loads: reg/reg and reg/imm5
@@ -784,8 +787,10 @@ def tLDRSH :                    // A8.6.84
                  AddrModeT1_2, IIC_iLoad_bh_r,
                  "ldrsh", "\t$Rt, $addr",
                  [(set tGPR:$Rt, (sextloadi16 t_addrmode_rr_sext:$addr))]>, Sched<[WriteLd]>;
+} // mayLoad = 1
 
 
+let mayStore = 1 in {
 def tSTRspi : T1pIs<(outs), (ins tGPR:$Rt, t_addrmode_sp:$addr), IIC_iStore_i,
                     "str", "\t$Rt, $addr",
                     [(store tGPR:$Rt, t_addrmode_sp:$addr)]>,
@@ -794,6 +799,7 @@ def tSTRspi : T1pIs<(outs), (ins tGPR:$Rt, t_addrmode_sp:$addr), IIC_iStore_i,
   bits<8> addr;
   let Inst{10-8} = Rt;
   let Inst{7-0} = addr;
+  let mayStore = 1;
 }
 
 // A8.6.194 & A8.6.192
@@ -813,6 +819,7 @@ defm tSTRH : thumb_st_rr_ri_enc<0b001, 0b1000, t_addrmode_rr,
                                t_addrmode_is2, AddrModeT1_2,
                                IIC_iStore_bh_r, IIC_iStore_bh_i, "strh",
                                truncstorei16>, Sched<[WriteST]>;
+} // mayStore = 1
 
 
 //===----------------------------------------------------------------------===//
@@ -1499,7 +1506,7 @@ def tLEApcrelJT : tPseudoInst<(outs tGPR:$Rd),
 
 // Thumb-1 doesn't have the TBB or TBH instructions, but we can synthesize them
 // and make use of the same compressed jump table format as Thumb-2.
-let Size = 2, isBranch = 1, isTerminator = 1, isBarrier = 1,
+let mayLoad = 1, Size = 2, isBranch = 1, isTerminator = 1, isBarrier = 1,
     isIndirectBranch = 1, isNotDuplicable = 1 in {
 def tTBB_JT : tPseudoInst<(outs),
         (ins tGPRwithpc:$base, tGPR:$index, i32imm:$jt, i32imm:$pclbl), 0,

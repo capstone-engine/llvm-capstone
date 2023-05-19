@@ -17,6 +17,7 @@
 #include "CodeGenInstruction.h"
 #include "CodeGenIntrinsics.h"
 #include "CodeGenSchedule.h"
+#include "Printer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TableGen/Error.h"
@@ -272,7 +273,11 @@ std::string llvm::getQualifiedName(const Record *R) {
     Namespace = std::string(R->getValueAsString("Namespace"));
   if (Namespace.empty())
     return std::string(R->getName());
-  return Namespace + "::" + R->getName().str();
+
+  if (PrinterLLVM::getLanguage() == PRINTER_LANG_CAPSTONE_C)
+    return Namespace + "_" + R->getName().str();
+  else
+    return Namespace + "::" + R->getName().str();
 }
 
 
