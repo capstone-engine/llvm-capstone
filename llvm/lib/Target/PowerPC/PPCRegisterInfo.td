@@ -745,6 +745,7 @@ def absdirectbrtarget : Operand<OtherVT> {
   let PrintMethod = "printAbsBranchOperand";
   let EncoderMethod = "getAbsDirectBrEncoding";
   let ParserMatchClass = PPCDirectBrAsmOperand;
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCCondBrAsmOperand : AsmOperandClass {
   let Name = "CondBr"; let PredicateMethod = "isCondBr";
@@ -832,6 +833,7 @@ def PPCDispRIOperand : AsmOperandClass {
 }
 def dispRI : Operand<iPTR> {
   let ParserMatchClass = PPCDispRIOperand;
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCDispRIXOperand : AsmOperandClass {
  let Name = "DispRIX"; let PredicateMethod = "isS16ImmX4";
@@ -839,6 +841,7 @@ def PPCDispRIXOperand : AsmOperandClass {
 }
 def dispRIX : Operand<iPTR> {
   let ParserMatchClass = PPCDispRIXOperand;
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCDispRIHashOperand : AsmOperandClass {
   let Name = "DispRIHash"; let PredicateMethod = "isHashImmX8";
@@ -846,6 +849,7 @@ def PPCDispRIHashOperand : AsmOperandClass {
 }
 def dispRIHash : Operand<iPTR> {
   let ParserMatchClass = PPCDispRIHashOperand;
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCDispRIX16Operand : AsmOperandClass {
  let Name = "DispRIX16"; let PredicateMethod = "isS16ImmX16";
@@ -861,6 +865,7 @@ def PPCDispSPE8Operand : AsmOperandClass {
 }
 def dispSPE8 : Operand<iPTR> {
   let ParserMatchClass = PPCDispSPE8Operand;
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCDispSPE4Operand : AsmOperandClass {
  let Name = "DispSPE4"; let PredicateMethod = "isU7ImmX4";
@@ -868,6 +873,7 @@ def PPCDispSPE4Operand : AsmOperandClass {
 }
 def dispSPE4 : Operand<iPTR> {
   let ParserMatchClass = PPCDispSPE4Operand;
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCDispSPE2Operand : AsmOperandClass {
  let Name = "DispSPE2"; let PredicateMethod = "isU6ImmX2";
@@ -875,6 +881,7 @@ def PPCDispSPE2Operand : AsmOperandClass {
 }
 def dispSPE2 : Operand<iPTR> {
   let ParserMatchClass = PPCDispSPE2Operand;
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def memri : Operand<iPTR> {
