@@ -5191,4 +5191,6 @@ def : Pat<(int_ppc_stfiw ForceXForm:$dst, f64:$XT),
 #define CAPSTONE_DEPR_INTRINSICS
 include "PPCDeprecated.td"
 #define CAPSTONE_DEPR_INSTR
+#define CAPSTONE_PS_INSTR
 include "PPCDeprecated.td"
+include "PPCInstrPairedSingle.td"

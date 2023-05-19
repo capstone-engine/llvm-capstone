@@ -44,7 +44,7 @@ def P9Model : SchedMachineModel {
   let UnsupportedFeatures = [HasSPE, PrefixInstrs, MMA,
                              PairedVectorMemops,
                              PCRelativeMemops, IsISA3_1, IsISAFuture,
-                             HasQPX];
+                             HasQPX, HasPS];
 }
 
 let SchedModel = P9Model in {
