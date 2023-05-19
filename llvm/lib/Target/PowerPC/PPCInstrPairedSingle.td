@@ -11,17 +11,19 @@
 #define INCLUDED_CAPSTONE_PS_FORMATS
 
 def PPCDispRID12Operand : AsmOperandClass {
- let Name = "DispRID12"; let PredicateMethod = "isS12Imm";
- let RenderMethod = "addImmOperands";
+  let Name = "DispRID12"; let PredicateMethod = "isS12Imm";
+  let RenderMethod = "addImmOperands";
 }
 
 def dispRID12 : Operand<iPTR> {
   let ParserMatchClass = PPCDispRID12Operand;
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def memrid12 : Operand<iPTR> {  // Paired Single displacement where imm is 12 bits.
   let PrintMethod = "printMemRegImm";
   let MIOperandInfo = (ops dispRID12:$imm, ptr_rc_nor0:$reg);
+  let OperandType = "OPERAND_MEMORY";
 }
 
 // PSForm_qd - Undocumented paired-singles quantized load/store form direct.
