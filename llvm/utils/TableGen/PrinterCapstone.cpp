@@ -2707,7 +2707,7 @@ void printInsnOpMapEntry(CodeGenTarget const &Target,
   std::string LLVMEnum = getLLVMInstEnumName(TargetName, CGI);
   // Write the C struct of the Instruction operands.
   InsnOpMap << "{ /* " + LLVMEnum + " (" << InsnNum
-            << ") - " + TargetName + "_INS_" +
+            << ") - " + TargetName.upper() + "_INS_" +
                    (UseMI ? getNormalMnemonic(MI) : "INVALID") + " - " +
                    CGI->AsmString + " */\n";
   InsnOpMap << "{\n";
@@ -2725,6 +2725,7 @@ void printInsnNameMapEnumEntry(StringRef const &TargetName,
                                raw_string_ostream &InsnNameMap,
                                raw_string_ostream &InsnEnum) {
   static std::set<std::string> MnemonicsSeen;
+  static std::set<std::string> EnumsSeen;
 
   std::string Mnemonic = MI->Mnemonic.str();
   if (MnemonicsSeen.find(Mnemonic) != MnemonicsSeen.end())
@@ -2733,9 +2734,11 @@ void printInsnNameMapEnumEntry(StringRef const &TargetName,
   std::string EnumName =
       TargetName.str() + "_INS_" + normalizedMnemonic(StringRef(Mnemonic));
   InsnNameMap.indent(2) << "\"" + Mnemonic + "\", // " + EnumName + "\n";
-  InsnEnum.indent(2) << EnumName + ",\n";
+  if (EnumsSeen.find(EnumName) == EnumsSeen.end())
+    InsnEnum.indent(2) << EnumName + ",\n";
 
   MnemonicsSeen.emplace(Mnemonic);
+  EnumsSeen.emplace(EnumName);
 }
 
 void printFeatureEnumEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
