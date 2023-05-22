@@ -1,122 +1,92 @@
-# The LLVM Compiler Infrastructure
+# Capstone's LLVM with refactored TableGen backends
 
-This directory and its sub-directories contain the source code for LLVM,
-a toolkit for the construction of highly optimized compilers,
-optimizers, and run-time environments.
+This LLVM version has the purpose to generate code for the
+[Capstone disassembler](https://github.com/capstone-engine/capstone).
 
-The README briefly describes how to get started with building LLVM.
-For more information on how to contribute to the LLVM project, please
-take a look at the
-[Contributing to LLVM](https://llvm.org/docs/Contributing.html) guide.
+It refactors the TableGen emitter backends, so they can emit C code
+in addition to the C++ code they normally emit.
 
-## Getting Started with the LLVM System
+Please note that within LLVM we speak of a `Target` if we refer to an architecture.
 
-Taken from [here](https://llvm.org/docs/GettingStarted.html).
+## Code generation
 
-### Overview
+### Relevant files
 
-Welcome to the LLVM project!
+The TableGen emitter backends are located in `llvm/utils/TableGen/`.
 
-The LLVM project has multiple components. The core of the project is
-itself called "LLVM". This contains all of the tools, libraries, and header
-files needed to process intermediate representations and convert them into
-object files. Tools include an assembler, disassembler, bitcode analyzer, and
-bitcode optimizer. It also contains basic regression tests.
+The target definition files (`.td`), which define the
+instructions, operands, features etc., can be
+found in `llvm/lib/Target/<ARCH>/`.
 
-C-like languages use the [Clang](http://clang.llvm.org/) frontend. This
-component compiles C, C++, Objective-C, and Objective-C++ code into LLVM bitcode
--- and from there into object files, using LLVM.
+### Code generation overview
 
-Other components include:
-the [libc++ C++ standard library](https://libcxx.llvm.org),
-the [LLD linker](https://lld.llvm.org), and more.
+Generating code for a target has 6 steps:
 
-### Getting the Source Code and Building LLVM
+```
+                                                                         5                 6
+                                                                    ┌──────────┐      ┌──────────┐
+                                                                    │Printer   │      │CS .inc   │
+    1               2                 3                4        ┌──►│Capstone  ├─────►│files     │
+┌───────┐     ┌───────────┐     ┌───────────┐     ┌──────────┐  │   └──────────┘      └──────────┘
+│ .td   │     │           │     │           │     │ Code-    │  │
+│ files ├────►│ TableGen  ├────►│  CodeGen  ├────►│ Emitter  │◄─┤
+└───────┘     └──────┬────┘     └───────────┘     └──────────┘  │
+                     │                                 ▲        │   ┌──────────┐      ┌──────────┐
+                     └─────────────────────────────────┘        └──►│Printer   ├─────►│LLVM .inc │
+                                                                    │LLVM      │      │files     │
+                                                                    └──────────┘      └──────────┘
+```
 
-The LLVM Getting Started documentation may be out of date. The [Clang
-Getting Started](http://clang.llvm.org/get_started.html) page might have more
-accurate information.
+1. LLVM targets are defined in `.td` files. They describe instructions, operands,
+features and other properties.
 
-This is an example work-flow and configuration to get and build the LLVM source:
+2. [LLVM TableGen](https://llvm.org/docs/TableGen/index.html) parses these files
+and converts them to an internal representation of [Classes, Records, DAGs](https://llvm.org/docs/TableGen/ProgRef.html)
+ and other types.
 
-1. Checkout LLVM (including related sub-projects like Clang):
+3. In the second step a TableGen component called [CodeGen](https://llvm.org/docs/CodeGenerator.html)
+abstracts this even further.
+The result is a representation which is _not_ specific to any target
+(e.g. the `CodeGenInstruction` class can represent a machine instruction of any target).
 
-     * ``git clone https://github.com/llvm/llvm-project.git``
+4. Different code emitter backends use the result of the former two components to
+generated code.
 
-     * Or, on windows, ``git clone --config core.autocrlf=false
-    https://github.com/llvm/llvm-project.git``
+5. Whenever the emitter emits code it calls a `Printer`. Either the `PrinterCapstone` to emit C or `PrinterLLVM` to emit C++.
+Which one is controlled by the `--printerLang=[CCS,C++]` option passed to `llvm-tblgen`.
 
-2. Configure and build LLVM and Clang:
+6. After the emitter backend is done, the `Printer` writes the `output_stream` content into the `.inc` files.
 
-     * ``cd llvm-project``
+### Emitter backends and their use cases
 
-     * ``cmake -S llvm -B build -G <generator> [options]``
+We use the following emitter backends
 
-        Some common build system generators are:
+| Name | Generated Code | Note |
+|------|----------------|------|
+| AsmMatcherEmitter | Mapping tables for Capstone | |
+| AsmWriterEmitter | State machine to decode the asm-string for a `MCInst` | |
+| DecoderEmitter | State machine which decodes bytes to a `MCInst`. | |
+| InstrInfoEmitter | Tables with instruction information (instruction enum, instr. operand information...) | |
+| RegisterInfoEmitter | Tables with register information (register enum, register type info...) | |
+| SubtargetEmitter | Table about the target features. | |
+| SearchableTablesEmitter | Usually used to generate tables and decoding functions for system registers. | Not all targets use this. |
 
-        * ``Ninja`` --- for generating [Ninja](https://ninja-build.org)
-          build files. Most llvm developers use Ninja.
-        * ``Unix Makefiles`` --- for generating make-compatible parallel makefiles.
-        * ``Visual Studio`` --- for generating Visual Studio projects and
-          solutions.
-        * ``Xcode`` --- for generating Xcode projects.
+## Developer notes
 
-        Some common options:
+- If you find C++ code within the generated files check the `.td` files again.
+It is possible that C++ code snippets were defined there
+(the [TokCode](https://llvm.org/docs/TableGen/ProgRef.html#grammar-token-tokcode) is usually used for code snippets).
 
-        * ``-DLLVM_ENABLE_PROJECTS='...'`` and ``-DLLVM_ENABLE_RUNTIMES='...'`` ---
-          semicolon-separated list of the LLVM sub-projects and runtimes you'd like to
-          additionally build. ``LLVM_ENABLE_PROJECTS`` can include any of: clang,
-          clang-tools-extra, cross-project-tests, flang, libc, libclc, lld, lldb,
-          mlir, openmp, polly, or pstl. ``LLVM_ENABLE_RUNTIMES`` can include any of
-          libcxx, libcxxabi, libunwind, compiler-rt, libc or openmp. Some runtime
-          projects can be specified either in ``LLVM_ENABLE_PROJECTS`` or in
-          ``LLVM_ENABLE_RUNTIMES``.
+- If the mapping files miss operand types or access information, then the `.td` files are incomplete (happens surprisingly often).
+You need to search for the instruction or operands with missing or incorrect values and fix them.
+  ```
+    Wrong access attributes for:
+      - Registers, Immediates: The instructions defines "out" and "in" operands incorrectly.
+      - Memory: The "mayLoad" or "mayStore" variable is not set for the instruction.
 
-          For example, to build LLVM, Clang, libcxx, and libcxxabi, use
-          ``-DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"``.
+    Operand type is invalid:
+      - The "OperandType" variable is unset for this operand type.
+  ```
 
-        * ``-DCMAKE_INSTALL_PREFIX=directory`` --- Specify for *directory* the full
-          path name of where you want the LLVM tools and libraries to be installed
-          (default ``/usr/local``). Be careful if you install runtime libraries: if
-          your system uses those provided by LLVM (like libc++ or libc++abi), you
-          must not overwrite your system's copy of those libraries, since that
-          could render your system unusable. In general, using something like
-          ``/usr`` is not advised, but ``/usr/local`` is fine.
-
-        * ``-DCMAKE_BUILD_TYPE=type`` --- Valid options for *type* are Debug,
-          Release, RelWithDebInfo, and MinSizeRel. Default is Debug.
-
-        * ``-DLLVM_ENABLE_ASSERTIONS=On`` --- Compile with assertion checks enabled
-          (default is Yes for Debug builds, No for all other build types).
-
-      * ``cmake --build build [-- [options] <target>]`` or your build system specified above
-        directly.
-
-        * The default target (i.e. ``ninja`` or ``make``) will build all of LLVM.
-
-        * The ``check-all`` target (i.e. ``ninja check-all``) will run the
-          regression tests to ensure everything is in working order.
-
-        * CMake will generate targets for each tool and library, and most
-          LLVM sub-projects generate their own ``check-<project>`` target.
-
-        * Running a serial build will be **slow**. To improve speed, try running a
-          parallel build. That's done by default in Ninja; for ``make``, use the option
-          ``-j NNN``, where ``NNN`` is the number of parallel jobs to run.
-          In most cases, you get the best performance if you specify the number of CPU threads you have.
-          On some Unix systems, you can specify this with ``-j$(nproc)``.
-
-      * For more information see [CMake](https://llvm.org/docs/CMake.html).
-
-Consult the
-[Getting Started with LLVM](https://llvm.org/docs/GettingStarted.html#getting-started-with-llvm)
-page for detailed information on configuring and compiling LLVM. You can visit
-[Directory Layout](https://llvm.org/docs/GettingStarted.html#directory-layout)
-to learn about the layout of the source code tree.
-
-## Getting in touch
-
-Join [LLVM Discourse forums](https://discourse.llvm.org/), [discord chat](https://discord.gg/xS7Z362) or #llvm IRC channel on [OFTC](https://oftc.net/).
-
-The LLVM project has adopted a [code of conduct](https://llvm.org/docs/CodeOfConduct.html) for
-participants to all modes of communication within the project.
+- If certain target features (e.g. architecture extensions) were removed from LLVM or you want to add your own,
+checkout [DeprecatedFeatures.md](DeprecatedFeatures.md).
