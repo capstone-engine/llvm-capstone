@@ -2512,6 +2512,8 @@ std::string getPrimaryCSOperandType(Record const *OpRec) {
   // Arch dependent special Op types
   else if (OperandType == "OPERAND_VPRED_N" || OperandType == "OPERAND_VPRED_R")
     return "CS_OP_INVALID";
+  else if (OperandType == "OPERAND_IMPLICIT_IMM_0")
+    return "CS_OP_IMM";
   else
     PrintFatalNote("Unhandled OperandType: " + OperandType);
   return OperandType;
