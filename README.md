@@ -69,7 +69,8 @@ We use the following emitter backends
 | InstrInfoEmitter | Tables with instruction information (instruction enum, instr. operand information...) | |
 | RegisterInfoEmitter | Tables with register information (register enum, register type info...) | |
 | SubtargetEmitter | Table about the target features. | |
-| SearchableTablesEmitter | Usually used to generate tables and decoding functions for system registers. | Not all targets use this. |
+| SearchableTablesEmitter | Usually used to generate tables and decoding functions for system registers. | **1.** Not all targets use this. |
+| | | **2.** Backend can't access the target name. Wherever the target name is needed `__ARCH__` or `##ARCH##` is printed and later replaced. |
 
 ## Developer notes
 
