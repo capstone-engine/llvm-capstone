@@ -75,8 +75,11 @@ We use the following emitter backends
 ## Developer notes
 
 - If you find C++ code within the generated files check the `.td` files again.
-It is possible that C++ code snippets were defined there
-(the [TokCode](https://llvm.org/docs/TableGen/ProgRef.html#grammar-token-tokcode) is usually used for code snippets).
+Some template function calls within the decoder get translated with `PrinterCapstone::resolveTemplateCall()`.
+But it is possible that this is unreliable, or the decoder is too complex, and it doesn't work.
+Or C++ code was used outside the decoder.
+In the last cases fix the `td` files. The syntax to define C++ code in `.td` files is `[{ code }]`
+Also see: TableGen syntax for [TokCode](https://llvm.org/docs/TableGen/ProgRef.html#grammar-token-tokcode) (usually used for code snippets).
 
 - If the mapping files miss operand types or access information, then the `.td` files are incomplete (happens surprisingly often).
 You need to search for the instruction or operands with missing or incorrect values and fix them.

@@ -619,7 +619,7 @@ void PrinterCapstone::regInfoEmitIsConstantPhysReg(
     std::deque<CodeGenRegister> const &Regs,
     std::string const &ClassName) const {}
 
-static std::string resolveTemplateCall(std::string const &Dec) {
+std::string PrinterCapstone::resolveTemplateCall(std::string const &Dec) {
   unsigned long const B = Dec.find_first_of("<");
   unsigned long const E = Dec.find(">");
   if (B == std::string::npos) {
@@ -630,10 +630,12 @@ static std::string resolveTemplateCall(std::string const &Dec) {
   std::string Args = Dec.substr(B + 1, E - B - 1);
   while ((Args.find("true") != std::string::npos) ||
          (Args.find("false") != std::string::npos) ||
-         (Args.find(",") != std::string::npos)) {
+         (Args.find(",") != std::string::npos) ||
+         (Args.find("'") != std::string::npos)) {
     Args = Regex("true").sub("1", Args);
     Args = Regex("false").sub("0", Args);
     Args = Regex(" *, *").sub("_", Args);
+    Args = Regex("'").sub("", Args);
   }
   std::string Decoder = DecName + "_" + Args;
   return Decoder;
@@ -2790,7 +2792,7 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
   }
 
   for (const CGIOperandList::OperandInfo &Op : CGI->Operands) {
-    std::string OpGroup = resolveTemplateCall(Op.PrinterMethodName).substr(5);
+    std::string OpGroup = PrinterCapstone::resolveTemplateCall(Op.PrinterMethodName).substr(5);
     if (OpGroups.find(OpGroup) != OpGroups.end())
       continue;
     OpGroupEnum.indent(2) << TargetName.upper() + "_OP_GROUP_" + OpGroup + " = "
