@@ -3078,10 +3078,33 @@ raw_string_ostream &PrinterCapstone::searchableTablesGetOS(StreamType G) const {
 
 void PrinterCapstone::searchableTablesEmitGenericEnum(
     const GenericEnum &Enum) const {
+  static std::set<std::string> EVals;
+
   raw_string_ostream &EnumS = searchableTablesGetOS(ST_ENUM_OS);
   for (const auto &Entry : Enum.Entries) {
-    EnumS << "\t##ARCH##_SYSREG_" << Entry->first.upper() << " = "
-          << format("0x%x", Entry->second) << ",\n";
+    std::string RegName = "##ARCH##_SYSREG_" + Entry->first.upper();
+    bool HasTwin = false;
+    if (EVals.find(RegName) != EVals.end()) {
+      // A system register can defined twice, if two target features
+      // use it. In this case we would define the same register twice with
+      // different values. We append the enum name to distnguish them.
+      // Users must check the enabled features during runtime
+      // to distinguish the different encodings.
+      RegName += "_" + Enum.Name;
+      HasTwin = true;
+      if (EVals.find(RegName) != EVals.end())
+        // Duplicate enum definitioin. We need another way
+        // to distnguish them.
+        llvm_unreachable("Cannot distinguish system registers.");
+    }
+
+    EnumS << "\t" << RegName << " = "
+          << format("0x%x", Entry->second) << ", // "
+          << "Group: " << Enum.Name;
+    if (HasTwin)
+      EnumS << " - also encoded as: " << "##ARCH##_SYSREG_" + Entry->first.upper();
+    EnumS << "\n";
+    EVals.emplace(RegName);
   }
 }
 
