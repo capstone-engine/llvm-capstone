@@ -144,22 +144,21 @@ void PrinterCapstone::regInfoEmitEnums(CodeGenTarget const &Target,
 
   emitIncludeToggle("GET_REGINFO_ENUM", true);
   StringRef TargetName = Target.getName();
-  std::string TargetNameU = TargetName.upper();
 
-  OS << "enum {\n  " << TargetNameU << "_NoRegister,\n";
-  CSRegEnum << "\t" << TargetNameU << "_REG_INVALID = 0,\n";
+  OS << "enum {\n  " << TargetName << "_NoRegister,\n";
+  CSRegEnum << "\t" << TargetName << "_REG_INVALID = 0,\n";
 
   for (const auto &Reg : Registers) {
-    OS << "  " << TargetNameU << "_" << Reg.getName() << " = " << Reg.EnumValue
+    OS << "  " << TargetName << "_" << Reg.getName() << " = " << Reg.EnumValue
        << ",\n";
-    CSRegEnum << "\t" << TargetNameU << "_REG_" << Reg.getName() << " = "
+    CSRegEnum << "\t" << TargetName << "_REG_" << Reg.getName() << " = "
               << Reg.EnumValue << ",\n";
   }
   assert(Registers.size() == Registers.back().EnumValue &&
          "Register enum value mismatch!");
   OS << "  NUM_TARGET_REGS // " << Registers.size() + 1 << "\n";
   OS << "};\n";
-  CSRegEnum << "\t" << TargetNameU << "_REG_ENDING, // " << Registers.size() + 1
+  CSRegEnum << "\t" << TargetName << "_REG_ENDING, // " << Registers.size() + 1
             << "\n";
 
   writeFile(TargetName.str() + "GenCSRegEnum.inc", CSRegEnumStr);
@@ -282,7 +281,7 @@ static std::string getQualifiedNameCCS(const Record *R) {
     Namespace = std::string(R->getValueAsString("Namespace"));
   if (Namespace.empty())
     return std::string(R->getName());
-  return StringRef(Namespace).upper() + "_" + R->getName().str();
+  return StringRef(Namespace).str() + "_" + R->getName().str();
 }
 
 void PrinterCapstone::regInfoEmitRegClasses(
@@ -705,7 +704,7 @@ bool PrinterCapstone::decoderEmitterEmitPredicateMatchAux(
       return true;
 
     std::string Subtarget =
-        StringRef(PredicateNamespace).upper() + "_" + D->getAsString();
+        StringRef(PredicateNamespace).str() + "_" + D->getAsString();
     PredOS << PredicateNamespace << "_getFeatureBits(Inst->csh->mode, "
            << Subtarget << ")";
     return false;
@@ -1728,7 +1727,7 @@ void PrinterCapstone::subtargetEmitSourceFileHeader() const {
 void PrinterCapstone::subtargetEmitFeatureEnum(
     DenseMap<Record *, unsigned> &FeatureMap,
     std::vector<Record *> const &DefList, unsigned N) const {
-  StringRef TN = StringRef(TargetName).upper();
+  StringRef TN = StringRef(TargetName);
   // Open enumeration.
   OS << "enum {\n";
 
@@ -2305,7 +2304,7 @@ void PrinterCapstone::instrInfoEmitEnums(
   unsigned Num = 0;
   OS << "  enum {\n";
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue())
-    OS << "    " << Namespace.upper() << "_" << Inst->TheDef->getName()
+    OS << "    " << Namespace << "_" << Inst->TheDef->getName()
        << "\t= " << Num++ << ",\n";
   OS << "    INSTRUCTION_LIST_END = " << Num << "\n";
   OS << "  };\n\n";
@@ -2398,7 +2397,7 @@ std::string getReqFeatures(StringRef const &TargetName, AsmMatcherInfo &AMI,
 std::string getLLVMInstEnumName(StringRef const &TargetName,
                                 CodeGenInstruction const *CGI) {
   std::string UniqueName = CGI->TheDef->getName().str();
-  std::string Enum = TargetName.upper() + "_" + UniqueName;
+  std::string Enum = TargetName.str() + "_" + UniqueName;
   return Enum;
 }
 
@@ -2454,13 +2453,13 @@ void printInsnMapEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
                     << " */\n";
   InsnMap.indent(2) << getLLVMInstEnumName(TargetName, CGI) << " /* " << InsnNum
                     << " */";
-  InsnMap << ", " << TargetName.upper() << "_INS_"
+  InsnMap << ", " << TargetName << "_INS_"
           << (UseMI ? getNormalMnemonic(MI) : "INVALID") << ",\n";
   InsnMap.indent(2) << "#ifndef CAPSTONE_DIET\n";
   if (UseMI) {
-    InsnMap.indent(4) << getImplicitUses(TargetName.upper(), CGI) << ", ";
-    InsnMap << getImplicitDefs(TargetName.upper(), CGI) << ", ";
-    InsnMap << getReqFeatures(TargetName.upper(), AMI, MI, UseMI, CGI) << ", ";
+    InsnMap.indent(4) << getImplicitUses(TargetName, CGI) << ", ";
+    InsnMap << getImplicitDefs(TargetName, CGI) << ", ";
+    InsnMap << getReqFeatures(TargetName, AMI, MI, UseMI, CGI) << ", ";
     InsnMap << (CGI->isBranch ? "1" : "0") << ", ";
     InsnMap << (CGI->isIndirectBranch ? "1" : "0") << ", ";
     InsnMap << getArchSupplInfo(TargetName, CGI, PPCFormatEnum);
@@ -2640,13 +2639,13 @@ void printInsnOpMapEntry(CodeGenTarget const &Target,
 
   // Instruction without mnemonic.
   if (!UseMI) {
-    std::string LLVMEnum = getLLVMInstEnumName(TargetName.upper(), CGI);
+    std::string LLVMEnum = getLLVMInstEnumName(TargetName, CGI);
     // Write the C struct of the Instruction operands.
     // The many braces are necessary because of this bug from
     // medieval times:
     // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53119
     InsnOpMap << "{{{ /* " + LLVMEnum + " (" << InsnNum
-              << ") - " + TargetName.upper() + "_INS_" +
+              << ") - " + TargetName + "_INS_" +
                      (UseMI ? getNormalMnemonic(MI) : "INVALID") + " - " +
                      CGI->AsmString + " */\n";
     InsnOpMap << " 0\n";
@@ -2709,7 +2708,7 @@ void printInsnOpMapEntry(CodeGenTarget const &Target,
   std::string LLVMEnum = getLLVMInstEnumName(TargetName, CGI);
   // Write the C struct of the Instruction operands.
   InsnOpMap << "{ /* " + LLVMEnum + " (" << InsnNum
-            << ") - " + TargetName.upper() + "_INS_" +
+            << ") - " + TargetName + "_INS_" +
                    (UseMI ? getNormalMnemonic(MI) : "INVALID") + " - " +
                    CGI->AsmString + " */\n";
   InsnOpMap << "{\n";
@@ -2759,7 +2758,7 @@ void printFeatureEnumEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
 
       // Enum
       EnumName =
-          TargetName.upper() + "_FEATURE_" + STF->TheDef->getName().str();
+          TargetName.str() + "_FEATURE_" + STF->TheDef->getName().str();
       FeatureEnum << EnumName;
       if (Features.size() == 1)
         FeatureEnum << " = 128";
@@ -2785,7 +2784,7 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
   if (OpGroups.empty()) {
     for (auto OpGroup : Exceptions) {
       OpGroupEnum.indent(2)
-          << TargetName.upper() + "_OP_GROUP_" + OpGroup + " = "
+          << TargetName + "_OP_GROUP_" + OpGroup + " = "
           << OpGroups.size() << ",\n";
       OpGroups.emplace(OpGroup);
     }
@@ -2795,7 +2794,7 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
     std::string OpGroup = PrinterCapstone::resolveTemplateCall(Op.PrinterMethodName).substr(5);
     if (OpGroups.find(OpGroup) != OpGroups.end())
       continue;
-    OpGroupEnum.indent(2) << TargetName.upper() + "_OP_GROUP_" + OpGroup + " = "
+    OpGroupEnum.indent(2) << TargetName + "_OP_GROUP_" + OpGroup + " = "
                           << OpGroups.size() << ",\n";
     OpGroups.emplace(OpGroup);
   }
@@ -2863,14 +2862,14 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
       MI->Mnemonic = "invalid";
     } else
       MI->Mnemonic = MI->AsmOperands[0].Token;
-    printInsnNameMapEnumEntry(Target.getName().upper(), MI, InsnNameMap,
+    printInsnNameMapEnumEntry(Target.getName(), MI, InsnNameMap,
                               InsnEnum);
-    printFeatureEnumEntry(Target.getName().upper(), Info, CGI, FeatureEnum,
+    printFeatureEnumEntry(Target.getName(), Info, CGI, FeatureEnum,
                           FeatureNameArray);
-    printOpPrintGroupEnum(Target.getName().upper(), CGI, OpGroups);
+    printOpPrintGroupEnum(Target.getName(), CGI, OpGroups);
 
     printInsnOpMapEntry(Target, MI, UseMI, CGI, InsnOpMap, InsnNum);
-    printInsnMapEntry(Target.getName().upper(), Info, MI, UseMI, CGI, InsnMap,
+    printInsnMapEntry(Target.getName(), Info, MI, UseMI, CGI, InsnMap,
                       InsnNum, PPCFormatEnum);
 
     ++InsnNum;
