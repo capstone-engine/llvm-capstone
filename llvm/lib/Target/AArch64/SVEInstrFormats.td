@@ -67,96 +67,96 @@ def sve_prfop : Operand<i32>, TImmLeaf<i32, [{
 class SVELogicalImmOperand<int Width> : AsmOperandClass {
   let Name = "SVELogicalImm" # Width;
   let DiagnosticType = "LogicalSecondSource";
-  let PredicateMethod = "isLogicalImm_int" # Width # "_t";
-  let RenderMethod = "addLogicalImmOperands_int" # Width # "_t";
+  let PredicateMethod = "isLogicalImm<int" # Width # "_t>";
+  let RenderMethod = "addLogicalImmOperands<int" # Width # "_t>";
 }
 
 def sve_logical_imm8 : Operand<i64> {
   let ParserMatchClass = SVELogicalImmOperand<8>;
-  let PrintMethod = "printLogicalImm_int8_t";
+  let PrintMethod = "printLogicalImm<int8_t>";
 
   let MCOperandPredicate = [{
     if (!MCOperand_isImm(MCOp))
       return false;
-    int64_t Val = AArch64_AM_decodeLogicalImmediate(MCOperand_getImm(MCOp), 64);
-    return AArch64_AM_isSVEMaskOfIdenticalElements_int8_t(Val);
+    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOperand_getImm(MCOp), 64);
+    return AArch64_AM::isSVEMaskOfIdenticalElements_int8_t(Val);
   }];
 }
 
 def sve_logical_imm16 : Operand<i64> {
   let ParserMatchClass = SVELogicalImmOperand<16>;
-  let PrintMethod = "printLogicalImm_int16_t";
+  let PrintMethod = "printLogicalImm<int16_t>";
 
   let MCOperandPredicate = [{
     if (!MCOperand_isImm(MCOp))
       return false;
-    int64_t Val = AArch64_AM_decodeLogicalImmediate(MCOperand_getImm(MCOp), 64);
-    return AArch64_AM_isSVEMaskOfIdenticalElements_int16_t(Val);
+    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOperand_getImm(MCOp), 64);
+    return AArch64_AM::isSVEMaskOfIdenticalElements_int16_t(Val);
   }];
 }
 
 def sve_logical_imm32 : Operand<i64> {
   let ParserMatchClass = SVELogicalImmOperand<32>;
-  let PrintMethod = "printLogicalImm_int32_t";
+  let PrintMethod = "printLogicalImm<int32_t>";
 
   let MCOperandPredicate = [{
     if (!MCOperand_isImm(MCOp))
       return false;
-    int64_t Val = AArch64_AM_decodeLogicalImmediate(MCOperand_getImm(MCOp), 64);
-    return AArch64_AM_isSVEMaskOfIdenticalElements_int32_t(Val);
+    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOperand_getImm(MCOp), 64);
+    return AArch64_AM::isSVEMaskOfIdenticalElements<int32_t>(Val);
   }];
 }
 
 class SVEPreferredLogicalImmOperand<int Width> : AsmOperandClass {
   let Name = "SVEPreferredLogicalImm" # Width;
-  let PredicateMethod = "isSVEPreferredLogicalImm_int" # Width # "_t";
-  let RenderMethod = "addLogicalImmOperands_int" # Width # "_t";
+  let PredicateMethod = "isSVEPreferredLogicalImm<int" # Width # "_t>";
+  let RenderMethod = "addLogicalImmOperands<int" # Width # "_t>";
 }
 
 def sve_preferred_logical_imm16 : Operand<i64> {
   let ParserMatchClass = SVEPreferredLogicalImmOperand<16>;
-  let PrintMethod = "printSVELogicalImm_int16_t";
+  let PrintMethod = "printSVELogicalImm<int16_t>";
 
   let MCOperandPredicate = [{
     if (!MCOperand_isImm(MCOp))
       return false;
-    int64_t Val = AArch64_AM_decodeLogicalImmediate(MCOperand_getImm(MCOp), 64);
-    return AArch64_AM_isSVEMaskOfIdenticalElements_int16_t(Val) &&
-           AArch64_AM_isSVEMoveMaskPreferredLogicalImmediate(Val);
+    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOperand_getImm(MCOp), 64);
+    return AArch64_AM::isSVEMaskOfIdenticalElements<int16_t>(Val) &&
+           AArch64_AM::isSVEMoveMaskPreferredLogicalImmediate(Val);
   }];
 }
 
 def sve_preferred_logical_imm32 : Operand<i64> {
   let ParserMatchClass =  SVEPreferredLogicalImmOperand<32>;
-  let PrintMethod = "printSVELogicalImm_int32_t";
+  let PrintMethod = "printSVELogicalImm<int32_t>";
 
   let MCOperandPredicate = [{
     if (!MCOperand_isImm(MCOp))
       return false;
-    int64_t Val = AArch64_AM_decodeLogicalImmediate(MCOperand_getImm(MCOp), 64);
-    return AArch64_AM_isSVEMaskOfIdenticalElements_int32_t(Val) &&
-           AArch64_AM_isSVEMoveMaskPreferredLogicalImmediate(Val);
+    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOperand_getImm(MCOp), 64);
+    return AArch64_AM::isSVEMaskOfIdenticalElements<int32_t>(Val) &&
+           AArch64_AM::isSVEMoveMaskPreferredLogicalImmediate(Val);
   }];
 }
 
 def sve_preferred_logical_imm64 : Operand<i64> {
   let ParserMatchClass = SVEPreferredLogicalImmOperand<64>;
-  let PrintMethod = "printSVELogicalImm_int64_t";
+  let PrintMethod = "printSVELogicalImm<int64_t>";
 
   let MCOperandPredicate = [{
     if (!MCOperand_isImm(MCOp))
       return false;
-    int64_t Val = AArch64_AM_decodeLogicalImmediate(MCOperand_getImm(MCOp), 64);
-    return AArch64_AM_isSVEMaskOfIdenticalElements_int64_t(Val) &&
-           AArch64_AM_isSVEMoveMaskPreferredLogicalImmediate(Val);
+    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOperand_getImm(MCOp), 64);
+    return AArch64_AM::isSVEMaskOfIdenticalElements<int64_t>(Val) &&
+           AArch64_AM::isSVEMoveMaskPreferredLogicalImmediate(Val);
   }];
 }
 
 class SVELogicalImmNotOperand<int Width> : AsmOperandClass {
   let Name = "SVELogicalImm" # Width # "Not";
   let DiagnosticType = "LogicalSecondSource";
-  let PredicateMethod = "isLogicalImm_int" # Width # "_t";
-  let RenderMethod = "addLogicalImmNotOperands_int" # Width # "_t";
+  let PredicateMethod = "isLogicalImm<int" # Width # "_t>";
+  let RenderMethod = "addLogicalImmNotOperands<int" # Width # "_t>";
 }
 
 def sve_logical_imm8_not : Operand<i64> {
@@ -180,22 +180,22 @@ class SVEShiftedImmOperand<int ElementWidth, string Infix, string Predicate>
   let PredicateMethod = Predicate;
 }
 
-def SVECpyImmOperand8  : SVEShiftedImmOperand<8,  "Cpy", "isSVECpyImm_int8_t">;
-def SVECpyImmOperand16 : SVEShiftedImmOperand<16, "Cpy", "isSVECpyImm_int16_t">;
-def SVECpyImmOperand32 : SVEShiftedImmOperand<32, "Cpy", "isSVECpyImm_int32_t">;
-def SVECpyImmOperand64 : SVEShiftedImmOperand<64, "Cpy", "isSVECpyImm_int64_t">;
+def SVECpyImmOperand8  : SVEShiftedImmOperand<8,  "Cpy", "isSVECpyImm<int8_t>">;
+def SVECpyImmOperand16 : SVEShiftedImmOperand<16, "Cpy", "isSVECpyImm<int16_t>">;
+def SVECpyImmOperand32 : SVEShiftedImmOperand<32, "Cpy", "isSVECpyImm<int32_t>">;
+def SVECpyImmOperand64 : SVEShiftedImmOperand<64, "Cpy", "isSVECpyImm<int64_t>">;
 
-def SVEAddSubImmOperand8  : SVEShiftedImmOperand<8,  "AddSub", "isSVEAddSubImm_int8_t">;
-def SVEAddSubImmOperand16 : SVEShiftedImmOperand<16, "AddSub", "isSVEAddSubImm_int16_t">;
-def SVEAddSubImmOperand32 : SVEShiftedImmOperand<32, "AddSub", "isSVEAddSubImm_int32_t">;
-def SVEAddSubImmOperand64 : SVEShiftedImmOperand<64, "AddSub", "isSVEAddSubImm_int64_t">;
+def SVEAddSubImmOperand8  : SVEShiftedImmOperand<8,  "AddSub", "isSVEAddSubImm<int8_t>">;
+def SVEAddSubImmOperand16 : SVEShiftedImmOperand<16, "AddSub", "isSVEAddSubImm<int16_t>">;
+def SVEAddSubImmOperand32 : SVEShiftedImmOperand<32, "AddSub", "isSVEAddSubImm<int32_t>">;
+def SVEAddSubImmOperand64 : SVEShiftedImmOperand<64, "AddSub", "isSVEAddSubImm<int64_t>">;
 
 class imm8_opt_lsl<int ElementWidth, string printType,
                    AsmOperandClass OpndClass>
     : Operand<i32> {
   let EncoderMethod = "getImm8OptLsl";
-  let DecoderMethod = "DecodeImm8OptLsl_" # ElementWidth;
-  let PrintMethod = "printImm8OptLsl_" # printType;
+  let DecoderMethod = "DecodeImm8OptLsl<" # ElementWidth # ">";
+  let PrintMethod = "printImm8OptLsl<" # printType # ">";
   let ParserMatchClass = OpndClass;
   let MIOperandInfo = (ops i32imm, i32imm);
 }
@@ -5296,7 +5296,7 @@ def simm5_16b_tgt : TImmLeaf<i16, [{ return (int16_t)Imm >= -16 && (int16_t)Imm 
 def simm5_32b_tgt : TImmLeaf<i32, [{ return (int32_t)Imm >= -16 && (int32_t)Imm < 16; }]>;
 def simm5_64b_tgt : TImmLeaf<i64, [{ return (int64_t)Imm >= -16 && (int64_t)Imm < 16; }]>;
 def i64imm_32bit_tgt : TImmLeaf<i64, [{
-  return (Imm & 0xffffffffULL) == (uint64_t)Imm;
+  return (Imm & 0xffffffffULL) == static_cast<uint64_t>(Imm);
 }]>;
 
 class sve_int_index_ii<bits<2> sz8_64, string asm, ZPRRegOp zprty,
