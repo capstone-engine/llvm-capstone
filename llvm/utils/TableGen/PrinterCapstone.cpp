@@ -2749,25 +2749,23 @@ void printFeatureEnumEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
   static std::set<std::string> Features;
   std::string EnumName;
 
-  for (Record *Predicate : CGI->TheDef->getValueAsListOfDefs("Predicates")) {
-    if (const SubtargetFeatureInfo *STF = AMI.getSubtargetFeature(Predicate)) {
-      std::string Feature = STF->TheDef->getName().str();
-      if (Features.find(Feature) != Features.end())
-        continue;
-      Features.emplace(Feature);
+  for (std::pair<Record *, SubtargetFeatureInfo> ST : AMI.SubtargetFeatures) {
+    const SubtargetFeatureInfo &STF = ST.second;
+    std::string Feature = STF.TheDef->getName().str();
+    if (Features.find(Feature) != Features.end())
+      continue;
+    Features.emplace(Feature);
 
-      // Enum
-      EnumName =
-          TargetName.str() + "_FEATURE_" + STF->TheDef->getName().str();
-      FeatureEnum << EnumName;
-      if (Features.size() == 1)
-        FeatureEnum << " = 128";
-      FeatureEnum << ",\n";
+    // Enum
+    EnumName = TargetName.str() + "_FEATURE_" + STF.TheDef->getName().str();
+    FeatureEnum << EnumName;
+    if (Features.size() == 1)
+      FeatureEnum << " = 128";
+    FeatureEnum << ",\n";
 
-      // Enum name map
-      FeatureNameArray << "{ " + EnumName + ", \"" +
-                              STF->TheDef->getName().str() + "\" },\n";
-    }
+    // Enum name map
+    FeatureNameArray << "{ " + EnumName + ", \"" + STF.TheDef->getName().str() +
+                            "\" },\n";
   }
 }
 
