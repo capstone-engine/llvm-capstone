@@ -3038,7 +3038,7 @@ void PrinterCapstone::asmMatcherEmitComputeAssemblerAvailableFeatures(
     AsmMatcherInfo &Info, StringRef const &ClassName) const {}
 
 void PrinterCapstone::searchableTablesWriteFiles() const {
-  std::string Filename = "__ARCH__GenSystemRegister.inc";
+  std::string Filename =  TargetName + "GenSystemRegister.inc";
   std::string HeaderStr;
   raw_string_ostream Header(HeaderStr);
   emitDefaultSourceFileHeader(Header);
@@ -3046,7 +3046,7 @@ void PrinterCapstone::searchableTablesWriteFiles() const {
   raw_string_ostream &Impl = searchableTablesGetOS(ST_IMPL_OS);
   writeFile(Filename, Header.str() + Decl.str() + Impl.str());
 
-  Filename = "__ARCH__GenCSSystemRegisterEnum.inc";
+  Filename = TargetName + "GenCSSystemRegisterEnum.inc";
   raw_string_ostream &Enum = searchableTablesGetOS(ST_ENUM_OS);
   writeFile(Filename, Header.str() + Enum.str());
 }
@@ -3086,7 +3086,7 @@ void PrinterCapstone::searchableTablesEmitGenericEnum(
 
   raw_string_ostream &EnumS = searchableTablesGetOS(ST_ENUM_OS);
   for (const auto &Entry : Enum.Entries) {
-    std::string RegName = "##ARCH##_SYSREG_" + Entry->first.upper();
+    std::string RegName = TargetName + "_SYSREG_" + Entry->first.upper();
     bool HasTwin = false;
     if (EVals.find(RegName) != EVals.end()) {
       // A system register can defined twice, if two target features
@@ -3107,7 +3107,7 @@ void PrinterCapstone::searchableTablesEmitGenericEnum(
           << "Group: " << Enum.Name;
     if (HasTwin)
       EnumS << " - also encoded as: "
-            << "##ARCH##_SYSREG_" + Entry->first.upper();
+            << TargetName + "_SYSREG_" + Entry->first.upper();
     EnumS << "\n";
     EVals.emplace(RegName);
   }
@@ -3312,6 +3312,31 @@ void PrinterCapstone::searchableTablesEmitMapII() const {
   OutS << "  { ";
 }
 
+/// Returns true if for the given field in the table is a register name
+/// and the enum name of it must be emitted as well.
+bool emitNameEnumPair(std::string TargetName,
+                      const GenericTable &Table,
+                      GenericField const &Field) {
+  // The types of tables which contain system register names.
+  static std::set<std::string> AArch64TableTypes = {"TLBI", "PRCTX", "IC", "SysReg", "SysAliasReg"};
+  static std::set<std::string> ARMTableTypes = {"MClassSysReg", "BankedReg"};
+  if (TargetName == "ARM") {
+    if (ARMTableTypes.find(Table.CppTypeName) == ARMTableTypes.end())
+      return false;
+    if (Field.Name == "Name" || Field.Name == "AltName")
+      return true;
+    return false;
+  } else if (TargetName == "AArch64") {
+    if (AArch64TableTypes.find(Table.CppTypeName) == AArch64TableTypes.end())
+      return false;
+    if (Field.Name == "Name" || Field.Name == "AltName")
+      return true;
+    return false;
+  } else {
+    llvm_unreachable("Searchable tables can not be altered for target.");
+  }
+}
+
 void PrinterCapstone::searchableTablesEmitMapIII(const GenericTable &Table,
                                                  ListSeparator &LS,
                                                  GenericField const &Field,
@@ -3323,11 +3348,11 @@ void PrinterCapstone::searchableTablesEmitMapIII(const GenericTable &Table,
   OutS << LS;
   std::string Repr = searchableTablesPrimaryRepresentation(
       Table.Locs[0], Field, Entry->getValueInit(Field.Name), IntrinsicEnum);
-  if (Repr.find("\"") != std::string::npos) {
+  if (emitNameEnumPair(TargetName, Table, Field)) {
     std::string RegName = Repr;
     while (RegName.find("\"") != std::string::npos)
       RegName = Regex("\"").sub("", RegName);
-    Repr = "\"" + RegName + "\", ##ARCH##_SYSREG_" + StringRef(RegName).upper();
+    Repr = "\"" + RegName + "\", " + TargetName + "_SYSREG_" + StringRef(RegName).upper();
   }
   OutS << Regex("{}").sub("{0}", Repr);
 }

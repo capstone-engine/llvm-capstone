@@ -625,9 +625,17 @@ void EmitSearchableTables(RecordKeeper &RK, raw_ostream &OS) {
     PI = new PrinterLLVM(FOS);
     break;
   case PRINTER_LANG_CAPSTONE_C:
-    PI = new PrinterCapstone(FOS);
+    Record *IDef = RK.getClass("I");
+    if (!IDef)
+      // If this is reached we need to implement the search for other classes which have Namespace set.
+      llvm_unreachable("Base instruction class \"I\" does not exist for this target.");
+    if (!IDef->getValue("Namespace"))
+      llvm_unreachable("Field \"Namespace\" does not exist.");
+    std::string TName = IDef->getValueAsString("Namespace").str();
+    PI = new PrinterCapstone(FOS, TName);
     break;
   }
+
   SearchableTableEmitter(RK, *PI).run();
   PI->searchableTablesWriteFiles();
   delete PI;
