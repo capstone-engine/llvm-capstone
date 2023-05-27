@@ -1160,8 +1160,7 @@ void PrinterCapstone::decoderEmitterEmitDecoderFunction(
       << "#define DecodeToMCInst(fname, fieldname, InsnType) \\\n"
       << "static DecodeStatus fname(DecodeStatus S, unsigned Idx, InsnType "
          "insn, MCInst *MI, \\\n"
-      << "		uint64_t Address, const void *Decoder, bool "
-         "&DecodeComplete) \\\n"
+      << "		uint64_t Address, const void *Decoder, bool &DecodeComplete) \\\n"
       << "{ \\\n";
   Indentation += 2;
   OS.indent(Indentation) << "InsnType tmp; \\\n";
@@ -2866,14 +2865,15 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
       MI->Mnemonic = "invalid";
     } else
       MI->Mnemonic = MI->AsmOperands[0].Token;
-    printInsnNameMapEnumEntry(Target.getName(), MI, InsnNameMap, InsnEnum);
+    printInsnNameMapEnumEntry(Target.getName(), MI, InsnNameMap,
+                              InsnEnum);
     printFeatureEnumEntry(Target.getName(), Info, CGI, FeatureEnum,
                           FeatureNameArray);
     printOpPrintGroupEnum(Target.getName(), CGI, OpGroups);
 
     printInsnOpMapEntry(Target, MI, UseMI, CGI, InsnOpMap, InsnNum);
-    printInsnMapEntry(Target.getName(), Info, MI, UseMI, CGI, InsnMap, InsnNum,
-                      PPCFormatEnum);
+    printInsnMapEntry(Target.getName(), Info, MI, UseMI, CGI, InsnMap,
+                      InsnNum, PPCFormatEnum);
 
     ++InsnNum;
   }
@@ -3038,7 +3038,7 @@ void PrinterCapstone::asmMatcherEmitComputeAssemblerAvailableFeatures(
     AsmMatcherInfo &Info, StringRef const &ClassName) const {}
 
 void PrinterCapstone::searchableTablesWriteFiles() const {
-  std::string Filename = TargetName + "GenSystemRegister.inc";
+  std::string Filename =  TargetName + "GenSystemRegister.inc";
   std::string HeaderStr;
   raw_string_ostream Header(HeaderStr);
   emitDefaultSourceFileHeader(Header);
@@ -3197,10 +3197,9 @@ std::string getTableType(const GenericTable &Table, std::string TargetName) {
   // Sometimes table type are wrapped into namespaces.
   // In Capstone we need to prepend the name to those types in this case.
   std::set<std::pair<std::string, std::string>> AArch64NSTypePairs = {
-      {"AArch64SysReg", "SysReg"},
-      {"AArch64SVEPredPattern", "SVEPREDPAT"},
-      {"AArch64SVEVecLenSpecifier", "SVEVECLENSPECIFIER"},
-      {"AArch64ExactFPImm", "ExactFPImm"}};
+    {"AArch64SysReg", "SysReg"}, {"AArch64SVEPredPattern", "SVEPREDPAT"},
+    {"AArch64SVEVecLenSpecifier", "SVEVECLENSPECIFIER"}, {"AArch64ExactFPImm", "ExactFPImm"}
+  };
   if (TargetName == "AArch64") {
     for (auto NSTPair : AArch64NSTypePairs) {
       if (NSTPair.second == Table.CppTypeName)
@@ -3220,9 +3219,7 @@ void PrinterCapstone::searchableTablesEmitLookupDeclaration(
     DoNotEmit = true;
     return;
   }
-  DoNotEmit = false;
-  OutS << "const " << getTableType(Table, TargetName) << " *" << Index.Name
-       << "(";
+  OutS << "const " << getTableType(Table, TargetName) << " *" << Index.Name << "(";
 
   ListSeparator LS;
   for (const auto &Field : Index.Fields)
@@ -3270,6 +3267,7 @@ void PrinterCapstone::searchableTablesEmitIndexArrayIV(
     return;
   OutS << ", " << Entry.second << " },\n";
 }
+
 void PrinterCapstone::searchableTablesEmitIndexArrayV() const {
   raw_string_ostream &OutS = searchableTablesGetOS(ST_IMPL_OS);
   if (DoNotEmit)
@@ -3319,8 +3317,8 @@ void PrinterCapstone::searchableTablesEmitMapI(
   if (DoNotEmit)
     return;
   raw_string_ostream &OutS = searchableTablesGetOS(ST_IMPL_OS);
-  OutS << "static const " << getTableType(Table, TargetName) << " "
-       << Table.Name << "[] = {\n";
+  OutS << "static const " << getTableType(Table, TargetName) << " " << Table.Name
+       << "[] = {\n";
 }
 
 void PrinterCapstone::searchableTablesEmitMapII() const {
@@ -3332,11 +3330,11 @@ void PrinterCapstone::searchableTablesEmitMapII() const {
 
 /// Returns true if for the given field in the table is a register name
 /// and the enum name of it must be emitted as well.
-bool emitNameEnumPair(std::string TargetName, const GenericTable &Table,
+bool emitNameEnumPair(std::string TargetName,
+                      const GenericTable &Table,
                       GenericField const &Field) {
   // The types of tables which contain system register names.
-  static std::set<std::string> AArch64TableTypes = {"TLBI", "PRCTX", "IC",
-                                                    "SysReg", "SysAliasReg"};
+  static std::set<std::string> AArch64TableTypes = {"TLBI", "PRCTX", "IC", "SysReg", "SysAliasReg"};
   static std::set<std::string> ARMTableTypes = {"MClassSysReg", "BankedReg"};
   if (TargetName == "ARM") {
     if (ARMTableTypes.find(Table.CppTypeName) == ARMTableTypes.end())
@@ -3370,8 +3368,7 @@ void PrinterCapstone::searchableTablesEmitMapIII(const GenericTable &Table,
     std::string RegName = Repr;
     while (RegName.find("\"") != std::string::npos)
       RegName = Regex("\"").sub("", RegName);
-    Repr = "\"" + RegName + "\", " + TargetName + "_SYSREG_" +
-           StringRef(RegName).upper();
+    Repr = "\"" + RegName + "\", " + TargetName + "_SYSREG_" + StringRef(RegName).upper();
   }
   OutS << Regex("{}").sub("{0}", Repr);
 }

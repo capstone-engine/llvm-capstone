@@ -991,6 +991,8 @@ public:
 ///
 /// Output language: C
 class PrinterCapstone : public PrinterLLVM {
+  // TODO: Toggle a flag is not nice to skip the search functions by strings
+  // is ugly. We should support them in the future.
   bool DoNotEmit = false;
 
 public:
