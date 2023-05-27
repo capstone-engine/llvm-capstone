@@ -779,7 +779,7 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
      << "static DecodeStatus fname(const uint8_t DecodeTable[], "
         "MCInst *MI, \\\n"
      << "                                      InsnType insn, uint64_t "
-        "Address) { \\\n"
+        "Address, const void *Decoder) { \\\n"
      << "  const uint8_t *Ptr = DecodeTable; \\\n"
      << "  uint64_t CurFieldValue = 0; \\\n"
      << "  DecodeStatus S = MCDisassembler_Success; \\\n"
@@ -862,7 +862,7 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
        << "      makeUp(insn, Len); \\\n";
   }
   OS << "      S = decoder(S, DecodeIdx, insn, MI, Address, "
-        "&DecodeComplete); \\\n"
+        "Decoder, &DecodeComplete); \\\n"
      << "      return S; \\\n"
      << "    } \\\n"
      << "    case MCD_OPC_TryDecode: { \\\n"
@@ -880,7 +880,7 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
      << "      MCInst_setOpcode(MI, Opc); \\\n"
      << "      bool DecodeComplete; \\\n"
      << "      S = decoder(S, DecodeIdx, insn, MI, Address, "
-     << "&DecodeComplete); \\\n"
+     << "Decoder, &DecodeComplete); \\\n"
      << "      if (DecodeComplete) { \\\n"
      << "        /* Decoding complete. */ \\\n"
      << "        return S; \\\n"
@@ -914,15 +914,20 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
      << "  } \\\n"
      << "  /* Bogisity detected in disassembler state machine! */ \\\n"
      << "}\n\n";
-  OS << "FieldFromInstruction(fieldFromInstruction_2, uint16_t)\n"
-     << "DecodeToMCInst(decodeToMCInst_2, fieldFromInstruction_2, uint16_t)\n"
-     << "DecodeInstruction(decodeInstruction_2, fieldFromInstruction_2, "
-        "decodeToMCInst_2, uint16_t)\n"
-     << "\n"
-     << "FieldFromInstruction(fieldFromInstruction_4, uint32_t)\n"
-     << "DecodeToMCInst(decodeToMCInst_4, fieldFromInstruction_4, uint32_t)\n"
-     << "DecodeInstruction(decodeInstruction_4, fieldFromInstruction_4, "
-        "decodeToMCInst_4, uint32_t)\n";
+
+  std::set<std::string> HasTwoByteInsns = {"ARM"};
+  std::set<std::string> HasFourByteInsns = {"ARM", "PPC", "AArch64"};
+
+  if (HasTwoByteInsns.find(TargetName) != HasTwoByteInsns.end())
+    OS << "FieldFromInstruction(fieldFromInstruction_2, uint16_t)\n"
+       << "DecodeToMCInst(decodeToMCInst_2, fieldFromInstruction_2, uint16_t)\n"
+       << "DecodeInstruction(decodeInstruction_2, fieldFromInstruction_2, "
+          "decodeToMCInst_2, uint16_t)\n\n";
+  if (HasFourByteInsns.find(TargetName) != HasFourByteInsns.end())
+    OS << "FieldFromInstruction(fieldFromInstruction_4, uint32_t)\n"
+       << "DecodeToMCInst(decodeToMCInst_4, fieldFromInstruction_4, uint32_t)\n"
+       << "DecodeInstruction(decodeInstruction_4, fieldFromInstruction_4, "
+          "decodeToMCInst_4, uint32_t)\n";
 }
 
 void PrinterCapstone::decoderEmitterEmitTable(
@@ -1155,7 +1160,7 @@ void PrinterCapstone::decoderEmitterEmitDecoderFunction(
       << "#define DecodeToMCInst(fname, fieldname, InsnType) \\\n"
       << "static DecodeStatus fname(DecodeStatus S, unsigned Idx, InsnType "
          "insn, MCInst *MI, \\\n"
-      << "		uint64_t Address, bool *Decoder) \\\n"
+      << "		uint64_t Address, const void *Decoder, bool &DecodeComplete) \\\n"
       << "{ \\\n";
   Indentation += 2;
   OS.indent(Indentation) << "InsnType tmp; \\\n";
@@ -2781,15 +2786,15 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
   static std::set<std::string> OpGroups;
   if (OpGroups.empty()) {
     for (auto OpGroup : Exceptions) {
-      OpGroupEnum.indent(2)
-          << TargetName + "_OP_GROUP_" + OpGroup + " = "
-          << OpGroups.size() << ",\n";
+      OpGroupEnum.indent(2) << TargetName + "_OP_GROUP_" + OpGroup + " = "
+                            << OpGroups.size() << ",\n";
       OpGroups.emplace(OpGroup);
     }
   }
 
   for (const CGIOperandList::OperandInfo &Op : CGI->Operands) {
-    std::string OpGroup = PrinterCapstone::resolveTemplateCall(Op.PrinterMethodName).substr(5);
+    std::string OpGroup =
+        PrinterCapstone::resolveTemplateCall(Op.PrinterMethodName).substr(5);
     if (OpGroups.find(OpGroup) != OpGroups.end())
       continue;
     OpGroupEnum.indent(2) << TargetName + "_OP_GROUP_" + OpGroup + " = "
@@ -3097,11 +3102,12 @@ void PrinterCapstone::searchableTablesEmitGenericEnum(
         llvm_unreachable("Cannot distinguish system registers.");
     }
 
-    EnumS << "\t" << RegName << " = "
-          << format("0x%x", Entry->second) << ", // "
+    EnumS << "\t" << RegName << " = " << format("0x%x", Entry->second)
+          << ", // "
           << "Group: " << Enum.Name;
     if (HasTwin)
-      EnumS << " - also encoded as: " << "##ARCH##_SYSREG_" + Entry->first.upper();
+      EnumS << " - also encoded as: "
+            << "##ARCH##_SYSREG_" + Entry->first.upper();
     EnumS << "\n";
     EVals.emplace(RegName);
   }
