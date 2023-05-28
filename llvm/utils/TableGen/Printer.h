@@ -30,7 +30,9 @@ typedef enum {
   ST_NONE,
   ST_DECL_OS,
   ST_IMPL_OS,
-  ST_ENUM_OS,
+  ST_ENUM_SYSREG_OS,
+  ST_ENUM_SYSIMM_OS,
+  ST_ENUM_SYSALIAS_OS,
 } StreamType;
 
 namespace llvm {
@@ -949,7 +951,7 @@ public:
   virtual void searchableTablesEmitIsContiguousCase(StringRef const &IndexName,
                                                     const GenericTable &Table,
                                                     const SearchIndex &Index,
-                                                    bool IsPrimary) const;
+                                                    bool IsPrimary);
   virtual void searchableTablesEmitIndexArrayV() const;
   virtual void searchableTablesEmitIndexArrayIV(
       std::pair<Record *, unsigned> const &Entry) const;
@@ -962,7 +964,7 @@ public:
                                       const SearchIndex &Index) const;
   virtual void searchableTablesEmitReturns(const GenericTable &Table,
                                            const SearchIndex &Index,
-                                           bool IsPrimary) const;
+                                           bool IsPrimary);
   virtual void
   searchableTablesEmitIndexLamda(const SearchIndex &Index,
                                  StringRef const &IndexName,
@@ -1799,7 +1801,7 @@ public:
   void searchableTablesEmitIsContiguousCase(StringRef const &IndexName,
                                             const GenericTable &Table,
                                             const SearchIndex &Index,
-                                            bool IsPrimary) const override;
+                                            bool IsPrimary) override;
   void searchableTablesEmitIndexArrayV() const override;
   void searchableTablesEmitIndexArrayIV(
       std::pair<Record *, unsigned> const &Entry) const override;
@@ -1812,7 +1814,7 @@ public:
                                       const SearchIndex &Index) const override;
   void searchableTablesEmitReturns(const GenericTable &Table,
                                    const SearchIndex &Index,
-                                   bool IsPrimary) const override;
+                                   bool IsPrimary) override;
   void
   searchableTablesEmitIndexLamda(const SearchIndex &Index,
                                  StringRef const &IndexName,
