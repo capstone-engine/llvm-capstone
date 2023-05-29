@@ -3192,19 +3192,41 @@ std::string PrinterCapstone::searchableTablesPrimaryRepresentation(
                            "'; expected: bit, bits, string, or code");
 }
 
-std::string getTableType(const GenericTable &Table, std::string TargetName) {
+std::string getTableNamespacePrefix(const GenericTable &Table,
+                                    std::string TargetName) {
   // Sometimes table type are wrapped into namespaces.
   // In Capstone we need to prepend the name to those types in this case.
   std::set<std::pair<std::string, std::string>> AArch64NSTypePairs = {
       {"AArch64SysReg", "SysReg"},
+      {"AArch64PState", "PStateImm0_15"},
+      {"AArch64PState", "PStateImm0_1"},
+      {"AArch64SVCR", "SVCR"},
+      {"AArch64AT", "AT"},
+      {"AArch64DB", "DB"},
+      {"AArch64DBnXS", "DBnXS"},
+      {"AArch64DC", "DC"},
+      {"AArch64IC", "IC"},
+      {"AArch64ISB", "ISB"},
+      {"AArch64TSB", "TSB"},
+      {"AArch64PRFM", "PRFM"},
+      {"AArch64SVEPRFM", "SVEPRFM"},
+      {"AArch64RPRFM", "RPRFM"},
+      {"AArch64SVCR", "SVCR"},
       {"AArch64SVEPredPattern", "SVEPREDPAT"},
       {"AArch64SVEVecLenSpecifier", "SVEVECLENSPECIFIER"},
-      {"AArch64ExactFPImm", "ExactFPImm"}};
+      {"AArch64ExactFPImm", "ExactFPImm"},
+      {"AArch64BTIHint", "BTI"},
+      {"AArch64TLBI", "TLBI"},
+      {"AArch64PRCTX", "PRCTX"},
+      {"AArch64BTIHint", "BTI"},
+      {"AArch64PSBHint", "PSB"},
+  };
   if (TargetName == "AArch64") {
     for (auto NSTPair : AArch64NSTypePairs) {
       if (NSTPair.second == Table.CppTypeName)
-        return NSTPair.first + "_" + Table.CppTypeName;
+        return NSTPair.first + "_";
     }
+    return "";
   }
   return Table.CppTypeName;
 }
@@ -3223,8 +3245,9 @@ void PrinterCapstone::searchableTablesEmitLookupDeclaration(
     return;
   }
   DoNotEmit = false;
-  OutS << "const " << getTableType(Table, TargetName) << " *" << Index.Name
-       << "(";
+  std::string NamespacePre = getTableNamespacePrefix(Table, TargetName);
+  OutS << "const " << NamespacePre << Table.CppTypeName << " *" << NamespacePre
+       << Index.Name << "(";
 
   ListSeparator LS;
   for (const auto &Field : Index.Fields)
@@ -3325,8 +3348,8 @@ void PrinterCapstone::searchableTablesEmitMapI(
   if (DoNotEmit)
     return;
   raw_string_ostream &OutS = searchableTablesGetOS(ST_IMPL_OS);
-  OutS << "static const " << getTableType(Table, TargetName) << " "
-       << Table.Name << "[] = {\n";
+  OutS << "static const " << getTableNamespacePrefix(Table, TargetName)
+       << Table.CppTypeName << " " << Table.Name << "[] = {\n";
 }
 
 void PrinterCapstone::searchableTablesEmitMapII() const {
