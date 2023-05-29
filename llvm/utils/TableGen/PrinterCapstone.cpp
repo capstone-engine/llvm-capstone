@@ -651,7 +651,7 @@ void PrinterCapstone::decoderEmitterEmitOpDecoder(raw_ostream &DecoderOS,
   }
 
   DecoderOS << "(MI, insn, Address, Decoder)" << GuardPostfix << " { "
-            << (Op.HasCompleteDecoder ? "" : "DecodeComplete = false; ")
+            << (Op.HasCompleteDecoder ? "" : "*DecodeComplete = false; ")
             << "return " << ReturnFail << "; } \\\n";
 }
 
@@ -690,7 +690,7 @@ void PrinterCapstone::decoderEmitterEmitOpBinaryParser(
                          << " { "
                          << (OpInfo.HasCompleteDecoder
                                  ? ""
-                                 : "DecodeComplete = false; ")
+                                 : "*DecodeComplete = false; ")
                          << "return " << ReturnFail << "; } \\\n";
   } else {
     DecOS.indent(Indent) << "MCOperand_CreateImm0(MI, tmp); \\\n";
@@ -1161,7 +1161,7 @@ void PrinterCapstone::decoderEmitterEmitDecoderFunction(
       << "static DecodeStatus fname(DecodeStatus S, unsigned Idx, InsnType "
          "insn, MCInst *MI, \\\n"
       << "		uint64_t Address, const void *Decoder, bool "
-         "&DecodeComplete) \\\n"
+         "*DecodeComplete) \\\n"
       << "{ \\\n";
   Indentation += 2;
   OS.indent(Indentation) << "InsnType tmp; \\\n";
