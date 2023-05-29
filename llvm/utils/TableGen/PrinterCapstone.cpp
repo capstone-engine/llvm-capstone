@@ -2088,7 +2088,8 @@ void PrinterCapstone::instrInfoSetOperandInfoStr(
   Res += ", ";
   assert(!Op.OperandType.empty() && "Invalid operand type.");
   std::string OpTypeCpy = Op.OperandType;
-  if (OpTypeCpy.find("VPRED") != std::string::npos)
+  if (OpTypeCpy.find("VPRED") != std::string::npos ||
+      OpTypeCpy.find("IMPLICIT_IMM") != std::string::npos)
     OpTypeCpy = Regex("OPERAND").sub("OP", OpTypeCpy);
   Res += OpTypeCpy.replace(OpTypeCpy.find("::"), 2, "_");
 
