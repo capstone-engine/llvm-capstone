@@ -1597,7 +1597,7 @@ void PrinterCapstone::asmWriterEmitPrintAliasInstrBodyRetFalse() const {
 void PrinterCapstone::asmWriterEmitDeclValid(std::string const &TargetName,
                                              StringRef const &ClassName) const {
   OS << "static bool " << TargetName << ClassName
-     << "ValidateMCOperand(const MCOperand &MCOp,\n"
+     << "ValidateMCOperand(const MCOperand *MCOp,\n"
      << "                  unsigned PredicateIndex);\n";
 }
 
@@ -1736,7 +1736,7 @@ void PrinterCapstone::asmWriterEmitPrintMC(
     std::vector<const Record *> const &MCOpPredicates) const {
   if (!MCOpPredicates.empty()) {
     OS << "static bool " << TargetName << ClassName
-       << "ValidateMCOperand(const MCOperand &MCOp,\n"
+       << "ValidateMCOperand(const MCOperand *MCOp,\n"
        << "                  unsigned PredicateIndex) {\n"
        << "  switch (PredicateIndex) {\n"
        << "  default:\n"
