@@ -1243,6 +1243,7 @@ def : InstAlias<"mtspefscr $Rx", (MTSPR8 512, g8rc:$Rx)>;
 
 
 // Sign extending loads.
+let mayLoad = 1 in {
 let PPC970_Unit = 2 in {
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in
 def LHA8: DForm_1<42, (outs g8rc:$rD), (ins memri:$src),
@@ -1263,6 +1264,8 @@ def LWAX : XForm_1_memOp<31, 341, (outs g8rc:$rD), (ins memrr:$src),
                         "lwax $rD, $src", IIC_LdStLHA,
                         [(set i64:$rD, (sextloadi32 XForm:$src))]>, isPPC64,
                         PPC970_DGroup_Cracked, SExt32To64;
+}
+
 // For fast-isel:
 let isCodeGenOnly = 1, mayLoad = 1, hasSideEffects = 0 in {
 def LWA_32  : DSForm_1<58, 2, (outs gprc:$rD), (ins memrix:$src),
@@ -1366,7 +1369,7 @@ def LWZUX8 : XForm_1_memOp<31, 55, (outs g8rc:$rD, ptr_rc_nor0:$ea_result),
 
 
 // Full 8-byte loads.
-let PPC970_Unit = 2 in {
+let PPC970_Unit = 2, mayLoad = 1 in {
 def LD   : DSForm_1<58, 0, (outs g8rc:$rD), (ins memrix:$src),
                     "ld $rD, $src", IIC_LdStLD,
                     [(set i64:$rD, (load DSForm:$src))]>, isPPC64;
@@ -1602,7 +1605,7 @@ def PADDIdtprel : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm
                   isPPC64;
 
 let PPC970_Unit = 2 in {
-let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
+let Interpretation64Bit = 1, isCodeGenOnly = 1, mayStore = 1 in {
 // Truncating stores.                       
 def STB8 : DForm_1<38, (outs), (ins g8rc:$rS, memri:$src),
                    "stb $rS, $src", IIC_LdStStore,
@@ -1628,6 +1631,7 @@ def STWX8 : XForm_8_memOp<31, 151, (outs), (ins g8rc:$rS, memrr:$dst),
 } // Interpretation64Bit
 
 // Normal 8-byte stores.
+let mayStore = 1 in {
 def STD  : DSForm_1<62, 0, (outs), (ins g8rc:$rS, memrix:$dst),
                     "std $rS, $dst", IIC_LdStSTD,
                     [(store i64:$rS, DSForm:$dst)]>, isPPC64;
@@ -1641,6 +1645,7 @@ def STDBRX: XForm_8_memOp<31, 660, (outs), (ins g8rc:$rS, memrr:$dst),
                           "stdbrx $rS, $dst", IIC_LdStStore,
                           [(PPCstbrx i64:$rS, ForceXForm:$dst, i64)]>, isPPC64,
                           PPC970_DGroup_Cracked;
+}
 }
 
 let mayStore = 1, hasNoSchedulingInfo = 1 in {

@@ -40,19 +40,10 @@ std::string AsmWriterOperand::getCode(bool PassSubtarget) const {
     std::string Res;
     if (Str.size() == 1) {
       Res = "SStream_concat1(O, '" + Str + "');";
-      if (Str == "[")
-        Res += "\n    set_mem_access(MI, true);";
       return Res;
     }
 
     Res = "SStream_concat0(O, \"" + Str + "\");";
-    if (Str.find("[]") != std::string::npos)
-      return Res;
-
-    if (Str.find("[") != std::string::npos)
-      Res += "\n    set_mem_access(MI, true);";
-    else if (Str.find("]") != std::string::npos)
-      Res += "\n    set_mem_access(MI, false);";
     return Res;
   }
 

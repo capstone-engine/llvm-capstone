@@ -697,39 +697,66 @@ def PDForm : ComplexPattern<iPTR, 2, "SelectPDForm",   [], [SDNPWantParent]>;
 
 //===----------------------------------------------------------------------===//
 // PowerPC Instruction Predicate Definitions.
-def In32BitMode  : Predicate<"!Subtarget->isPPC64()">;
-def In64BitMode  : Predicate<"Subtarget->isPPC64()">;
-def IsBookE  : Predicate<"Subtarget->isBookE()">;
-def IsNotBookE  : Predicate<"!Subtarget->isBookE()">;
-def HasOnlyMSYNC : Predicate<"Subtarget->hasOnlyMSYNC()">;
-def HasSYNC   : Predicate<"!Subtarget->hasOnlyMSYNC()">;
-def IsPPC4xx  : Predicate<"Subtarget->isPPC4xx()">;
-def IsPPC6xx  : Predicate<"Subtarget->isPPC6xx()">;
-def IsE500  : Predicate<"Subtarget->isE500()">;
-def HasSPE  : Predicate<"Subtarget->hasSPE()">;
-def HasICBT : Predicate<"Subtarget->hasICBT()">;
-def HasPartwordAtomics : Predicate<"Subtarget->hasPartwordAtomics()">;
-def HasQuadwordAtomics : Predicate<"Subtarget->hasQuadwordAtomics()">;
+def In32BitMode  : Predicate<"!Subtarget->isPPC64()">,
+  AssemblerPredicate<(all_of (not Feature64Bit)), "64bit">;
+def In64BitMode  : Predicate<"Subtarget->isPPC64()">,
+  AssemblerPredicate<(all_of Feature64Bit), "64bit">;
+def IsBookE  : Predicate<"Subtarget->isBookE()">,
+  AssemblerPredicate<(all_of FeatureBookE), "booke">;
+def IsNotBookE  : Predicate<"!Subtarget->isBookE()">,
+  AssemblerPredicate<(all_of (not FeatureBookE)), "notbooke">;
+def HasOnlyMSYNC : Predicate<"Subtarget->hasOnlyMSYNC()">,
+  AssemblerPredicate<(all_of FeatureMSYNC), "msync">;
+def HasSYNC   : Predicate<"!Subtarget->hasOnlyMSYNC()">,
+  AssemblerPredicate<(all_of (not FeatureMSYNC)), "sync">;
+def IsPPC4xx  : Predicate<"Subtarget->isPPC4xx()">,
+  AssemblerPredicate<(all_of FeaturePPC4xx), "ppc4xx">;
+def IsPPC6xx  : Predicate<"Subtarget->isPPC6xx()">,
+  AssemblerPredicate<(all_of FeaturePPC6xx), "ppc6xx">;
+def IsE500  : Predicate<"Subtarget->isE500()">,
+  AssemblerPredicate<(all_of FeatureE500), "e500">;
+def HasSPE  : Predicate<"Subtarget->hasSPE()">,
+  AssemblerPredicate<(all_of FeatureSPE), "spe">;
+def HasICBT : Predicate<"Subtarget->hasICBT()">,
+  AssemblerPredicate<(all_of FeatureICBT), "icbt">;
+def HasPartwordAtomics : Predicate<"Subtarget->hasPartwordAtomics()">,
+  AssemblerPredicate<(all_of FeaturePartwordAtomic), "partwordatomic">;
+def HasQuadwordAtomics : Predicate<"Subtarget->hasQuadwordAtomics()">,
+  AssemblerPredicate<(all_of FeatureQuadwordAtomic), "quadwordatomic">;
 def NoNaNsFPMath
-    : Predicate<"Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
+    : Predicate<"Subtarget->getTargetMachine().Options.NoNaNsFPMath">,
+  AssemblerPredicate<(all_of (not FeatureFPU)), "notfpu">;
 def NaNsFPMath
-    : Predicate<"!Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
-def HasBPERMD : Predicate<"Subtarget->hasBPERMD()">;
-def HasExtDiv : Predicate<"Subtarget->hasExtDiv()">;
-def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">;
-def IsISA2_07 : Predicate<"Subtarget->isISA2_07()">;
-def IsISA3_0 : Predicate<"Subtarget->isISA3_0()">;
-def HasFPU : Predicate<"Subtarget->hasFPU()">;
-def PCRelativeMemops : Predicate<"Subtarget->hasPCRelativeMemops()">;
-def IsNotISA3_1 : Predicate<"!Subtarget->isISA3_1()">;
+    : Predicate<"!Subtarget->getTargetMachine().Options.NoNaNsFPMath">,
+  AssemblerPredicate<(all_of FeatureFPU), "fpu">;
+def HasBPERMD : Predicate<"Subtarget->hasBPERMD()">,
+  AssemblerPredicate<(all_of FeatureBPERMD), "bpermd">;
+def HasExtDiv : Predicate<"Subtarget->hasExtDiv()">,
+  AssemblerPredicate<(all_of FeatureFPU), "fpu">;
+def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">,
+  AssemblerPredicate<(all_of FeatureBPERMD), "bpermd">;
+def IsISA2_07 : Predicate<"Subtarget->isISA2_07()">,
+  AssemblerPredicate<(all_of FeatureExtDiv), "extdiv">;
+def IsISA3_0 : Predicate<"Subtarget->isISA3_0()">,
+  AssemblerPredicate<(all_of FeatureISA2_06), "isa2_06">;
+def HasFPU : Predicate<"Subtarget->hasFPU()">,
+  AssemblerPredicate<(all_of FeatureISA2_07), "isa2_07">;
+def PCRelativeMemops : Predicate<"Subtarget->hasPCRelativeMemops()">,
+  AssemblerPredicate<(all_of FeatureISA3_0), "isa3_0">;
+def IsNotISA3_1 : Predicate<"!Subtarget->isISA3_1()">,
+  AssemblerPredicate<(all_of (not FeatureISA3_1)), "notisa3_1">;
 
 // AIX assembler may not be modern enough to support some extended mne.
-def ModernAs: Predicate<"!Subtarget->isAIXABI() || Subtarget->HasModernAIXAs">, 
+def ModernAs: Predicate<"!Subtarget->isAIXABI() || Subtarget->HasModernAIXAs">,
                  AssemblerPredicate<(any_of (not AIXOS), FeatureModernAIXAs)>;
-def IsAIX : Predicate<"Subtarget->isAIXABI()">;
-def NotAIX : Predicate<"!Subtarget->isAIXABI()">;
-def IsISAFuture : Predicate<"Subtarget->isISAFuture()">;
-def IsNotISAFuture : Predicate<"!Subtarget->isISAFuture()">;
+def IsAIX : Predicate<"Subtarget->isAIXABI()">,
+  AssemblerPredicate<(all_of AIXOS), "aix">;
+def NotAIX : Predicate<"!Subtarget->isAIXABI()">,
+  AssemblerPredicate<(all_of (not AIXOS)), "notaix">;
+def IsISAFuture : Predicate<"Subtarget->isISAFuture()">,
+  AssemblerPredicate<(all_of FeatureISAFuture), "isafuture">;
+def IsNotISAFuture : Predicate<"!Subtarget->isISAFuture()">,
+  AssemblerPredicate<(all_of (not FeatureISAFuture)), "notisafuture">;
 
 //===----------------------------------------------------------------------===//
 // PowerPC Multiclass Definitions.
@@ -1563,16 +1590,20 @@ def DCBA   : DCB_Form<758, 0, (outs), (ins memrr:$dst), "dcba $dst",
 def DCBI   : DCB_Form<470, 0, (outs), (ins memrr:$dst), "dcbi $dst",
                       IIC_LdStDCBF, [(int_ppc_dcbi xoaddr:$dst)]>,
                       PPC970_DGroup_Single;
+let mayLoad = 1 in
 def DCBST  : DCB_Form<54, 0, (outs), (ins memrr:$dst), "dcbst $dst",
                       IIC_LdStDCBF, [(int_ppc_dcbst xoaddr:$dst)]>,
                       PPC970_DGroup_Single;
+let mayStore = 1 in {
 def DCBZ   : DCB_Form<1014, 0, (outs), (ins memrr:$dst), "dcbz $dst",
                       IIC_LdStDCBF, [(int_ppc_dcbz xoaddr:$dst)]>,
                       PPC970_DGroup_Single;
 def DCBZL  : DCB_Form<1014, 1, (outs), (ins memrr:$dst), "dcbzl $dst",
                       IIC_LdStDCBF, [(int_ppc_dcbzl xoaddr:$dst)]>,
                       PPC970_DGroup_Single;
+}
 
+let mayLoad = 1 in
 def DCBF   : DCB_Form_hint<86, (outs), (ins u3imm:$TH, memrr:$dst),
                       "dcbf $dst, $TH", IIC_LdStDCBF, []>,
                       PPC970_DGroup_Single;
@@ -1590,10 +1621,12 @@ def ICBLC  : XForm_icbt<31, 230, (outs), (ins u4imm:$CT, memrr:$src),
                        "icblc $CT, $src", IIC_LdStStore>, Requires<[HasICBT]>;
 def ICBLQ  : XForm_icbt<31, 198, (outs), (ins u4imm:$CT, memrr:$src),
                        "icblq. $CT, $src", IIC_LdStLoad>, Requires<[HasICBT]>;
+let mayLoad = 1 in {
 def ICBT  : XForm_icbt<31, 22, (outs), (ins u4imm:$CT, memrr:$src),
                        "icbt $CT, $src", IIC_LdStLoad>, Requires<[HasICBT]>;
 def ICBTLS : XForm_icbt<31, 486, (outs), (ins u4imm:$CT, memrr:$src),
                        "icbtls $CT, $src", IIC_LdStLoad>, Requires<[HasICBT]>;
+}
 
 def : Pat<(int_ppc_dcbt xoaddr:$dst),
           (DCBT 0, xoaddr:$dst)>;
@@ -1813,7 +1846,7 @@ def POPCNTB : XForm_11<31, 122, (outs gprc:$rA), (ins gprc:$rS),
 //
 
 // Unindexed (r+i) Loads.
-let PPC970_Unit = 2 in {
+let PPC970_Unit = 2, mayLoad = 1 in {
 def LBZ : DForm_1<34, (outs gprc:$rD), (ins memri:$src),
                   "lbz $rD, $src", IIC_LdStLoad,
                   [(set i32:$rD, (zextloadi8 DForm:$src))]>, ZExt32To64,
@@ -2024,7 +2057,7 @@ def : Pat<(pre_store f64:$rS, iPTR:$ptrreg, iaddroff:$ptroff),
           (STFDU $rS, iaddroff:$ptroff, $ptrreg)>;
 
 // Indexed (r+r) Stores.
-let PPC970_Unit = 2 in {
+let PPC970_Unit = 2, mayStore = 1 in {
 def STBX  : XForm_8_memOp<31, 215, (outs), (ins gprc:$rS, memrr:$dst),
                    "stbx $rS, $dst", IIC_LdStStore,
                    [(truncstorei8 i32:$rS, XForm:$dst)]>,
@@ -4056,6 +4089,7 @@ def STSWI : XForm_base_r3xo_memOp<31, 725, (outs),
 def ISYNC : XLForm_2_ext<19, 150, 0, 0, 0, (outs), (ins),
                          "isync", IIC_SprISYNC, []>;
 
+let mayLoad = 1 in
 def ICBI : XForm_1a<31, 982, (outs), (ins memrr:$src),
                     "icbi $src", IIC_LdStICBI, []>;
 
@@ -4224,6 +4258,7 @@ def NAP   : XLForm_1_np<19, 434, (outs), (ins), "nap", IIC_BrB, []>;
 
 def ATTN : XForm_attn<0, 256, (outs), (ins), "attn", IIC_BrB>;
 
+let mayLoad = 1 in {
 def LBZCIX : XForm_base_r3xo_memOp<31, 853, (outs gprc:$RST),
                                   (ins gprc:$A, gprc:$B),
                                   "lbzcix $RST, $A, $B", IIC_LdStLoad, []>;
@@ -4236,7 +4271,9 @@ def LWZCIX : XForm_base_r3xo_memOp<31, 789, (outs gprc:$RST),
 def LDCIX :  XForm_base_r3xo_memOp<31, 885, (outs gprc:$RST),
                                   (ins gprc:$A, gprc:$B),
                                   "ldcix $RST, $A, $B", IIC_LdStLoad, []>;
+}
 
+let mayStore = 1 in {
 def STBCIX : XForm_base_r3xo_memOp<31, 981, (outs),
                                   (ins gprc:$RST, gprc:$A, gprc:$B),
                                   "stbcix $RST, $A, $B", IIC_LdStLoad, []>;
@@ -4249,9 +4286,11 @@ def STWCIX : XForm_base_r3xo_memOp<31, 917, (outs),
 def STDCIX : XForm_base_r3xo_memOp<31, 1013, (outs),
                                   (ins gprc:$RST, gprc:$A, gprc:$B),
                                   "stdcix $RST, $A, $B", IIC_LdStLoad, []>;
+}
 
 // External PID Load Store Instructions
 
+let mayLoad = 1 in {
 def LBEPX   : XForm_1<31, 95, (outs gprc:$rD), (ins memrr:$src),
                       "lbepx $rD, $src", IIC_LdStLoad, []>,
                       Requires<[IsE500]>;
@@ -4267,7 +4306,9 @@ def LHEPX   : XForm_1<31, 287, (outs gprc:$rD), (ins memrr:$src),
 def LWEPX   : XForm_1<31, 31, (outs gprc:$rD), (ins memrr:$src),
                       "lwepx $rD, $src", IIC_LdStLoad, []>,
                       Requires<[IsE500]>;
+}
 
+let mayStore = 1 in {
 def STBEPX  : XForm_8<31, 223, (outs), (ins gprc:$rS, memrr:$dst),
                       "stbepx $rS, $dst", IIC_LdStStore, []>,
                       Requires<[IsE500]>;
@@ -4283,6 +4324,7 @@ def STHEPX  : XForm_8<31, 415, (outs), (ins gprc:$rS, memrr:$dst),
 def STWEPX  : XForm_8<31, 159, (outs), (ins gprc:$rS, memrr:$dst),
                       "stwepx $rS, $dst", IIC_LdStStore, []>,
                       Requires<[IsE500]>;
+}
 
 def DCBFEP  : DCB_Form<127, 0, (outs), (ins memrr:$dst), "dcbfep $dst",
                       IIC_LdStDCBF, []>, Requires<[IsE500]>;
@@ -4304,6 +4346,7 @@ def DCBZEP  : DCB_Form<1023, 0, (outs), (ins memrr:$dst), "dcbzep $dst",
 def DCBZLEP : DCB_Form<1023, 1, (outs), (ins memrr:$dst), "dcbzlep $dst",
                       IIC_LdStDCBF, []>, Requires<[IsE500]>;
 
+let mayLoad = 1 in
 def ICBIEP  : XForm_1a<31, 991, (outs), (ins memrr:$src), "icbiep $src",
                       IIC_LdStICBI, []>, Requires<[IsE500]>;
 
@@ -4353,9 +4396,11 @@ def DCBTSTCT : PPCAsmPseudo<"dcbtstct $dst, $TH", (ins memrr:$dst, u5imm:$TH)>;
 def DCBTSTDS : PPCAsmPseudo<"dcbtstds $dst, $TH", (ins memrr:$dst, u5imm:$TH)>;
 def DCBTSTT  : PPCAsmPseudo<"dcbtstt $dst", (ins memrr:$dst)>;
 
+let mayLoad = 1 in {
 def DCBFx  : PPCAsmPseudo<"dcbf $dst", (ins memrr:$dst)>;
 def DCBFL  : PPCAsmPseudo<"dcbfl $dst", (ins memrr:$dst)>;
 def DCBFLP : PPCAsmPseudo<"dcbflp $dst", (ins memrr:$dst)>;
+}
 
 def : Pat<(int_ppc_isync),  (ISYNC)>;
 def : Pat<(int_ppc_dcbfl xoaddr:$dst),
@@ -4545,6 +4590,7 @@ def : InstAlias<"tlbwehi $RS, $A", (TLBWE2 gprc:$RS, gprc:$A, 0)>,
 def : InstAlias<"tlbwelo $RS, $A", (TLBWE2 gprc:$RS, gprc:$A, 1)>,
                 Requires<[IsPPC4xx]>;
 
+let mayLoad = 1 in
 def LAx : PPCAsmPseudo<"la $rA, $addr", (ins gprc:$rA, memri:$addr)>;
 
 def SUBI : PPCAsmPseudo<"subi $rA, $rB, $imm",
@@ -5160,3 +5206,10 @@ def : Pat<(int_ppc_dcbtt ForceXForm:$dst),
 
 def : Pat<(int_ppc_stfiw ForceXForm:$dst, f64:$XT),
           (STFIWX f64:$XT, ForceXForm:$dst)>;
+
+#define CAPSTONE_DEPR_INTRINSICS
+include "PPCDeprecated.td"
+#define CAPSTONE_DEPR_INSTR
+#define CAPSTONE_PS_INSTR
+include "PPCDeprecated.td"
+include "PPCInstrPairedSingle.td"

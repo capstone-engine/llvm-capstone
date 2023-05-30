@@ -2208,3 +2208,7 @@ class PPCPostRAExpPseudo<dag OOL, dag IOL, string asmstr, list<dag> pattern>
 class PseudoXFormMemOp<dag OOL, dag IOL, string asmstr, list<dag> pattern>
     : PPCPostRAExpPseudo<OOL, IOL, asmstr, pattern>, XFormMemOp;
 
+#define CAPSTONE_PS_FORMATS
+include "PPCInstrPairedSingle.td"
+#define CAPSTONE_DEPR_FORMATS
+include "PPCDeprecated.td"

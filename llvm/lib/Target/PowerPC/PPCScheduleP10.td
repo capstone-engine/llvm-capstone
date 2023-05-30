@@ -36,7 +36,7 @@ def P10Model : SchedMachineModel {
   let CompleteModel = 1;
 
   // Do not support SPE (Signal Procesing Engine) on Power 10.
-  let UnsupportedFeatures = [HasSPE, IsE500, IsBookE, IsISAFuture];
+  let UnsupportedFeatures = [HasSPE, IsE500, IsBookE, IsISAFuture, HasQPX, HasPS];
 }
 
 let SchedModel = P10Model in {
