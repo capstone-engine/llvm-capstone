@@ -1012,7 +1012,7 @@ public:
                          bool Newline = true,
                          bool UndefAtEnd = false) const override;
 
-  static std::string resolveTemplateCall(std::string const &Dec);
+  static std::string translateToC(std::string const &Dec);
 
   //------------------------
   // Backend: RegisterInfo

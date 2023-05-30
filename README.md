@@ -74,11 +74,9 @@ We use the following emitter backends
 
 ## Developer notes
 
-- If you find C++ code within the generated files check the `.td` files again.
-You can replace any C++ code except calls to template functions (those are used by `auto-sync's` `TemplateCollector`).
-If the `PrinterCapstone` is used the calls to template functions are patched in `PrinterCapstone::resolveTemplateCall()`.
-Syntax to define C++ code in `.td` files is `[{ code }]`
-Also see: TableGen syntax for [TokCode](https://llvm.org/docs/TableGen/ProgRef.html#grammar-token-tokcode) (usually used for code snippets).
+- If you find C++ code within the generated files you need to extend `PrinterCapstone::translateToC()`.
+If this still doesn't fix the problem, the code snipped wasn't passed through `translateToC()` before emitting.
+So you need to figure out where this specific code snipped is printed and add `translateToC()`.
 
 - If the mapping files miss operand types or access information, then the `.td` files are incomplete (happens surprisingly often).
 You need to search for the instruction or operands with missing or incorrect values and fix them.

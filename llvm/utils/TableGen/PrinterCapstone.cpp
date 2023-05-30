@@ -618,15 +618,38 @@ void PrinterCapstone::regInfoEmitIsConstantPhysReg(
     std::deque<CodeGenRegister> const &Regs,
     std::string const &ClassName) const {}
 
-std::string PrinterCapstone::resolveTemplateCall(std::string const &Dec) {
-  unsigned long const B = Dec.find_first_of("<");
-  unsigned long const E = Dec.find(">");
+void patchQualifier(std::string &Code) {
+  while (Code.find("::") != std::string::npos)
+    Code = Regex("::").sub("_", Code);
+}
+
+void patchNullptr(std::string &Code) {
+  while (Code.find("nullptr") != std::string::npos)
+    Code = Regex("nullptr").sub("NULL", Code);
+}
+
+void patchIsGetImmReg(std::string &Code) {
+  Regex Pattern = Regex("[a-zA-Z0-9_]+\\.(get|is)(Imm|Reg)\\(\\)");
+  SmallVector<StringRef> Matches;
+  while (Pattern.match(Code, &Matches)) {
+    StringRef Match = Matches[0];
+    StringRef Op = Match.split(".").first;
+    StringRef Func = Match.split(".").second.trim(")");
+    Code = Code.replace(Code.find(Match), Match.size(),
+                        "MCOperand_" + Func.str() + Op.str() + ")");
+  }
+}
+
+void patchTemplateArgs(std::string &Code) {
+  unsigned long const B = Code.find_first_of("<");
+  unsigned long const E = Code.find(">");
   if (B == std::string::npos) {
     // No template
-    return Dec;
+    return;
   }
-  std::string const &DecName = Dec.substr(0, B);
-  std::string Args = Dec.substr(B + 1, E - B - 1);
+  std::string const &DecName = Code.substr(0, B);
+  std::string Args = Code.substr(B + 1, E - B - 1);
+  std::string Rest = Code.substr(E + 1);
   while ((Args.find("true") != std::string::npos) ||
          (Args.find("false") != std::string::npos) ||
          (Args.find(",") != std::string::npos) ||
@@ -636,8 +659,16 @@ std::string PrinterCapstone::resolveTemplateCall(std::string const &Dec) {
     Args = Regex(" *, *").sub("_", Args);
     Args = Regex("'").sub("", Args);
   }
-  std::string Decoder = DecName + "_" + Args;
-  return Decoder;
+  Code = DecName + "_" + Args + Rest;
+}
+
+std::string PrinterCapstone::translateToC(std::string const &Code) {
+  std::string PatchedCode(Code);
+  patchQualifier(PatchedCode);
+  patchNullptr(PatchedCode);
+  patchIsGetImmReg(PatchedCode);
+  patchTemplateArgs(PatchedCode);
+  return PatchedCode;
 }
 
 void PrinterCapstone::decoderEmitterEmitOpDecoder(raw_ostream &DecoderOS,
@@ -645,7 +676,7 @@ void PrinterCapstone::decoderEmitterEmitOpDecoder(raw_ostream &DecoderOS,
   unsigned const Indent = 4;
   DecoderOS.indent(Indent) << GuardPrefix;
   if (Op.Decoder.find("<") != std::string::npos) {
-    DecoderOS << resolveTemplateCall(Op.Decoder);
+    DecoderOS << translateToC(Op.Decoder);
   } else {
     DecoderOS << Op.Decoder;
   }
@@ -659,7 +690,7 @@ void PrinterCapstone::decoderEmitterEmitOpBinaryParser(
     raw_ostream &DecOS, const OperandInfo &OpInfo) const {
   unsigned const Indent = 4;
   const std::string &Decoder = (OpInfo.Decoder.find("<") != std::string::npos)
-                                   ? resolveTemplateCall(OpInfo.Decoder)
+                                   ? translateToC(OpInfo.Decoder)
                                    : OpInfo.Decoder;
 
   bool const UseInsertBits = OpInfo.numFields() != 1 || OpInfo.InitValue != 0;
@@ -1686,8 +1717,10 @@ void PrinterCapstone::asmWriterEmitPrintAliasOp(
        << "    break;\n";
 
     for (unsigned I = 0; I < PrintMethods.size(); ++I) {
-      OS << "  case " << I << ":\n"
-         << "    " << PrintMethods[I].first << "(MI, "
+      OS << "  case " << I << ":\n";
+      std::string PrintMethod =
+          PrinterCapstone::translateToC(PrintMethods[I].first);
+      OS << "    " << PrintMethod << "(MI, "
          << (PrintMethods[I].second ? "Address, " : "") << "OpIdx, "
          << "OS);\n"
          << "    break;\n";
@@ -1713,8 +1746,9 @@ void PrinterCapstone::asmWriterEmitPrintMC(
     for (unsigned I = 0; I < MCOpPredicates.size(); ++I) {
       StringRef const MCOpPred =
           MCOpPredicates[I]->getValueAsString("MCOperandPredicate");
-      OS << "  case " << I + 1 << ": {\n"
-         << MCOpPred.data() << "\n"
+      OS << "  case " << I + 1 << ": {\n";
+      std::string PrintMethod = PrinterCapstone::translateToC(MCOpPred.data());
+      OS << PrintMethod << "\n"
          << "    }\n";
     }
     OS << "  }\n"
@@ -2796,7 +2830,7 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
 
   for (const CGIOperandList::OperandInfo &Op : CGI->Operands) {
     std::string OpGroup =
-        PrinterCapstone::resolveTemplateCall(Op.PrinterMethodName).substr(5);
+        PrinterCapstone::translateToC(Op.PrinterMethodName).substr(5);
     if (OpGroups.find(OpGroup) != OpGroups.end())
       continue;
     OpGroupEnum.indent(2) << TargetName + "_OP_GROUP_" + OpGroup + " = "

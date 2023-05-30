@@ -57,7 +57,7 @@ std::string AsmWriterOperand::getCode(bool PassSubtarget) const {
 
   if (Str.find("<") != std::string::npos &&
       LangCS)
-    Result = PrinterCapstone::resolveTemplateCall(Result) + "(MI";
+    Result = PrinterCapstone::translateToC(Result) + "(MI";
   else
     Result = Result + "(MI";
 
