@@ -2816,12 +2816,39 @@ void printFeatureEnumEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
 void printOpPrintGroupEnum(StringRef const &TargetName,
                            CodeGenInstruction const *CGI,
                            raw_string_ostream &OpGroupEnum) {
-  static const std::string Exceptions[] = {
-      // ARM Operand groups which are used, but are not passed here.
-      "RegImmShift", "LdStmModeOperand", "MandatoryInvertedPredicateOperand"};
   static std::set<std::string> OpGroups;
-  if (OpGroups.empty()) {
-    for (auto OpGroup : Exceptions) {
+  // Some operand groups, which exists, are never passed here.
+  // So we add them manually.
+  static const std::set<std::string> ARMExceptions = {
+      "RegImmShift",
+      "LdStmModeOperand",
+      "MandatoryInvertedPredicateOperand",
+  };
+  static const std::set<std::string> AArch64Exceptions = {
+      "LogicalImm_int8_t",
+      "LogicalImm_int16_t",
+      "InverseCondCode",
+      "AMNoIndex",
+      "PSBHintOp",
+      "BTIHintOp",
+      "ImplicitlyTypedVectorList",
+      "SVERegOp_0",
+      "SVELogicalImm_int16_t",
+      "SVELogicalImm_int32_t",
+      "SVELogicalImm_int64_t",
+      "ZPRasFPR_128"};
+
+  bool NoExceptions = false;
+  const std::set<std::string> *Exc;
+  if (TargetName == "ARM")
+    Exc = &ARMExceptions;
+  else if (TargetName == "AArch64")
+    Exc = &AArch64Exceptions;
+  else
+    NoExceptions = true;
+
+  if (OpGroups.empty() && !NoExceptions) {
+    for (const std::string &OpGroup : *Exc) {
       OpGroupEnum.indent(2) << TargetName + "_OP_GROUP_" + OpGroup + " = "
                             << OpGroups.size() << ",\n";
       OpGroups.emplace(OpGroup);
@@ -3401,7 +3428,8 @@ std::string getFieldOpGroup(std::string TargetName, const GenericTable &Table,
   // names.
   static std::set<std::string> AArch64TableRegTypes = {"TLBI", "PRCTX", "IC",
                                                        "SysReg", "SysAliasReg"};
-  static std::set<std::string> AArch64TableImmTypes = {"DBnXS", "SysImm", "ExactFPImm"};
+  static std::set<std::string> AArch64TableImmTypes = {"DBnXS", "SysImm",
+                                                       "ExactFPImm"};
   static std::set<std::string> AArch64TableAliasTypes = {
       "SysAlias",      "SVCR",         "AT",   "DB",      "DC",
       "ISB",           "TSB",          "PRFM", "SVEPRFM", "RPRFM",
