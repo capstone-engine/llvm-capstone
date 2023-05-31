@@ -78,7 +78,7 @@ def sve_logical_imm8 : Operand<i64> {
   let MCOperandPredicate = [{
     if (!MCOp.isImm())
       return false;
-    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOp.getImm()), 64);
+    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOp.getImm(), 64);
     return AArch64_AM::isSVEMaskOfIdenticalElements<int8_t>(Val);
   }];
 }
@@ -90,7 +90,7 @@ def sve_logical_imm16 : Operand<i64> {
   let MCOperandPredicate = [{
     if (!MCOp.isImm())
       return false;
-    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOp.getImm()), 64);
+    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOp.getImm(), 64);
     return AArch64_AM::isSVEMaskOfIdenticalElements<int16_t>(Val);
   }];
 }
@@ -102,7 +102,7 @@ def sve_logical_imm32 : Operand<i64> {
   let MCOperandPredicate = [{
     if (!MCOp.isImm())
       return false;
-    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOp.getImm()), 64);
+    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOp.getImm(), 64);
     return AArch64_AM::isSVEMaskOfIdenticalElements<int32_t>(Val);
   }];
 }
@@ -120,7 +120,7 @@ def sve_preferred_logical_imm16 : Operand<i64> {
   let MCOperandPredicate = [{
     if (!MCOp.isImm())
       return false;
-    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOp.getImm()), 64);
+    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOp.getImm(), 64);
     return AArch64_AM::isSVEMaskOfIdenticalElements<int16_t>(Val) &&
            AArch64_AM::isSVEMoveMaskPreferredLogicalImmediate(Val);
   }];
@@ -133,7 +133,7 @@ def sve_preferred_logical_imm32 : Operand<i64> {
   let MCOperandPredicate = [{
     if (!MCOp.isImm())
       return false;
-    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOp.getImm()), 64);
+    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOp.getImm(), 64);
     return AArch64_AM::isSVEMaskOfIdenticalElements<int32_t>(Val) &&
            AArch64_AM::isSVEMoveMaskPreferredLogicalImmediate(Val);
   }];
@@ -146,7 +146,7 @@ def sve_preferred_logical_imm64 : Operand<i64> {
   let MCOperandPredicate = [{
     if (!MCOp.isImm())
       return false;
-    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOp.getImm()), 64);
+    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOp.getImm(), 64);
     return AArch64_AM::isSVEMaskOfIdenticalElements<int64_t>(Val) &&
            AArch64_AM::isSVEMoveMaskPreferredLogicalImmediate(Val);
   }];
