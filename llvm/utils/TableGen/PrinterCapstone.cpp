@@ -3401,7 +3401,7 @@ std::string getFieldOpGroup(std::string TargetName, const GenericTable &Table,
   // names.
   static std::set<std::string> AArch64TableRegTypes = {"TLBI", "PRCTX", "IC",
                                                        "SysReg", "SysAliasReg"};
-  static std::set<std::string> AArch64TableImmTypes = {"DBnXS", "SysImm"};
+  static std::set<std::string> AArch64TableImmTypes = {"DBnXS", "SysImm", "ExactFPImm"};
   static std::set<std::string> AArch64TableAliasTypes = {
       "SysAlias",      "SVCR",         "AT",   "DB",      "DC",
       "ISB",           "TSB",          "PRFM", "SVEPRFM", "RPRFM",
