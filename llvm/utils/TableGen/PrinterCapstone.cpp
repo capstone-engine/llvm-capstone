@@ -640,6 +640,24 @@ void patchIsGetImmReg(std::string &Code) {
   }
 }
 
+std::string edgeCaseTemplArg(std::string &Code) {
+  unsigned long const B = Code.find_first_of("<");
+  unsigned long const E = Code.find(">");
+  if (B == std::string::npos) {
+    // No template
+    PrintFatalNote("Edge case for C++ code not handled: " + Code);
+  }
+  std::string const &DecName = Code.substr(0, B);
+  std::string Args = Code.substr(B + 1, E - B - 1);
+  std::string Rest = Code.substr(E + 1);
+  if (Code.find("printSVERegOp") != std::string::npos)
+    // AArch64: Template argument is of type char and
+    // no argument is interpreded as 0
+    return DecName + "_0" + Rest;
+
+  PrintFatalNote("Edge case for C++ code not handled: " + Code);
+}
+
 void patchTemplateArgs(std::string &Code) {
   unsigned long const B = Code.find_first_of("<");
   unsigned long const E = Code.find(">");
@@ -650,6 +668,10 @@ void patchTemplateArgs(std::string &Code) {
   std::string const &DecName = Code.substr(0, B);
   std::string Args = Code.substr(B + 1, E - B - 1);
   std::string Rest = Code.substr(E + 1);
+  if (Args.empty()) {
+    Code = edgeCaseTemplArg(Code);
+    return;
+  }
   while ((Args.find("true") != std::string::npos) ||
          (Args.find("false") != std::string::npos) ||
          (Args.find(",") != std::string::npos) ||
