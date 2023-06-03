@@ -3451,48 +3451,6 @@ void PrinterCapstone::searchableTablesEmitMapII() const {
   OutS << "  { ";
 }
 
-/// Returns the operand group (SysReg, SysImm, SysAlias) for the field
-/// or an empty string if it is none of those.
-std::string getFieldOpGroup(std::string TargetName, const GenericTable &Table,
-                            GenericField const &Field) {
-  // The types of tables which contain system register, immediates or alias
-  // names.
-  static std::set<std::string> AArch64TableRegTypes = {"TLBI", "PRCTX", "IC",
-                                                       "SysReg", "SysAliasReg"};
-  static std::set<std::string> AArch64TableImmTypes = {"DBnXS", "SysImm",
-                                                       "ExactFPImm"};
-  static std::set<std::string> AArch64TableAliasTypes = {
-      "SysAlias",      "SVCR",         "AT",   "DB",      "DC",
-      "ISB",           "TSB",          "PRFM", "SVEPRFM", "RPRFM",
-      "PStateImm0_15", "PStateImm0_1", "PSB",  "BTI"};
-  static std::set<std::string> ARMTableRegTypes = {"MClassSysReg", "BankedReg"};
-
-  if (TargetName == "ARM") {
-    if (ARMTableRegTypes.find(Table.CppTypeName) != ARMTableRegTypes.end()) {
-      if (Field.Name == "Name" || Field.Name == "AltName")
-        return "SYSREG";
-    }
-    return "";
-  } else if (TargetName == "AArch64") {
-    if (AArch64TableRegTypes.find(Table.CppTypeName) !=
-        AArch64TableRegTypes.end()) {
-      if (Field.Name == "Name" || Field.Name == "AltName")
-        return "SYSREG";
-    } else if (AArch64TableImmTypes.find(Table.CppTypeName) !=
-               AArch64TableImmTypes.end()) {
-      if (Field.Name == "Name" || Field.Name == "AltName")
-        return "SYSIMM";
-    } else if (AArch64TableAliasTypes.find(Table.CppTypeName) !=
-               AArch64TableAliasTypes.end()) {
-      if (Field.Name == "Name" || Field.Name == "AltName")
-        return "SYSALIAS";
-    }
-    return "";
-  } else {
-    PrintFatalNote("System operand fields not handled for this target.");
-  }
-}
-
 uint64_t BitsInitToUInt(const BitsInit *BI) {
   uint64_t Value = 0;
   for (unsigned I = 0, Ie = BI->getNumBits(); I != Ie; ++I) {
@@ -3535,13 +3493,12 @@ void PrinterCapstone::searchableTablesEmitMapIII(const GenericTable &Table,
       Table.Locs[0], Field, Entry->getValueInit(Field.Name), IntrinsicEnum);
 
   // Emit table field
-  std::string OpGroup = getFieldOpGroup(TargetName, Table, Field);
-  if (!OpGroup.empty()) {
-    // Prepend the enum name
+  if (Field.Name == "Name" || Field.Name == "AltName") {
+    // Prepend the enum id to the name field
     std::string OpName = Repr;
     while (OpName.find("\"") != std::string::npos)
       OpName = Regex("\"").sub("", OpName);
-    EnumName = TargetName + "_" + OpGroup + "_" + StringRef(OpName).upper();
+    EnumName = TargetName + "_" + StringRef(Table.CppTypeName).upper() + "_" + StringRef(OpName).upper();
     Repr = "\"" + OpName + "\", " + EnumName;
     OutS << Repr;
 
