@@ -658,11 +658,34 @@ std::string edgeCaseTemplArg(std::string &Code) {
   PrintFatalNote("Edge case for C++ code not handled: " + Code);
 }
 
-void patchTemplateArgs(std::string &Code) {
+static std::string handleDefaultArg(std::string &Code) {
+  static SmallVector<std::pair<std::string, std::string>>
+      TemplFuncWithDefaults = {// Default is 1
+                               {"printVectorIndex", "1"},
+                               // Default is false == 0
+                               {"printPrefetchOp", "0"}};
+
+  for (std::pair Func : TemplFuncWithDefaults) {
+    if (Code.find(Func.first) != std::string::npos) {
+      unsigned long const B =
+          Code.find(Func.first) + std::string(Func.first).size();
+      if (Code[B] == '<' || Code[B] == '_')
+        // False positive or already fixed.
+        continue;
+      std::string const &DecName = Code.substr(0, B);
+      std::string Rest = Code.substr(B);
+      return DecName + "_" + Func.second + Rest;
+    }
+  }
+  // No template function, false positive or fixed
+  return Code;
+}
+
+static void patchTemplateArgs(std::string &Code) {
   unsigned long const B = Code.find_first_of("<");
   unsigned long const E = Code.find(">");
   if (B == std::string::npos) {
-    // No template
+    Code = handleDefaultArg(Code);
     return;
   }
   std::string const &DecName = Code.substr(0, B);
@@ -1364,11 +1387,11 @@ void PrinterCapstone::asmWriterEmitPrintInstruction(
       // Emit two possibilitys with if/else.
       OS << "  if ((Bits >> " << (OpcodeInfoBits - BitsLeft) << ") & "
          << ((1 << NumBits) - 1) << ") {\n"
-         << Commands[1] << "  } else {\n"
-         << Commands[0] << "  }\n\n";
+         << translateToC(Commands[1]) << "  } else {\n"
+         << translateToC(Commands[0]) << "  }\n\n";
     } else if (Commands.size() == 1) {
       // Emit a single possibility.
-      OS << Commands[0] << "\n\n";
+      OS << translateToC(Commands[0]) << "\n\n";
     } else {
       OS << "  switch ((Bits >> " << (OpcodeInfoBits - BitsLeft) << ") & "
          << ((1 << NumBits) - 1) << ") {\n"
@@ -1377,7 +1400,7 @@ void PrinterCapstone::asmWriterEmitPrintInstruction(
       // Print out all the cases.
       for (unsigned J = 0, F = Commands.size(); J != F; ++J) {
         OS << "  case " << J << ":\n";
-        OS << Commands[J];
+        OS << translateToC(Commands[J]);
         OS << "    break;\n";
       }
       OS << "  }\n\n";
