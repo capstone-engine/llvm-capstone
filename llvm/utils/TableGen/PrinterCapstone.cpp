@@ -350,7 +350,7 @@ void PrinterCapstone::regInfoEmitMCRegClassesTable(
 void PrinterCapstone::regInfoEmitRegEncodingTable(
     std::string const TargetName,
     std::deque<CodeGenRegister> const &Regs) const {
-  OS << "const uint16_t " << TargetName;
+  OS << "static const uint16_t " << TargetName;
   OS << "RegEncodingTable[] = {\n";
   // Add entry for NoRegister
   OS << "  0,\n";
