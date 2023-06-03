@@ -2870,6 +2870,8 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
       "MandatoryInvertedPredicateOperand",
   };
   static const std::set<std::string> AArch64Exceptions = {
+      "VectorIndex_8",
+      "PrefetchOp_1",
       "LogicalImm_int8_t",
       "LogicalImm_int16_t",
       "InverseCondCode",
