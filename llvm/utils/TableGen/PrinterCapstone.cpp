@@ -3155,20 +3155,10 @@ void PrinterCapstone::searchableTablesWriteFiles() const {
   raw_string_ostream &Impl = searchableTablesGetOS(ST_IMPL_OS);
   writeFile(Filename, Header.str() + Decl.str() + Impl.str());
 
-  raw_string_ostream &SysRegEnum = searchableTablesGetOS(ST_ENUM_SYSREG_OS);
-  raw_string_ostream &SysImmEnum = searchableTablesGetOS(ST_ENUM_SYSIMM_OS);
-  raw_string_ostream &SysAliasEnum = searchableTablesGetOS(ST_ENUM_SYSALIAS_OS);
-  if (!SysRegEnum.str().empty()) {
-    Filename = TargetName + "GenCSSystemRegisterEnum.inc";
-    writeFile(Filename, Header.str() + SysRegEnum.str());
-  }
-  if (!SysImmEnum.str().empty()) {
-    Filename = TargetName + "GenCSSystemImmediateEnum.inc";
-    writeFile(Filename, Header.str() + SysImmEnum.str());
-  }
-  if (!SysAliasEnum.str().empty()) {
-    Filename = TargetName + "GenCSSystemAliasEnum.inc";
-    writeFile(Filename, Header.str() + SysAliasEnum.str());
+  raw_string_ostream &SysOpsEnum = searchableTablesGetOS(ST_ENUM_SYSOPS_OS);
+  if (!SysOpsEnum.str().empty()) {
+    Filename = TargetName + "GenCSSystemOperandsEnum.inc";
+    writeFile(Filename, Header.str() + SysOpsEnum.str());
   }
 }
 
@@ -3179,19 +3169,13 @@ raw_string_ostream &PrinterCapstone::searchableTablesGetOS(StreamType G) const {
   static std::string SysRegDecl;
   static raw_string_ostream *SysRegDeclOS;
   static std::string SysRegEnum;
-  static raw_string_ostream *SysRegEnumOS;
-  static std::string SysImmEnum;
-  static raw_string_ostream *SysImmEnumOS;
-  static std::string SysAliasEnum;
-  static raw_string_ostream *SysAliasEnumOS;
+  static raw_string_ostream *SysOpsEnumOS;
   static std::string SysRegImpl;
   static raw_string_ostream *SysRegImplOS;
   if (!Init) {
     SysRegDeclOS = new raw_string_ostream(SysRegDecl);
     SysRegImplOS = new raw_string_ostream(SysRegImpl);
-    SysRegEnumOS = new raw_string_ostream(SysRegEnum);
-    SysImmEnumOS = new raw_string_ostream(SysImmEnum);
-    SysAliasEnumOS = new raw_string_ostream(SysAliasEnum);
+    SysOpsEnumOS = new raw_string_ostream(SysRegEnum);
     Init = true;
   }
 
@@ -3202,12 +3186,8 @@ raw_string_ostream &PrinterCapstone::searchableTablesGetOS(StreamType G) const {
     return *SysRegDeclOS;
   case ST_IMPL_OS:
     return *SysRegImplOS;
-  case ST_ENUM_SYSREG_OS:
-    return *SysRegEnumOS;
-  case ST_ENUM_SYSIMM_OS:
-    return *SysImmEnumOS;
-  case ST_ENUM_SYSALIAS_OS:
-    return *SysAliasEnumOS;
+  case ST_ENUM_SYSOPS_OS:
+    return *SysOpsEnumOS;
   }
 }
 
@@ -3458,6 +3438,10 @@ void PrinterCapstone::searchableTablesEmitMapI(
   raw_string_ostream &OutS = searchableTablesGetOS(ST_IMPL_OS);
   OutS << "static const " << getTableNamespacePrefix(Table, TargetName)
        << Table.CppTypeName << " " << Table.Name << "[] = {\n";
+
+  raw_string_ostream &EnumOS = searchableTablesGetOS(ST_ENUM_SYSOPS_OS);
+  EnumOS << "#ifdef GET_ENUM_VALUES_" << Table.CppTypeName << "\n";
+  EnumOS << "#undef GET_ENUM_VALUES_" << Table.CppTypeName << "\n";
 }
 
 void PrinterCapstone::searchableTablesEmitMapII() const {
@@ -3566,17 +3550,8 @@ void PrinterCapstone::searchableTablesEmitMapIII(const GenericTable &Table,
       return;
     EnumNamesSeen.emplace(EnumName);
 
-    if (OpGroup == "SYSREG") {
-      raw_string_ostream &EnumOS = searchableTablesGetOS(ST_ENUM_SYSREG_OS);
-      EnumOS << "\t" + EnumName + " = " << format("0x%x", EnumVal) << ",\n";
-    } else if (OpGroup == "SYSIMM") {
-      raw_string_ostream &EnumOS = searchableTablesGetOS(ST_ENUM_SYSIMM_OS);
-      EnumOS << "\t" + EnumName + " = " << format("0x%x", EnumVal) << ",\n";
-    } else if (OpGroup == "SYSALIAS") {
-      raw_string_ostream &EnumOS = searchableTablesGetOS(ST_ENUM_SYSALIAS_OS);
-      EnumOS << "\t" + EnumName + " = " << format("0x%x", EnumVal) << ",\n";
-    } else
-      llvm_unreachable("Unknown OpGroup");
+    raw_string_ostream &EnumOS = searchableTablesGetOS(ST_ENUM_SYSOPS_OS);
+    EnumOS << "\t" + EnumName + " = " << format("0x%x", EnumVal) << ",\n";
   } else {
     OutS << Regex("{ *}").sub("{0}", Repr);
   }
@@ -3594,6 +3569,9 @@ void PrinterCapstone::searchableTablesEmitMapV() {
   if (DoNotEmit)
     return;
   OutS << "  };\n\n";
+
+  raw_string_ostream &EnumOS = searchableTablesGetOS(ST_ENUM_SYSOPS_OS);
+  EnumOS << "#endif\n\n";
 }
 
 } // end namespace llvm

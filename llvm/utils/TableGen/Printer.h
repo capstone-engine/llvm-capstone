@@ -30,9 +30,7 @@ typedef enum {
   ST_NONE,
   ST_DECL_OS,
   ST_IMPL_OS,
-  ST_ENUM_SYSREG_OS,
-  ST_ENUM_SYSIMM_OS,
-  ST_ENUM_SYSALIAS_OS,
+  ST_ENUM_SYSOPS_OS,
 } StreamType;
 
 namespace llvm {
