@@ -3505,8 +3505,32 @@ std::string getFieldOpGroup(std::string TargetName, const GenericTable &Table,
     }
     return "";
   } else {
-    llvm_unreachable("System operand fields not handled for this target.");
+    PrintFatalNote("System operand fields not handled for this target.");
   }
+}
+
+uint64_t BitsInitToUInt(const BitsInit *BI) {
+  uint64_t Value = 0;
+  for (unsigned I = 0, Ie = BI->getNumBits(); I != Ie; ++I) {
+    if (BitInit *B = dyn_cast<BitInit>(BI->getBit(I)))
+      Value |= (uint64_t)B->getValue() << I;
+  }
+  return Value;
+}
+
+unsigned getEnumValue(Record *Entry) {
+  if (!Entry->getValue("EnumValueField") ||
+      Entry->isValueUnset("EnumValueField")) {
+    // Guess field which has the encoding.
+    if (Entry->getValue("Encoding")) {
+      BitsInit *BI = Entry->getValueAsBitsInit("Encoding");
+      return BitsInitToUInt(BI);
+    }
+    Entry->dump();
+    PrintFatalNote("Which of those fields above are the encoding/enum value?");
+  }
+  StringRef EnumValField = Entry->getValueAsString("EnumValueField");
+  return BitsInitToUInt(Entry->getValueAsBitsInit(EnumValField));
 }
 
 void PrinterCapstone::searchableTablesEmitMapIII(const GenericTable &Table,
@@ -3515,6 +3539,7 @@ void PrinterCapstone::searchableTablesEmitMapIII(const GenericTable &Table,
                                                  StringRef &IntrinsicEnum,
                                                  Record *Entry) const {
   static std::set<std::string> EnumNamesSeen;
+  unsigned EnumVal = getEnumValue(Entry);
 
   if (DoNotEmit)
     return;
@@ -3543,13 +3568,13 @@ void PrinterCapstone::searchableTablesEmitMapIII(const GenericTable &Table,
 
     if (OpGroup == "SYSREG") {
       raw_string_ostream &EnumOS = searchableTablesGetOS(ST_ENUM_SYSREG_OS);
-      EnumOS << "\t" + EnumName + ",\n";
+      EnumOS << "\t" + EnumName + " = " << format("0x%x", EnumVal) << ",\n";
     } else if (OpGroup == "SYSIMM") {
       raw_string_ostream &EnumOS = searchableTablesGetOS(ST_ENUM_SYSIMM_OS);
-      EnumOS << "\t" + EnumName + ",\n";
+      EnumOS << "\t" + EnumName + " = " << format("0x%x", EnumVal) << ",\n";
     } else if (OpGroup == "SYSALIAS") {
       raw_string_ostream &EnumOS = searchableTablesGetOS(ST_ENUM_SYSALIAS_OS);
-      EnumOS << "\t" + EnumName + ",\n";
+      EnumOS << "\t" + EnumName + " = " << format("0x%x", EnumVal) << ",\n";
     } else
       llvm_unreachable("Unknown OpGroup");
   } else {
