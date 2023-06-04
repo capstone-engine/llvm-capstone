@@ -2511,12 +2511,12 @@ std::string getArchSupplInfoPPC(StringRef const &TargetName,
         PPCFormatEnum << Format + ",\n";
       }
       Formats.emplace(Format);
-      return "{ " + Format + " }";
+      return "{{ " + Format + " }}";
     }
     PrevSC = SC;
   }
   // Pseudo instructions
-  return "{ 0 }";
+  return "{{ 0 }}";
 }
 
 std::string getArchSupplInfo(StringRef const &TargetName,
@@ -2524,7 +2524,7 @@ std::string getArchSupplInfo(StringRef const &TargetName,
                              raw_string_ostream &PPCFormatEnum) {
   if (TargetName == "PPC")
     return getArchSupplInfoPPC(TargetName, CGI, PPCFormatEnum);
-  return "{ 0 }";
+  return "{{ 0 }}";
 }
 
 void printInsnMapEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
@@ -2551,7 +2551,7 @@ void printInsnMapEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
     InsnMap << getArchSupplInfo(TargetName, CGI, PPCFormatEnum);
     InsnMap << "\n";
   } else {
-    InsnMap.indent(4) << "{ 0 }, { 0 }, { 0 }, 0, 0, { 0 }\n";
+    InsnMap.indent(4) << "{ 0 }, { 0 }, { 0 }, 0, 0, {{ 0 }}\n";
   }
   InsnMap.indent(2) << "#endif\n";
   InsnMap << "},\n";
@@ -3499,7 +3499,7 @@ void PrinterCapstone::searchableTablesEmitMapIII(const GenericTable &Table,
     while (OpName.find("\"") != std::string::npos)
       OpName = Regex("\"").sub("", OpName);
     EnumName = TargetName + "_" + StringRef(Table.CppTypeName).upper() + "_" + StringRef(OpName).upper();
-    Repr = "\"" + OpName + "\", " + EnumName;
+    Repr = "\"" + OpName + "\", { " + EnumName + " }";
     OutS << Repr;
 
     // Emit enum name
