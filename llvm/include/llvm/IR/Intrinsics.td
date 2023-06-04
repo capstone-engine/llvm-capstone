@@ -2177,6 +2177,7 @@ def int_ptrauth_sign_generic :
 include "llvm/IR/IntrinsicsPowerPC.td"
 include "llvm/IR/IntrinsicsX86.td"
 include "llvm/IR/IntrinsicsARM.td"
+include "llvm/IR/IntrinsicsAlpha.td"
 include "llvm/IR/IntrinsicsAArch64.td"
 include "llvm/IR/IntrinsicsXCore.td"
 include "llvm/IR/IntrinsicsHexagon.td"
