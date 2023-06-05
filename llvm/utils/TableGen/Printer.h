@@ -959,7 +959,7 @@ public:
   virtual void searchableTablesEmitIndexArrayI() const;
   virtual void
   searchableTablesEmitIndexTypeStruct(const GenericTable &Table,
-                                      const SearchIndex &Index) const;
+                                      const SearchIndex &Index);
   virtual void searchableTablesEmitReturns(const GenericTable &Table,
                                            const SearchIndex &Index,
                                            bool IsPrimary);
@@ -993,7 +993,7 @@ public:
 class PrinterCapstone : public PrinterLLVM {
   // TODO: Toggle a flag is not nice to skip the search functions by strings
   // is ugly. We should support them in the future.
-  bool DoNotEmit = false;
+  bool EmittingNameLookup = false;
 
 public:
   using PrinterLLVM::PrinterLLVM;
@@ -1809,7 +1809,7 @@ public:
   void searchableTablesEmitIndexArrayI() const override;
   void
   searchableTablesEmitIndexTypeStruct(const GenericTable &Table,
-                                      const SearchIndex &Index) const override;
+                                      const SearchIndex &Index) override;
   void searchableTablesEmitReturns(const GenericTable &Table,
                                    const SearchIndex &Index,
                                    bool IsPrimary) override;

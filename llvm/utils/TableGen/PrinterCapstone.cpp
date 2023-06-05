@@ -3328,15 +3328,6 @@ void PrinterCapstone::searchableTablesEmitLookupDeclaration(
   raw_string_ostream &OutS = (ST == ST_DECL_OS)
                                  ? searchableTablesGetOS(ST_DECL_OS)
                                  : searchableTablesGetOS(ST_IMPL_OS);
-  if ((Index.Fields.size() == 1) && isa<StringRecTy>(Index.Fields[0].RecType)) {
-    // Don't emit functions which work on strings.
-    if (ST == ST_DECL_OS)
-      // Only a declaration
-      return;
-    DoNotEmit = true;
-    return;
-  }
-  DoNotEmit = false;
   std::string NamespacePre = getTableNamespacePrefix(Table, TargetName);
   OutS << "const " << NamespacePre << Table.CppTypeName << " *" << NamespacePre
        << Index.Name << "(";
@@ -3355,42 +3346,41 @@ void PrinterCapstone::searchableTablesEmitLookupDeclaration(
 }
 
 void PrinterCapstone::searchableTablesEmitIndexTypeStruct(
-    const GenericTable &Table, const SearchIndex &Index) const {}
+    const GenericTable &Table, const SearchIndex &Index) {
+  for (const auto &Field : Index.Fields) {
+    if (isa<StringRecTy>(Field.RecType)) {
+      EmittingNameLookup = isa<StringRecTy>(Field.RecType);
+    }
+  }
+}
 
 void PrinterCapstone::searchableTablesEmitIndexArrayI() const {
   raw_string_ostream &OutS = searchableTablesGetOS(ST_IMPL_OS);
-  if (DoNotEmit)
-    return;
-  OutS << "  static const struct IndexType Index[] = {\n";
+  if (EmittingNameLookup)
+    OutS << "  static const struct IndexTypeStr Index[] = {\n";
+  else
+    OutS << "  static const struct IndexType Index[] = {\n";
 }
 
 void PrinterCapstone::searchableTablesEmitIndexArrayII() const {
   raw_string_ostream &OutS = searchableTablesGetOS(ST_IMPL_OS);
-  if (DoNotEmit)
-    return;
   OutS << "    { ";
 }
 
 void PrinterCapstone::searchableTablesEmitIndexArrayIII(
     ListSeparator &LS, std::string Repr) const {
   raw_string_ostream &OutS = searchableTablesGetOS(ST_IMPL_OS);
-  if (DoNotEmit)
-    return;
   OutS << LS << Repr;
 }
 
 void PrinterCapstone::searchableTablesEmitIndexArrayIV(
     std::pair<Record *, unsigned> const &Entry) const {
   raw_string_ostream &OutS = searchableTablesGetOS(ST_IMPL_OS);
-  if (DoNotEmit)
-    return;
   OutS << ", " << Entry.second << " },\n";
 }
 
 void PrinterCapstone::searchableTablesEmitIndexArrayV() const {
   raw_string_ostream &OutS = searchableTablesGetOS(ST_IMPL_OS);
-  if (DoNotEmit)
-    return;
   OutS << "  };\n\n";
 }
 
@@ -3418,13 +3408,15 @@ void PrinterCapstone::searchableTablesEmitIndexLamda(
 void PrinterCapstone::searchableTablesEmitReturns(const GenericTable &Table,
                                                   const SearchIndex &Index,
                                                   bool IsPrimary) {
-  if (DoNotEmit) {
-    DoNotEmit = false;
-    return;
-  }
   raw_string_ostream &OutS = searchableTablesGetOS(ST_IMPL_OS);
-  OutS
-      << "   unsigned i = binsearch_IndexTypeEncoding(Index, ARR_SIZE(Index), ";
+  if (EmittingNameLookup) {
+    OutS
+        << "   unsigned i = binsearch_IndexTypeStrEncoding(Index, ARR_SIZE(Index), ";
+    EmittingNameLookup = false;
+  }
+  else
+    OutS
+        << "   unsigned i = binsearch_IndexTypeEncoding(Index, ARR_SIZE(Index), ";
   for (const auto &Field : Index.Fields)
     OutS << Field.Name;
   OutS << ");\n"
@@ -3437,8 +3429,6 @@ void PrinterCapstone::searchableTablesEmitReturns(const GenericTable &Table,
 
 void PrinterCapstone::searchableTablesEmitMapI(
     const GenericTable &Table) const {
-  if (DoNotEmit)
-    return;
   raw_string_ostream &OutS = searchableTablesGetOS(ST_IMPL_OS);
   OutS << "static const " << getTableNamespacePrefix(Table, TargetName)
        << Table.CppTypeName << " " << Table.Name << "[] = {\n";
@@ -3450,8 +3440,6 @@ void PrinterCapstone::searchableTablesEmitMapI(
 
 void PrinterCapstone::searchableTablesEmitMapII() const {
   raw_string_ostream &OutS = searchableTablesGetOS(ST_IMPL_OS);
-  if (DoNotEmit)
-    return;
   OutS << "  { ";
 }
 
@@ -3487,9 +3475,6 @@ void PrinterCapstone::searchableTablesEmitMapIII(const GenericTable &Table,
   static std::set<std::string> EnumNamesSeen;
   unsigned EnumVal = getEnumValue(Entry);
 
-  if (DoNotEmit)
-    return;
-
   raw_string_ostream &OutS = searchableTablesGetOS(ST_IMPL_OS);
   OutS << LS;
   std::string EnumName;
@@ -3521,15 +3506,11 @@ void PrinterCapstone::searchableTablesEmitMapIII(const GenericTable &Table,
 
 void PrinterCapstone::searchableTablesEmitMapIV(unsigned i) const {
   raw_string_ostream &OutS = searchableTablesGetOS(ST_IMPL_OS);
-  if (DoNotEmit)
-    return;
   OutS << " }, // " << i << "\n";
 }
 
 void PrinterCapstone::searchableTablesEmitMapV() {
   raw_string_ostream &OutS = searchableTablesGetOS(ST_IMPL_OS);
-  if (DoNotEmit)
-    return;
   OutS << "  };\n\n";
 
   raw_string_ostream &EnumOS = searchableTablesGetOS(ST_ENUM_SYSOPS_OS);

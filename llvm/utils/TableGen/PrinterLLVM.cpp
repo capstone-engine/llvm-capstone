@@ -6146,7 +6146,7 @@ void PrinterLLVM::searchableTablesEmitLookupDeclaration(
 }
 
 void PrinterLLVM::searchableTablesEmitIndexTypeStruct(
-    const GenericTable &Table, const SearchIndex &Index) const {
+    const GenericTable &Table, const SearchIndex &Index) {
   OS << "  struct IndexType {\n";
   for (const auto &Field : Index.Fields) {
     OS << "    "
