@@ -1695,6 +1695,10 @@ void PrinterCapstone::asmWriterEmitPrintAliasInstrBody(
   OS.indent(2) << "  Patterns,\n";
   OS.indent(2) << "  Conds,\n";
   OS.indent(2) << "  AsmStrings,\n";
+  if (!MCOpPredicates.empty())
+    OS.indent(2) << "  " << TargetName << ClassName << "ValidateMCOperand,\n";
+  else
+    OS.indent(2) << "  NULL,\n";
   OS.indent(2) << "};\n";
 
   OS.indent(2) << "const char *AsmString = matchAliasPatterns(MI, &M);\n";
@@ -3498,7 +3502,8 @@ void PrinterCapstone::searchableTablesEmitMapIII(const GenericTable &Table,
     std::string OpName = Repr;
     while (OpName.find("\"") != std::string::npos)
       OpName = Regex("\"").sub("", OpName);
-    EnumName = TargetName + "_" + StringRef(Table.CppTypeName).upper() + "_" + StringRef(OpName).upper();
+    EnumName = TargetName + "_" + StringRef(Table.CppTypeName).upper() + "_" +
+               StringRef(OpName).upper();
     Repr = "\"" + OpName + "\", { " + EnumName + " }";
     OutS << Repr;
 
