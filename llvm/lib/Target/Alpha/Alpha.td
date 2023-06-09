@@ -47,7 +47,9 @@ include "AlphaSchedule.td"
 
 include "AlphaInstrInfo.td"
 
-def AlphaInstrInfo : InstrInfo;
+def AlphaInstrInfo : InstrInfo {
+  let useDeprecatedPositionallyEncodedOperands = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // Alpha Processor Definitions

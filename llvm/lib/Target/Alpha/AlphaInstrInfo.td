@@ -30,8 +30,7 @@ def retflag       : SDNode<"AlphaISD::RET_FLAG", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue]>;
 
 // These are target-independent nodes, but have target-specific formats.
-def SDT_AlphaCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i64>,
-                                             SDTCisVT<1, i64> ]>;
+def SDT_AlphaCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i64> ]>;
 def SDT_AlphaCallSeqEnd   : SDCallSeqEnd<[ SDTCisVT<0, i64>,
                                            SDTCisVT<1, i64> ]>;
 
@@ -152,7 +151,7 @@ def WTF : PseudoInstAlpha<(outs), (ins variable_ops), "#wtf", [], s_pseudo>;
 
 let hasCtrlDep = 1, Defs = [R30], Uses = [R30] in {
 def ADJUSTSTACKUP : PseudoInstAlpha<(outs), (ins s64imm:$amt1, s64imm:$amt2),
-                "; ADJUP $amt1",
+                "; ADJUP $amt1", 
                 [(callseq_start timm:$amt1, timm:$amt2)], s_pseudo>;
 def ADJUSTSTACKDOWN : PseudoInstAlpha<(outs), (ins s64imm:$amt1, s64imm:$amt2),
                 "; ADJDOWN $amt1",
@@ -166,20 +165,20 @@ def MEMLABEL : PseudoInstAlpha<(outs), (ins s64imm:$i, s64imm:$j, s64imm:$k, s64
          "LSMARKER$$$i$$$j$$$k$$$m:", [], s_pseudo>;
 }
 
-let usesCustomInserter = 1 in {   // Expanded after instruction selection.
-def CAS32 : PseudoInstAlpha<(outs GPRC:$dst), (ins GPRC:$ptr, GPRC:$cmp, GPRC:$swp), "cas32",
+let usesCustomInserter = 1, isCodeGenOnly = 1 in {   // Expanded after instruction selection.
+def CAS32 : PseudoInstAlpha<(outs GPRC:$dst), (ins GPRC:$ptr, GPRC:$cmp, GPRC:$swp), "",
       [(set GPRC:$dst, (atomic_cmp_swap_32 GPRC:$ptr, GPRC:$cmp, GPRC:$swp))], s_pseudo>;
-def CAS64 : PseudoInstAlpha<(outs GPRC:$dst), (ins GPRC:$ptr, GPRC:$cmp, GPRC:$swp), "cas64",
+def CAS64 : PseudoInstAlpha<(outs GPRC:$dst), (ins GPRC:$ptr, GPRC:$cmp, GPRC:$swp), "",
       [(set GPRC:$dst, (atomic_cmp_swap_64 GPRC:$ptr, GPRC:$cmp, GPRC:$swp))], s_pseudo>;
 
-def LAS32 : PseudoInstAlpha<(outs GPRC:$dst), (ins GPRC:$ptr, GPRC:$swp), "las32",
+def LAS32 : PseudoInstAlpha<(outs GPRC:$dst), (ins GPRC:$ptr, GPRC:$swp), "",
       [(set GPRC:$dst, (atomic_load_add_32 GPRC:$ptr, GPRC:$swp))], s_pseudo>;
-def LAS64 :PseudoInstAlpha<(outs GPRC:$dst), (ins GPRC:$ptr, GPRC:$swp), "las64",
+def LAS64 :PseudoInstAlpha<(outs GPRC:$dst), (ins GPRC:$ptr, GPRC:$swp), "",
       [(set GPRC:$dst, (atomic_load_add_64 GPRC:$ptr, GPRC:$swp))], s_pseudo>;
 
-def SWAP32 : PseudoInstAlpha<(outs GPRC:$dst), (ins GPRC:$ptr, GPRC:$swp), "swap32",
+def SWAP32 : PseudoInstAlpha<(outs GPRC:$dst), (ins GPRC:$ptr, GPRC:$swp), "",
         [(set GPRC:$dst, (atomic_swap_32 GPRC:$ptr, GPRC:$swp))], s_pseudo>;
-def SWAP64 :PseudoInstAlpha<(outs GPRC:$dst), (ins GPRC:$ptr, GPRC:$swp), "swap64",
+def SWAP64 :PseudoInstAlpha<(outs GPRC:$dst), (ins GPRC:$ptr, GPRC:$swp), "",
         [(set GPRC:$dst, (atomic_swap_64 GPRC:$ptr, GPRC:$swp))], s_pseudo>;
 }
 
@@ -398,11 +397,11 @@ let isReturn = 1, isTerminator = 1, isBarrier = 1, Ra = 31, Rb = 26, disp = 1, U
   def RETDAGp : MbrpForm< 0x1A, 0x02, (ins), "ret $$31,($$26),1", [(retflag)], s_jsr>; //Return from subroutine
 }
 
-let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1, Ra = 31, disp = 0, isCodeGenOnly=1 in
-def JMP : MbrpForm< 0x1A, 0x00, (ins GPRC:$RS), "jmp $$31,($RS),0",
+let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1, Ra = 31, disp = 0, isCodeGenOnly = 1 in
+def JMP : MbrpForm< 0x1A, 0x00, (ins GPRC:$RS), "jmp $$31,($RS),0", 
           [(brind GPRC:$RS)], s_jsr>; //Jump
 
-let isCall = 1, Ra = 26, isCodeGenOnly=1,
+let isCall = 1, Ra = 26, isCodeGenOnly = 1,
     Defs = [R0, R1, R2, R3, R4, R5, R6, R7, R8, R16, R17, R18, R19,
             R20, R21, R22, R23, R24, R25, R26, R27, R28, R29,
             F0, F1,
@@ -580,7 +579,7 @@ def LDAHg : MForm<0x09, 1, "ldah $RA,0($RB)\t\t!gpdisp!$NUM", [], s_lda>;  //Loa
 }
 
 //Load quad, rellocated literal form
-let OutOperandList = (outs GPRC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB), isCodeGenOnly = 1 in
+let OutOperandList = (outs GPRC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB), isCodeGenOnly = 1 in 
 def LDQl : MForm<0x29, 1, "ldq $RA,$DISP($RB)\t\t!literal",
                  [(set GPRC:$RA, (Alpha_rellit tglobaladdr:$DISP, GPRC:$RB))], s_ild>;
 def : Pat<(Alpha_rellit texternalsym:$ext, GPRC:$RB),
@@ -828,13 +827,13 @@ def CVTQS : FPForm<0x16, 0x7BC, "cvtqs/sui $RB,$RC",
 let OutOperandList = (outs F8RC:$RC), InOperandList = (ins F8RC:$RB), Fa = 31 in 
 def CVTQT : FPForm<0x16, 0x7BE, "cvtqt/sui $RB,$RC",
         [(set F8RC:$RC, (Alpha_cvtqt F8RC:$RB))], s_fadd>;
-let OutOperandList = (outs F8RC:$RC), InOperandList = (ins F8RC:$RB), Fa = 31 in
+let OutOperandList = (outs F8RC:$RC), InOperandList = (ins F8RC:$RB), Fa = 31 in 
 def CVTTQ : FPForm<0x16, 0x52F, "cvttq/svc $RB,$RC",
         [(set F8RC:$RC, (Alpha_cvttq F8RC:$RB))], s_fadd>;
 let OutOperandList = (outs F8RC:$RC), InOperandList = (ins F4RC:$RB), Fa = 31 in 
 def CVTST : FPForm<0x16, 0x6AC, "cvtst/s $RB,$RC",
                    [(set F8RC:$RC, (fpextend F4RC:$RB))], s_fadd>;
-let OutOperandList = (outs F4RC:$RC), InOperandList = (ins F8RC:$RB), Fa = 31 in
+let OutOperandList = (outs F4RC:$RC), InOperandList = (ins F8RC:$RB), Fa = 31 in 
 def CVTTS : FPForm<0x16, 0x7AC, "cvtts/sui $RB,$RC",
                    [(set F4RC:$RC, (fpround F8RC:$RB))], s_fadd>;
 

@@ -34,6 +34,7 @@ class InstAlpha<bits<6> op, string asmstr, InstrItinClass itin> : Instruction {
   let AsmString = asmstr;
   let Inst{31-26} = op;
   let Itinerary = itin;
+  let Size = 4;
 }
 
 
@@ -264,5 +265,6 @@ class PseudoInstAlpha<dag OOL, dag IOL, string nm, list<dag> pattern, InstrItinC
   let OutOperandList = OOL;
   let InOperandList = IOL;
   let Pattern = pattern;
-
+  let isPseudo = 1;
+  let isCodeGenOnly = 1;
 }

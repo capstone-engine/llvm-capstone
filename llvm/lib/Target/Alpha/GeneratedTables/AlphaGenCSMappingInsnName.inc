@@ -16,7 +16,6 @@
   "addq", // ALPHA_INS_ADDQ
   "adds/su", // ALPHA_INS_ADDS/SU
   "addt/su", // ALPHA_INS_ADDT/SU
-  ";", // ALPHA_INS_;
   "and", // ALPHA_INS_AND
   "beq", // ALPHA_INS_BEQ
   "bge", // ALPHA_INS_BGE
@@ -29,8 +28,6 @@
   "blt", // ALPHA_INS_BLT
   "bne", // ALPHA_INS_BNE
   "br", // ALPHA_INS_BR
-  "cas32", // ALPHA_INS_CAS32
-  "cas64", // ALPHA_INS_CAS64
   "cmoveq", // ALPHA_INS_CMOVEQ
   "cmovge", // ALPHA_INS_CMOVGE
   "cmovgt", // ALPHA_INS_CMOVGT
@@ -84,8 +81,6 @@
   "itofs", // ALPHA_INS_ITOFS
   "itoft", // ALPHA_INS_ITOFT
   "jsr", // ALPHA_INS_JSR
-  "las32", // ALPHA_INS_LAS32
-  "las64", // ALPHA_INS_LAS64
   "mb", // ALPHA_INS_MB
   "mull", // ALPHA_INS_MULL
   "mulq", // ALPHA_INS_MULQ
@@ -113,10 +108,7 @@
   "subq", // ALPHA_INS_SUBQ
   "subs/su", // ALPHA_INS_SUBS/SU
   "subt/su", // ALPHA_INS_SUBT/SU
-  "swap32", // ALPHA_INS_SWAP32
-  "swap64", // ALPHA_INS_SWAP64
   "umulh", // ALPHA_INS_UMULH
   "wmb", // ALPHA_INS_WMB
-  "#wtf", // ALPHA_INS_#WTF
   "xor", // ALPHA_INS_XOR
   "zapnot", // ALPHA_INS_ZAPNOT
