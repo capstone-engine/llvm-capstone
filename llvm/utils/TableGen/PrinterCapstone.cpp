@@ -22,9 +22,10 @@
 #include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
 #include <unordered_map>
+#include <bitset>
 
 static void emitDefaultSourceFileHeader(raw_ostream &OS) {
-  OS << "/* Capstone Disassembly Engine, http://www.capstone-engine.org */\n"
+  OS << "/* Capstone Disassembly Engine, https://www.capstone-engine.org */\n"
      << "/* By Nguyen Anh Quynh <aquynh@gmail.com>, 2013-2022, */\n"
      << "/*    Rot127 <unisono@quyllur.org> 2022-2023 */\n"
      << "/* Automatically generated file by Capstone's LLVM TableGen "
@@ -2435,7 +2436,6 @@ std::string getImplicitUses(StringRef const &TargetName,
   Flags += "0 }";
   return Flags;
 }
-
 std::string getImplicitDefs(StringRef const &TargetName,
                             CodeGenInstruction const *Inst) {
   std::string Flags = "{ ";
@@ -2537,7 +2537,193 @@ std::string getArchSupplInfo(StringRef const &TargetName,
                              raw_string_ostream &PPCFormatEnum) {
   if (TargetName == "PPC")
     return getArchSupplInfoPPC(TargetName, CGI, PPCFormatEnum);
-  return "{{ 0 }}";
+  return "{ 0 }";
+}
+
+Record *argInitOpToRecord(Init *ArgInit) {
+  DagInit *SubArgDag = dyn_cast<DagInit>(ArgInit);
+  if (SubArgDag)
+    ArgInit = SubArgDag->getOperator();
+  DefInit *Arg = dyn_cast<DefInit>(ArgInit);
+  Record *Rec = Arg->getDef();
+  return Rec;
+}
+
+std::string getPrimaryCSOperandType(Record const* OpRec) {
+    std::string OperandType;
+    if (OpRec->isSubClassOf("PredicateOperand"))
+        return "CS_OP_PRED";
+
+    if (OpRec->isSubClassOf("RegisterClass") ||
+        OpRec->isSubClassOf("PointerLikeRegClass"))
+        OperandType = "OPERAND_REGISTER";
+    else if (OpRec->isSubClassOf("Operand") ||
+        OpRec->isSubClassOf("RegisterOperand"))
+        OperandType = std::string(OpRec->getValueAsString("OperandType"));
+    else
+        return "CS_OP_INVALID";
+
+    if (OperandType == "OPERAND_UNKNOWN") {
+        if (OpRec->getValueAsDef("Type")->getValueAsInt("Size") == 0)
+            // Pseudo type
+            return "CS_OP_INVALID";
+        OperandType = "OPERAND_IMMEDIATE";
+    }
+    if (OperandType == "OPERAND_PCREL" || OperandType == "OPERAND_IMMEDIATE")
+        OperandType = "CS_OP_IMM";
+    else if (OperandType == "OPERAND_MEMORY")
+        OperandType = "CS_OP_MEM";
+    else if (OperandType == "OPERAND_REGISTER")
+        OperandType = "CS_OP_REG";
+    // Arch dependent special Op types
+    else if (OperandType == "OPERAND_VPRED_N" || OperandType == "OPERAND_VPRED_R")
+        return "CS_OP_INVALID";
+    else if (OperandType == "OPERAND_IMPLICIT_IMM_0")
+        return "CS_OP_IMM";
+    else
+        PrintFatalNote("Unhandled OperandType: " + OperandType);
+    return OperandType;
+}
+
+std::string getCSOperandType(Record const *OpRec) {
+  std::string OperandType = getPrimaryCSOperandType(OpRec);
+  if (OperandType == "CS_OP_MEM")
+    OperandType += " | CS_OP_IMM";
+  return OperandType;
+}
+
+std::string getCSOperandEncoding(CodeGenInstruction const *CGI,
+                                 Record const *OpRec, StringRef const &OpName) {
+  BitsInit const *const InstrBits =
+      !CGI->TheDef->getValueAsBit("isPseudo")
+          ? CGI->TheDef->getValueAsBitsInit("Inst")
+          : nullptr;
+  if (!InstrBits)
+    return "{ 0 }";
+
+  std::string ResultStr;
+  raw_string_ostream Result(ResultStr);
+  int64_t const Size = CGI->TheDef->getValueAsInt("Size") * 8;
+  // For some reason even on 2 byte THUMB instructions the Inst field has 32
+  // bits with the first 16 left as 0, so we skip them.
+  // I assume the same may happen for other architectures as well.
+  unsigned const BitCount = InstrBits->getNumBits();
+  unsigned const StartIdx = BitCount - Size;
+
+  struct {
+    unsigned OperandPiecesCount;
+    std::array<unsigned, 8> Indexes;
+    std::array<unsigned, 8> Sizes;
+  } EncodingData{};
+
+  // scan all bits one by one to try and find any references of the operand
+  for (unsigned InstrBitIdx = StartIdx; InstrBitIdx != BitCount;
+       ++InstrBitIdx) {
+    VarBitInit const *VarBit;
+    if ((VarBit = dyn_cast<VarBitInit>(
+             InstrBits->getBit(BitCount - InstrBitIdx - 1))) &&
+            VarBit->getBitVar()->getAsString() == OpName) {
+      unsigned const BitNum = (InstrBitIdx + VarBit->getBitNum()) >= BitCount
+                                  ? BitCount - InstrBitIdx - 1
+                                  : VarBit->getBitNum();
+      if (EncodingData.OperandPiecesCount == 8)
+        llvm_unreachable("Too many operand pieces in the instruction!");
+
+      // place current index
+      EncodingData.Indexes[EncodingData.OperandPiecesCount] =
+          InstrBitIdx - StartIdx;
+
+      unsigned VarBitIdx;
+      // this is meant for getting the size of the operand and to also see
+      // whether there are more pieces of the operand further
+      for (VarBitIdx = 1; VarBitIdx <= BitNum; ++VarBitIdx) {
+        VarBit = dyn_cast<VarBitInit>(
+            InstrBits->getBit(BitCount - (InstrBitIdx + VarBitIdx) - 1));
+
+        if (VarBit && VarBit->getBitVar()->getAsString() == OpName)
+          continue;
+        break;
+      }
+      // place current size
+      EncodingData.Sizes[EncodingData.OperandPiecesCount] = VarBitIdx;
+      ++EncodingData.OperandPiecesCount;
+
+      // if we broke out of the loop before it finishes, it means we aren't
+      // done here. more pieces of the operand are to be found
+      if (VarBitIdx <= BitNum) {
+        InstrBitIdx += VarBitIdx - 1;
+        continue;
+      }
+      break;
+    }
+  }
+
+  // if no references were found we exit, otherwise we add the encoding to the string
+  if (!EncodingData.OperandPiecesCount)
+    return "{ 0 }";
+  Result << "{ " << EncodingData.OperandPiecesCount << ", { ";
+
+  for (unsigned i = 0; i != EncodingData.OperandPiecesCount; ++i) {
+    if (i)
+      Result << ", ";
+    Result << EncodingData.Indexes[i];
+  }
+  Result << " }, { ";
+  for (unsigned i = 0; i != EncodingData.OperandPiecesCount; ++i) {
+    if (i)
+      Result << ", ";
+    Result << EncodingData.Sizes[i];
+  }
+  Result << " } }";
+  return ResultStr;
+}
+
+std::string getCSOpcodeEncoding(CodeGenInstruction const *CGI) {
+  BitsInit const *const InstrBits =
+      !CGI->TheDef->getValueAsBit("isPseudo")
+          ? CGI->TheDef->getValueAsBitsInit("Inst")
+          : nullptr;
+  if (!InstrBits)
+    return "{ 0 }";
+
+  std::string ResultStr;
+  raw_string_ostream Result(ResultStr);
+  int64_t const Size = CGI->TheDef->getValueAsInt("Size") * 8;
+  unsigned const BitCount = InstrBits->getNumBits();
+  unsigned const StartIdx = BitCount - Size;
+
+  struct {
+    std::bitset<64> Bits;
+    std::array<unsigned, 64> Indexes;
+    unsigned BitCount;
+  } OpcodeData{};
+
+  for (unsigned InstrBitIdx = StartIdx; InstrBitIdx != BitCount;
+       ++InstrBitIdx) {
+    if (auto const *const Bit =
+            dyn_cast<BitInit>(InstrBits->getBit(BitCount - InstrBitIdx - 1))) {
+      if (OpcodeData.BitCount == 64)
+        llvm_unreachable("Instruction's opcode size is greater than 8 bytes!");
+      OpcodeData.Bits.set(OpcodeData.BitCount, Bit->getValue());
+      OpcodeData.Indexes[OpcodeData.BitCount] = InstrBitIdx - StartIdx;
+      ++OpcodeData.BitCount;
+    }
+  }
+
+  // Most likely unreachable since there is no instruction to my knowledge that doesn't have any opcode bits
+  if (!OpcodeData.BitCount)
+    llvm_unreachable("Instruction without opcode bits!");
+
+  Result << "{ " << OpcodeData.Bits.to_ullong() << ", { ";
+  for (auto Current = OpcodeData.Indexes.begin(),
+            end = Current + OpcodeData.BitCount;
+       Current != end; ++Current) {
+    if (Current != OpcodeData.Indexes.begin())
+      Result << ", ";
+    Result << *Current;
+  }
+  Result << " }, " << OpcodeData.BitCount << " }";
+  return ResultStr;
 }
 
 void printInsnMapEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
@@ -2550,10 +2736,12 @@ void printInsnMapEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
                     << (CGI->AsmString != "" ? CGI->AsmString
                                              : "<No AsmString>")
                     << " */\n";
+  // adds id
   InsnMap.indent(2) << getLLVMInstEnumName(TargetName, CGI) << " /* " << InsnNum
                     << " */";
   InsnMap << ", " << TargetName << "_INS_"
           << (UseMI ? getNormalMnemonic(MI) : "INVALID") << ",\n";
+  // no diet only
   InsnMap.indent(2) << "#ifndef CAPSTONE_DIET\n";
   if (UseMI) {
     InsnMap.indent(4) << getImplicitUses(TargetName, CGI) << ", ";
@@ -2561,11 +2749,12 @@ void printInsnMapEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
     InsnMap << getReqFeatures(TargetName, AMI, MI, UseMI, CGI) << ", ";
     InsnMap << (CGI->isBranch ? "1" : "0") << ", ";
     InsnMap << (CGI->isIndirectBranch ? "1" : "0") << ", ";
-    InsnMap << getArchSupplInfo(TargetName, CGI, PPCFormatEnum);
-    InsnMap << "\n";
+    InsnMap << getArchSupplInfo(TargetName, CGI, PPCFormatEnum) << ",\n";
+    InsnMap.indent(4) << getCSOpcodeEncoding(CGI);
   } else {
-    InsnMap.indent(4) << "{ 0 }, { 0 }, { 0 }, 0, 0, {{ 0 }}\n";
+    InsnMap.indent(4) << "{ 0 }, { 0 }, { 0 }, 0, 0, {{ 0 }}, { 0 }\n";
   }
+  InsnMap << '\n';
   InsnMap.indent(2) << "#endif\n";
   InsnMap << "},\n";
 }
@@ -2581,49 +2770,6 @@ static std::string getCSAccess(short Access) {
     return "CS_AC_INVALID";
   else
     PrintFatalNote("Invalid access flags set.");
-}
-
-std::string getPrimaryCSOperandType(Record const *OpRec) {
-  std::string OperandType;
-  if (OpRec->isSubClassOf("PredicateOperand"))
-    return "CS_OP_PRED";
-
-  if (OpRec->isSubClassOf("RegisterClass") ||
-      OpRec->isSubClassOf("PointerLikeRegClass"))
-    OperandType = "OPERAND_REGISTER";
-  else if (OpRec->isSubClassOf("Operand") ||
-           OpRec->isSubClassOf("RegisterOperand"))
-    OperandType = std::string(OpRec->getValueAsString("OperandType"));
-  else
-    return "CS_OP_INVALID";
-
-  if (OperandType == "OPERAND_UNKNOWN") {
-    if (OpRec->getValueAsDef("Type")->getValueAsInt("Size") == 0)
-      // Pseudo type
-      return "CS_OP_INVALID";
-    OperandType = "OPERAND_IMMEDIATE";
-  }
-  if (OperandType == "OPERAND_PCREL" || OperandType == "OPERAND_IMMEDIATE")
-    OperandType = "CS_OP_IMM";
-  else if (OperandType == "OPERAND_MEMORY")
-    OperandType = "CS_OP_MEM";
-  else if (OperandType == "OPERAND_REGISTER")
-    OperandType = "CS_OP_REG";
-  // Arch dependent special Op types
-  else if (OperandType == "OPERAND_VPRED_N" || OperandType == "OPERAND_VPRED_R")
-    return "CS_OP_INVALID";
-  else if (OperandType == "OPERAND_IMPLICIT_IMM_0")
-    return "CS_OP_IMM";
-  else
-    PrintFatalNote("Unhandled OperandType: " + OperandType);
-  return OperandType;
-}
-
-std::string getCSOperandType(Record const *OpRec) {
-  std::string OperandType = getPrimaryCSOperandType(OpRec);
-  if (OperandType == "CS_OP_MEM")
-    OperandType += " | CS_OP_IMM";
-  return OperandType;
 }
 
 std::string getOperandDataTypes(Record const *Op, std::string &OperandType) {
@@ -2670,20 +2816,12 @@ typedef struct OpData {
   std::string OpType;
   std::string DataTypes;
   unsigned Access; ///< 0b00 = unkown, 0b01 = In, 0b10 = Out, 0b11 = In and Out
+  std::string OpEncoding;
   std::string str() const {
     return "Asm: " + OpAsm + " Type: " + OpType +
            " Access: " + std::to_string(Access);
   }
 } OpData;
-
-Record *argInitOpToRecord(Init *ArgInit) {
-  DagInit *SubArgDag = dyn_cast<DagInit>(ArgInit);
-  if (SubArgDag)
-    ArgInit = SubArgDag->getOperator();
-  DefInit *Arg = dyn_cast<DefInit>(ArgInit);
-  Record *Rec = Arg->getDef();
-  return Rec;
-}
 
 uint8_t getOpAccess(CodeGenInstruction const *CGI, std::string OperandType,
                     bool IsOutOp) {
@@ -2700,10 +2838,13 @@ uint8_t getOpAccess(CodeGenInstruction const *CGI, std::string OperandType,
   return IsOutOp ? 2 : 1;
 }
 
-void addComplexOperand(CodeGenInstruction const *CGI, Record const *ComplexOp,
-                       StringRef const &ArgName, bool IsOutOp,
+void addComplexOperand(CodeGenInstruction const *CGI,
+                       Record const *ComplexOp, StringRef const &ArgName,
+                       bool IsOutOp, std::string const &Encoding,
                        std::vector<OpData> &InsOps) {
   DagInit *SubOps = ComplexOp->getValueAsDag("MIOperandInfo");
+
+  std::string const &ComplOperandType = getPrimaryCSOperandType(ComplexOp);
 
   unsigned E = SubOps->getNumArgs();
   for (unsigned I = 0; I != E; ++I) {
@@ -2713,7 +2854,6 @@ void addComplexOperand(CodeGenInstruction const *CGI, Record const *ComplexOp,
     // Determine Operand type
     std::string OperandType;
     std::string SubOperandType = getPrimaryCSOperandType(SubOp);
-    std::string ComplOperandType = getPrimaryCSOperandType(ComplexOp);
     if (ComplOperandType == "CS_OP_MEM")
       OperandType = ComplOperandType + " | " + SubOperandType;
     else
@@ -2725,8 +2865,9 @@ void addComplexOperand(CodeGenInstruction const *CGI, Record const *ComplexOp,
     // Check if Operand was already seen before (as In or Out operand).
     // If so update its access flags.
     std::string OpName = ArgName.str() + " - " + SubOp->getName().str();
-    OpData NewOp = {SubOp, OpName, OperandType, OpDataTypes, AccessFlag};
-    InsOps.emplace_back(NewOp);
+    InsOps.push_back(OpData{SubOp, std::move(OpName), std::move(OperandType),
+                            std::move(OpDataTypes), AccessFlag,
+                            std::move(Encoding)});
   }
 }
 
@@ -2773,11 +2914,13 @@ void printInsnOpMapEntry(CodeGenTarget const &Target,
     }
     Record *Rec = argInitOpToRecord(ArgInit);
 
+    std::string const &Encoding = getCSOperandEncoding(CGI, Rec, ArgName);
+
     // Add complex operands.
-    // Operands which effectifly consists of two or more operands.
+    // Operands which effectively consists of two or more operands.
     if (Rec->getValue("MIOperandInfo")) {
       if (Rec->getValueAsDag("MIOperandInfo")->getNumArgs() > 0) {
-        addComplexOperand(CGI, Rec, ArgName, IsOutOp, InsOps);
+        addComplexOperand(CGI, Rec, ArgName, IsOutOp, Encoding, InsOps);
         continue;
       }
     }
@@ -2792,8 +2935,9 @@ void printInsnOpMapEntry(CodeGenTarget const &Target,
     // Check if Operand was already seen before (as In or Out operand).
     // If so update its access flags.
     unsigned AccessFlag = getOpAccess(CGI, OperandType, IsOutOp);
-    OpData NewOp = {Rec, ArgName.str(), OperandType, OpDataTypes, AccessFlag};
-    InsOps.emplace_back(NewOp);
+    InsOps.push_back(OpData{Rec, ArgName.str(), std::move(OperandType),
+                            std::move(OpDataTypes), AccessFlag,
+                            std::move(Encoding)});
   }
 
   if (InsOps.size() > 15) {
@@ -2812,9 +2956,9 @@ void printInsnOpMapEntry(CodeGenTarget const &Target,
                    CGI->AsmString + " */\n";
   InsnOpMap << "{\n";
   for (OpData const &OD : InsOps) {
-    InsnOpMap.indent(2) << "{ " + OD.OpType + ", " + getCSAccess(OD.Access) +
-                               ", "
-                        << OD.DataTypes << " }, /* " + OD.OpAsm + " */\n";
+    InsnOpMap.indent(2) << "{ " << OD.OpType << ", " << getCSAccess(OD.Access)
+                        << ", " << OD.DataTypes << ", " << OD.OpEncoding
+                        << " }, /* " << OD.OpAsm << " */\n";
   }
   InsnOpMap.indent(2) << "{ 0 }\n";
   InsnOpMap << "}},\n";
