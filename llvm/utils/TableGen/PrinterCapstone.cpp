@@ -3313,14 +3313,30 @@ std::string getTableNamespacePrefix(const GenericTable &Table,
       {"AArch64BTIHint", "BTI"},
       {"AArch64PSBHint", "PSB"},
   };
-  if (TargetName == "AArch64") {
-    for (auto NSTPair : AArch64NSTypePairs) {
-      if (NSTPair.second == Table.CppTypeName)
-        return NSTPair.first + "_";
-    }
-    return "";
+
+  std::set<std::pair<std::string, std::string>> ARMNSTypePairs = {
+      {"ARMSysReg", "MClassSysReg"},
+      {"ARMBankedReg", "BankedReg"},
+  };
+
+  std::set<std::pair<std::string, std::string>> *NSTable;
+
+  if (TargetName != "AArch64" && TargetName != "ARM")
+    return Table.CppTypeName + "_";
+
+  if (TargetName == "AArch64")
+    NSTable = &AArch64NSTypePairs;
+  else if (TargetName == "ARM")
+    NSTable = &ARMNSTypePairs;
+  else
+    PrintFatalNote("No Namespace Type table defined for target.");
+
+  for (auto NSTPair : *NSTable) {
+    if (NSTPair.second == Table.CppTypeName)
+      return NSTPair.first + "_";
   }
-  return Table.CppTypeName;
+  PrintNote("No namespace defined for type: " + Table.CppTypeName);
+  return "";
 }
 
 void PrinterCapstone::searchableTablesEmitLookupDeclaration(
@@ -3410,13 +3426,12 @@ void PrinterCapstone::searchableTablesEmitReturns(const GenericTable &Table,
                                                   bool IsPrimary) {
   raw_string_ostream &OutS = searchableTablesGetOS(ST_IMPL_OS);
   if (EmittingNameLookup) {
-    OutS
-        << "   unsigned i = binsearch_IndexTypeStrEncoding(Index, ARR_SIZE(Index), ";
+    OutS << "   unsigned i = binsearch_IndexTypeStrEncoding(Index, "
+            "ARR_SIZE(Index), ";
     EmittingNameLookup = false;
-  }
-  else
-    OutS
-        << "   unsigned i = binsearch_IndexTypeEncoding(Index, ARR_SIZE(Index), ";
+  } else
+    OutS << "   unsigned i = binsearch_IndexTypeEncoding(Index, "
+            "ARR_SIZE(Index), ";
   for (const auto &Field : Index.Fields)
     OutS << Field.Name;
   OutS << ");\n"
