@@ -957,9 +957,8 @@ public:
                                                  std::string Repr) const;
   virtual void searchableTablesEmitIndexArrayII() const;
   virtual void searchableTablesEmitIndexArrayI() const;
-  virtual void
-  searchableTablesEmitIndexTypeStruct(const GenericTable &Table,
-                                      const SearchIndex &Index);
+  virtual void searchableTablesEmitIndexTypeStruct(const GenericTable &Table,
+                                                   const SearchIndex &Index);
   virtual void searchableTablesEmitReturns(const GenericTable &Table,
                                            const SearchIndex &Index,
                                            bool IsPrimary);
@@ -1010,7 +1009,8 @@ public:
                          bool Newline = true,
                          bool UndefAtEnd = false) const override;
 
-  static std::string translateToC(std::string const &Dec);
+  static std::string translateToC(std::string const &TargetName,
+                                  std::string const &Dec);
 
   //------------------------
   // Backend: RegisterInfo
@@ -1807,9 +1807,8 @@ public:
                                          std::string Repr) const override;
   void searchableTablesEmitIndexArrayII() const override;
   void searchableTablesEmitIndexArrayI() const override;
-  void
-  searchableTablesEmitIndexTypeStruct(const GenericTable &Table,
-                                      const SearchIndex &Index) override;
+  void searchableTablesEmitIndexTypeStruct(const GenericTable &Table,
+                                           const SearchIndex &Index) override;
   void searchableTablesEmitReturns(const GenericTable &Table,
                                    const SearchIndex &Index,
                                    bool IsPrimary) override;

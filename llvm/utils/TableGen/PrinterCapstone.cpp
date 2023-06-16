@@ -658,14 +658,20 @@ std::string edgeCaseTemplArg(std::string &Code) {
   PrintFatalNote("Edge case for C++ code not handled: " + Code);
 }
 
-static std::string handleDefaultArg(std::string &Code) {
+static std::string handleDefaultArg(const std::string &TargetName,
+                                    std::string &Code) {
   static SmallVector<std::pair<std::string, std::string>>
-      TemplFuncWithDefaults = {// Default is 1
-                               {"printVectorIndex", "1"},
-                               // Default is false == 0
-                               {"printPrefetchOp", "0"}};
+      AArch64TemplFuncWithDefaults = {// Default is 1
+                                      {"printVectorIndex", "1"},
+                                      // Default is false == 0
+                                      {"printPrefetchOp", "0"}};
+  SmallVector<std::pair<std::string, std::string>> *TemplFuncWithDefaults;
+  if (TargetName == "AArch64")
+    TemplFuncWithDefaults = &AArch64TemplFuncWithDefaults;
+  else
+    return Code;
 
-  for (std::pair Func : TemplFuncWithDefaults) {
+  for (std::pair Func : *TemplFuncWithDefaults) {
     if (Code.find(Func.first) != std::string::npos) {
       unsigned long const B =
           Code.find(Func.first) + std::string(Func.first).size();
@@ -681,11 +687,12 @@ static std::string handleDefaultArg(std::string &Code) {
   return Code;
 }
 
-static void patchTemplateArgs(std::string &Code) {
+static void patchTemplateArgs(const std::string &TargetName,
+                              std::string &Code) {
   unsigned long const B = Code.find_first_of("<");
   unsigned long const E = Code.find(">");
   if (B == std::string::npos) {
-    Code = handleDefaultArg(Code);
+    Code = handleDefaultArg(TargetName, Code);
     return;
   }
   std::string const &DecName = Code.substr(0, B);
@@ -707,12 +714,13 @@ static void patchTemplateArgs(std::string &Code) {
   Code = DecName + "_" + Args + Rest;
 }
 
-std::string PrinterCapstone::translateToC(std::string const &Code) {
+std::string PrinterCapstone::translateToC(std::string const &TargetName,
+                                          std::string const &Code) {
   std::string PatchedCode(Code);
   patchQualifier(PatchedCode);
   patchNullptr(PatchedCode);
   patchIsGetImmReg(PatchedCode);
-  patchTemplateArgs(PatchedCode);
+  patchTemplateArgs(TargetName, PatchedCode);
   return PatchedCode;
 }
 
@@ -721,7 +729,7 @@ void PrinterCapstone::decoderEmitterEmitOpDecoder(raw_ostream &DecoderOS,
   unsigned const Indent = 4;
   DecoderOS.indent(Indent) << GuardPrefix;
   if (Op.Decoder.find("<") != std::string::npos) {
-    DecoderOS << translateToC(Op.Decoder);
+    DecoderOS << translateToC(TargetName, Op.Decoder);
   } else {
     DecoderOS << Op.Decoder;
   }
@@ -735,7 +743,7 @@ void PrinterCapstone::decoderEmitterEmitOpBinaryParser(
     raw_ostream &DecOS, const OperandInfo &OpInfo) const {
   unsigned const Indent = 4;
   const std::string &Decoder = (OpInfo.Decoder.find("<") != std::string::npos)
-                                   ? translateToC(OpInfo.Decoder)
+                                   ? translateToC(TargetName, OpInfo.Decoder)
                                    : OpInfo.Decoder;
 
   bool const UseInsertBits = OpInfo.numFields() != 1 || OpInfo.InitValue != 0;
@@ -1387,11 +1395,11 @@ void PrinterCapstone::asmWriterEmitPrintInstruction(
       // Emit two possibilitys with if/else.
       OS << "  if ((Bits >> " << (OpcodeInfoBits - BitsLeft) << ") & "
          << ((1 << NumBits) - 1) << ") {\n"
-         << translateToC(Commands[1]) << "  } else {\n"
-         << translateToC(Commands[0]) << "  }\n\n";
+         << translateToC(TargetName, Commands[1]) << "  } else {\n"
+         << translateToC(TargetName, Commands[0]) << "  }\n\n";
     } else if (Commands.size() == 1) {
       // Emit a single possibility.
-      OS << translateToC(Commands[0]) << "\n\n";
+      OS << translateToC(TargetName, Commands[0]) << "\n\n";
     } else {
       OS << "  switch ((Bits >> " << (OpcodeInfoBits - BitsLeft) << ") & "
          << ((1 << NumBits) - 1) << ") {\n"
@@ -1400,7 +1408,7 @@ void PrinterCapstone::asmWriterEmitPrintInstruction(
       // Print out all the cases.
       for (unsigned J = 0, F = Commands.size(); J != F; ++J) {
         OS << "  case " << J << ":\n";
-        OS << translateToC(Commands[J]);
+        OS << translateToC(TargetName, Commands[J]);
         OS << "    break;\n";
       }
       OS << "  }\n\n";
@@ -1425,7 +1433,7 @@ void PrinterCapstone::asmWriterEmitOpCases(
     }
 
   // Finally, emit the code.
-  OS << "\n      " << TheOp.getCode(PassSubtarget);
+  OS << "\n      " << translateToC(TargetName, TheOp.getCode(PassSubtarget));
   OS << "\n      break;\n";
 }
 
@@ -1459,7 +1467,7 @@ void PrinterCapstone::asmWriterEmitInstruction(
   for (unsigned I = 0, E = FirstInst.Operands.size(); I != E; ++I) {
     if (I != DifferingOperand) {
       // If the operand is the same for all instructions, just print it.
-      OS << "    " << FirstInst.Operands[I].getCode(PassSubtarget);
+      OS << "    " << translateToC(TargetName, FirstInst.Operands[I].getCode(PassSubtarget));
     } else {
       // If this is the operand that varies between all of the instructions,
       // emit a switch for just this operand now.
@@ -1768,7 +1776,7 @@ void PrinterCapstone::asmWriterEmitPrintAliasOp(
     for (unsigned I = 0; I < PrintMethods.size(); ++I) {
       OS << "  case " << I << ":\n";
       std::string PrintMethod =
-          PrinterCapstone::translateToC(PrintMethods[I].first);
+          PrinterCapstone::translateToC(TargetName, PrintMethods[I].first);
       OS << "    " << PrintMethod << "(MI, "
          << (PrintMethods[I].second ? "Address, " : "") << "OpIdx, "
          << "OS);\n"
@@ -1796,7 +1804,8 @@ void PrinterCapstone::asmWriterEmitPrintMC(
       StringRef const MCOpPred =
           MCOpPredicates[I]->getValueAsString("MCOperandPredicate");
       OS << "  case " << I + 1 << ": {\n";
-      std::string PrintMethod = PrinterCapstone::translateToC(MCOpPred.data());
+      std::string PrintMethod =
+          PrinterCapstone::translateToC(TargetName, MCOpPred.data());
       OS << PrintMethod << "\n"
          << "    }\n";
     }
@@ -2908,7 +2917,8 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
 
   for (const CGIOperandList::OperandInfo &Op : CGI->Operands) {
     std::string OpGroup =
-        PrinterCapstone::translateToC(Op.PrinterMethodName).substr(5);
+        PrinterCapstone::translateToC(TargetName.str(), Op.PrinterMethodName)
+            .substr(5);
     if (OpGroups.find(OpGroup) != OpGroups.end())
       continue;
     OpGroupEnum.indent(2) << TargetName + "_OP_GROUP_" + OpGroup + " = "

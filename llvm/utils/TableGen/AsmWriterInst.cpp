@@ -55,11 +55,7 @@ std::string AsmWriterOperand::getCode(bool PassSubtarget) const {
   } else
     Result = Str;
 
-  if (Str.find("<") != std::string::npos &&
-      LangCS)
-    Result = PrinterCapstone::translateToC(Result) + "(MI";
-  else
-    Result = Result + "(MI";
+  Result = Result + "(MI";
 
   if (PCRel)
     Result += ", Address";
