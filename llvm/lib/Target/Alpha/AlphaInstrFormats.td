@@ -34,7 +34,7 @@ class InstAlpha<bits<6> op, string asmstr, InstrItinClass itin> : Instruction {
   let AsmString = asmstr;
   let Inst{31-26} = op;
   let Itinerary = itin;
-  let Size = 4;
+  let Size =  4;
 }
 
 

@@ -31,7 +31,7 @@ std::pair<const char *, uint64_t> AlphaInstPrinter::getMnemonic(const MCInst *MI
   /* 88 */ "cmovlbc \0"
   /* 97 */ "rpcc \0"
   /* 103 */ "bic \0"
-  /* 108 */ "cvttq/svc \0"
+  /* 108 */ "cvttq_svc \0"
   /* 119 */ "and \0"
   /* 124 */ "fbge \0"
   /* 130 */ "cmpbge \0"
@@ -46,9 +46,9 @@ std::pair<const char *, uint64_t> AlphaInstPrinter::getMnemonic(const MCInst *MI
   /* 207 */ "cpyse \0"
   /* 214 */ "ldah \0"
   /* 220 */ "umulh \0"
-  /* 227 */ "cvtqs/sui \0"
-  /* 238 */ "cvtts/sui \0"
-  /* 249 */ "cvtqt/sui \0"
+  /* 227 */ "cvtqs_sui \0"
+  /* 238 */ "cvtts_sui \0"
+  /* 249 */ "cvtqt_sui \0"
   /* 260 */ "ldl_l \0"
   /* 267 */ "stl_l \0"
   /* 274 */ "ldq_l \0"
@@ -74,7 +74,7 @@ std::pair<const char *, uint64_t> AlphaInstPrinter::getMnemonic(const MCInst *MI
   /* 412 */ "mulq \0"
   /* 418 */ "stq \0"
   /* 423 */ "xor \0"
-  /* 428 */ "cvtst/s \0"
+  /* 428 */ "cvtst_s \0"
   /* 437 */ "blbs \0"
   /* 443 */ "cmovlbs \0"
   /* 452 */ "lds \0"
@@ -96,51 +96,51 @@ std::pair<const char *, uint64_t> AlphaInstPrinter::getMnemonic(const MCInst *MI
   /* 559 */ "ornot \0"
   /* 566 */ "stt \0"
   /* 571 */ "ldbu \0"
-  /* 577 */ "cmptle/su \0"
-  /* 588 */ "cmptun/su \0"
-  /* 599 */ "cmpteq/su \0"
-  /* 610 */ "subs/su \0"
-  /* 619 */ "adds/su \0"
-  /* 628 */ "muls/su \0"
-  /* 637 */ "sqrts/su \0"
-  /* 647 */ "divs/su \0"
-  /* 656 */ "subt/su \0"
-  /* 665 */ "addt/su \0"
-  /* 674 */ "cmptlt/su \0"
-  /* 685 */ "mult/su \0"
-  /* 694 */ "sqrtt/su \0"
-  /* 704 */ "divt/su \0"
+  /* 577 */ "cmptle_su \0"
+  /* 588 */ "cmptun_su \0"
+  /* 599 */ "cmpteq_su \0"
+  /* 610 */ "subs_su \0"
+  /* 619 */ "adds_su \0"
+  /* 628 */ "muls_su \0"
+  /* 637 */ "sqrts_su \0"
+  /* 647 */ "divs_su \0"
+  /* 656 */ "subt_su \0"
+  /* 665 */ "addt_su \0"
+  /* 674 */ "cmptlt_su \0"
+  /* 685 */ "mult_su \0"
+  /* 694 */ "sqrtt_su \0"
+  /* 704 */ "divt_su \0"
   /* 713 */ "ldwu \0"
   /* 719 */ "eqv \0"
   /* 724 */ "stw \0"
   /* 729 */ "sextw \0"
   /* 736 */ "bsr $26,$\0"
   /* 746 */ "LSMARKER$\0"
-  /* 756 */ "jmp $31,(\0"
-  /* 766 */ "br $31,\0"
-  /* 774 */ "# XRay Function Patchable RET.\0"
-  /* 805 */ "# XRay Typed Event Log.\0"
-  /* 829 */ "# XRay Custom Event Log.\0"
-  /* 854 */ "# XRay Function Enter.\0"
-  /* 877 */ "# XRay Tail Call Exit.\0"
-  /* 900 */ "# XRay Function Exit.\0"
-  /* 922 */ "jsr $23,($27),0\0"
-  /* 938 */ "jsr $26,($27),0\0"
-  /* 954 */ "ret $31,($26),1\0"
-  /* 970 */ ":comment COND_BRANCH imm:\0"
-  /* 996 */ "LIFETIME_END\0"
-  /* 1009 */ "PSEUDO_PROBE\0"
-  /* 1022 */ "BUNDLE\0"
-  /* 1029 */ "DBG_VALUE\0"
-  /* 1039 */ "DBG_INSTR_REF\0"
-  /* 1053 */ "DBG_PHI\0"
-  /* 1061 */ "DBG_LABEL\0"
-  /* 1071 */ "LIFETIME_START\0"
-  /* 1086 */ "DBG_VALUE_LIST\0"
-  /* 1101 */ "PCMARKER_\0"
-  /* 1111 */ "wmb\0"
-  /* 1115 */ "#wtf\0"
-  /* 1120 */ "# FEntry call\0"
+  /* 756 */ "jmp $31,\0"
+  /* 765 */ "br $31,\0"
+  /* 773 */ "# XRay Function Patchable RET.\0"
+  /* 804 */ "# XRay Typed Event Log.\0"
+  /* 828 */ "# XRay Custom Event Log.\0"
+  /* 853 */ "# XRay Function Enter.\0"
+  /* 876 */ "# XRay Tail Call Exit.\0"
+  /* 899 */ "# XRay Function Exit.\0"
+  /* 921 */ "jsr $23,($27),0\0"
+  /* 937 */ "jsr $26,($27),0\0"
+  /* 953 */ "ret $31,($26),1\0"
+  /* 969 */ "COND_BRANCH imm:\0"
+  /* 986 */ "LIFETIME_END\0"
+  /* 999 */ "PSEUDO_PROBE\0"
+  /* 1012 */ "BUNDLE\0"
+  /* 1019 */ "DBG_VALUE\0"
+  /* 1029 */ "DBG_INSTR_REF\0"
+  /* 1043 */ "DBG_PHI\0"
+  /* 1051 */ "DBG_LABEL\0"
+  /* 1061 */ "LIFETIME_START\0"
+  /* 1076 */ "DBG_VALUE_LIST\0"
+  /* 1091 */ "PCMARKER_\0"
+  /* 1101 */ "wmb\0"
+  /* 1105 */ "#wtf\0"
+  /* 1110 */ "# FEntry call\0"
 };
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
@@ -160,20 +160,20 @@ std::pair<const char *, uint64_t> AlphaInstPrinter::getMnemonic(const MCInst *MI
     0U,	// IMPLICIT_DEF
     0U,	// SUBREG_TO_REG
     0U,	// COPY_TO_REGCLASS
-    1030U,	// DBG_VALUE
-    1087U,	// DBG_VALUE_LIST
-    1040U,	// DBG_INSTR_REF
-    1054U,	// DBG_PHI
-    1062U,	// DBG_LABEL
+    1020U,	// DBG_VALUE
+    1077U,	// DBG_VALUE_LIST
+    1030U,	// DBG_INSTR_REF
+    1044U,	// DBG_PHI
+    1052U,	// DBG_LABEL
     0U,	// REG_SEQUENCE
     0U,	// COPY
-    1023U,	// BUNDLE
-    1072U,	// LIFETIME_START
-    997U,	// LIFETIME_END
-    1010U,	// PSEUDO_PROBE
+    1013U,	// BUNDLE
+    1062U,	// LIFETIME_START
+    987U,	// LIFETIME_END
+    1000U,	// PSEUDO_PROBE
     0U,	// ARITH_FENCE
     0U,	// STACKMAP
-    1121U,	// FENTRY_CALL
+    1111U,	// FENTRY_CALL
     0U,	// PATCHPOINT
     0U,	// LOAD_STACK_GUARD
     0U,	// PREALLOCATED_SETUP
@@ -182,12 +182,12 @@ std::pair<const char *, uint64_t> AlphaInstPrinter::getMnemonic(const MCInst *MI
     0U,	// LOCAL_ESCAPE
     0U,	// FAULTING_OP
     0U,	// PATCHABLE_OP
-    855U,	// PATCHABLE_FUNCTION_ENTER
-    775U,	// PATCHABLE_RET
-    901U,	// PATCHABLE_FUNCTION_EXIT
-    878U,	// PATCHABLE_TAIL_CALL
-    830U,	// PATCHABLE_EVENT_CALL
-    806U,	// PATCHABLE_TYPED_EVENT_CALL
+    854U,	// PATCHABLE_FUNCTION_ENTER
+    774U,	// PATCHABLE_RET
+    900U,	// PATCHABLE_FUNCTION_EXIT
+    877U,	// PATCHABLE_TAIL_CALL
+    829U,	// PATCHABLE_EVENT_CALL
+    805U,	// PATCHABLE_TYPED_EVENT_CALL
     0U,	// ICALL_BRANCH_FUNNEL
     0U,	// MEMBARRIER
     0U,	// G_ASSERT_SEXT
@@ -406,10 +406,10 @@ std::pair<const char *, uint64_t> AlphaInstPrinter::getMnemonic(const MCInst *MI
     0U,	// LAS32
     0U,	// LAS64
     19179U,	// MEMLABEL
-    27726U,	// PCLABEL
+    27716U,	// PCLABEL
     0U,	// SWAP32
     0U,	// SWAP64
-    1116U,	// WTF
+    1106U,	// WTF
     37171U,	// ADDLi
     37171U,	// ADDLr
     37236U,	// ADDQi
@@ -418,20 +418,20 @@ std::pair<const char *, uint64_t> AlphaInstPrinter::getMnemonic(const MCInst *MI
     37530U,	// ADDT
     36984U,	// ANDi
     36984U,	// ANDr
-    37256U,	// BEQ
-    36990U,	// BGE
-    37365U,	// BGT
+    43400U,	// BEQ
+    43134U,	// BGE
+    43509U,	// BGT
     36968U,	// BICi
     36968U,	// BICr
     37329U,	// BISi
     37329U,	// BISr
-    36947U,	// BLBC
-    37302U,	// BLBS
-    37013U,	// BLE
-    37387U,	// BLT
-    37043U,	// BNE
-    2815U,	// BR
-    43745U,	// BSR
+    43091U,	// BLBC
+    43446U,	// BLBS
+    43157U,	// BLE
+    43531U,	// BLT
+    43187U,	// BNE
+    2814U,	// BR
+    51937U,	// BSR
     37269U,	// CMOVEQi
     37269U,	// CMOVEQr
     37004U,	// CMOVGEi
@@ -464,8 +464,8 @@ std::pair<const char *, uint64_t> AlphaInstPrinter::getMnemonic(const MCInst *MI
     37025U,	// CMPULEi
     37399U,	// CMPULT
     37399U,	// CMPULTi
-    52171U,	// COND_BRANCH_F
-    60363U,	// COND_BRANCH_I
+    60362U,	// COND_BRANCH_F
+    3018U,	// COND_BRANCH_I
     37072U,	// CPYSES
     37072U,	// CPYSESt
     37072U,	// CPYSET
@@ -477,14 +477,14 @@ std::pair<const char *, uint64_t> AlphaInstPrinter::getMnemonic(const MCInst *MI
     37346U,	// CPYSSt
     37346U,	// CPYST
     37346U,	// CPYSTs
-    4145U,	// CTLZ
-    4129U,	// CTPOP
-    4151U,	// CTTZ
-    4324U,	// CVTQS
-    4346U,	// CVTQT
-    4525U,	// CVTST
-    4205U,	// CVTTQ
-    4335U,	// CVTTS
+    12337U,	// CTLZ
+    12321U,	// CTPOP
+    12343U,	// CTTZ
+    12516U,	// CVTQS
+    12538U,	// CVTQT
+    12717U,	// CVTST
+    12397U,	// CVTTQ
+    12527U,	// CVTTS
     37512U,	// DIVS
     37569U,	// DIVT
     37584U,	// EQVi
@@ -492,12 +492,12 @@ std::pair<const char *, uint64_t> AlphaInstPrinter::getMnemonic(const MCInst *MI
     36865U,	// EXTBL
     36872U,	// EXTLL
     36879U,	// EXTWL
-    37255U,	// FBEQ
-    36989U,	// FBGE
-    37364U,	// FBGT
-    37012U,	// FBLE
-    37386U,	// FBLT
-    37042U,	// FBNE
+    43399U,	// FBEQ
+    43133U,	// FBGE
+    43508U,	// FBGT
+    43156U,	// FBLE
+    43530U,	// FBLT
+    43186U,	// FBNE
     6548U,	// FCMOVEQS
     6548U,	// FCMOVEQT
     6283U,	// FCMOVGES
@@ -510,36 +510,36 @@ std::pair<const char *, uint64_t> AlphaInstPrinter::getMnemonic(const MCInst *MI
     6687U,	// FCMOVLTT
     6343U,	// FCMOVNES
     6343U,	// FCMOVNET
-    4566U,	// FTOIS
-    4611U,	// FTOIT
-    4554U,	// ITOFS
-    4589U,	// ITOFT
-    10997U,	// JMP
-    939U,	// JSR
-    18616U,	// JSR_COROUTINE
-    923U,	// JSRs
-    26685U,	// LDA
-    26839U,	// LDAH
+    12758U,	// FTOIS
+    12803U,	// FTOIT
+    12746U,	// ITOFS
+    12781U,	// ITOFT
+    19189U,	// JMP
+    938U,	// JSR
+    26808U,	// JSR_COROUTINE
+    922U,	// JSRs
+    43069U,	// LDA
+    43223U,	// LDAH
     35031U,	// LDAHg
-    26839U,	// LDAHr
+    43223U,	// LDAHr
     34877U,	// LDAg
-    26685U,	// LDAr
-    27196U,	// LDBU
-    27196U,	// LDBUr
-    26945U,	// LDL
-    26885U,	// LDL_L
-    26945U,	// LDLr
-    27010U,	// LDQ
-    26899U,	// LDQ_L
-    27010U,	// LDQl
-    27010U,	// LDQr
-    27077U,	// LDS
-    27077U,	// LDSr
-    27112U,	// LDT
-    27112U,	// LDTr
-    27338U,	// LDWU
-    27338U,	// LDWUr
-    1113U,	// MB
+    43069U,	// LDAr
+    43580U,	// LDBU
+    43580U,	// LDBUr
+    43329U,	// LDL
+    43269U,	// LDL_L
+    43329U,	// LDLr
+    43394U,	// LDQ
+    43283U,	// LDQ_L
+    43394U,	// LDQl
+    43394U,	// LDQr
+    43461U,	// LDS
+    43461U,	// LDSr
+    43496U,	// LDT
+    43496U,	// LDTr
+    43722U,	// LDWU
+    43722U,	// LDWUr
+    1103U,	// MB
     37195U,	// MULLi
     37195U,	// MULLr
     37277U,	// MULQi
@@ -548,8 +548,8 @@ std::pair<const char *, uint64_t> AlphaInstPrinter::getMnemonic(const MCInst *MI
     37550U,	// MULT
     37424U,	// ORNOTi
     37424U,	// ORNOTr
-    955U,	// RETDAG
-    955U,	// RETDAGp
+    954U,	// RETDAG
+    954U,	// RETDAGp
     2146U,	// RPCC
     37169U,	// S4ADDLi
     37169U,	// S4ADDLr
@@ -567,30 +567,30 @@ std::pair<const char *, uint64_t> AlphaInstPrinter::getMnemonic(const MCInst *MI
     37161U,	// S8SUBLr
     37226U,	// S8SUBQi
     37226U,	// S8SUBQr
-    4172U,	// SEXTB
-    4826U,	// SEXTW
+    12364U,	// SEXTB
+    13018U,	// SEXTW
     37190U,	// SLi
     37190U,	// SLr
-    4734U,	// SQRTS
-    4791U,	// SQRTT
+    12926U,	// SQRTS
+    12983U,	// SQRTT
     36930U,	// SRAi
     36930U,	// SRAr
     37201U,	// SRLi
     37201U,	// SRLr
-    26695U,	// STB
-    26695U,	// STBr
-    26966U,	// STL
+    43079U,	// STB
+    43079U,	// STBr
+    43350U,	// STL
     37132U,	// STL_C
-    26966U,	// STLr
-    27043U,	// STQ
+    43350U,	// STLr
+    43427U,	// STQ
     37146U,	// STQ_C
-    27043U,	// STQr
-    27101U,	// STS
-    27101U,	// STSr
-    27191U,	// STT
-    27191U,	// STTr
-    27349U,	// STW
-    27349U,	// STWr
+    43427U,	// STQr
+    43485U,	// STS
+    43485U,	// STSr
+    43575U,	// STT
+    43575U,	// STTr
+    43733U,	// STW
+    43733U,	// STWr
     37155U,	// SUBLi
     37155U,	// SUBLr
     37220U,	// SUBQi
@@ -599,7 +599,7 @@ std::pair<const char *, uint64_t> AlphaInstPrinter::getMnemonic(const MCInst *MI
     37521U,	// SUBT
     37085U,	// UMULHi
     37085U,	// UMULHr
-    1112U,	// WMB
+    1102U,	// WMB
     37288U,	// XORi
     37288U,	// XORr
     37416U,	// ZAPNOTi
@@ -924,7 +924,7 @@ std::pair<const char *, uint64_t> AlphaInstPrinter::getMnemonic(const MCInst *MI
     0U,	// CMPULT
     0U,	// CMPULTi
     0U,	// COND_BRANCH_F
-    0U,	// COND_BRANCH_I
+    1U,	// COND_BRANCH_I
     0U,	// CPYSES
     0U,	// CPYSESt
     0U,	// CPYSET
@@ -977,27 +977,27 @@ std::pair<const char *, uint64_t> AlphaInstPrinter::getMnemonic(const MCInst *MI
     0U,	// JSR
     1U,	// JSR_COROUTINE
     0U,	// JSRs
-    5U,	// LDA
-    5U,	// LDAH
+    4U,	// LDA
+    4U,	// LDAH
     1U,	// LDAHg
-    7U,	// LDAHr
+    20U,	// LDAHr
     1U,	// LDAg
-    9U,	// LDAr
-    5U,	// LDBU
-    9U,	// LDBUr
-    5U,	// LDL
-    5U,	// LDL_L
-    9U,	// LDLr
-    5U,	// LDQ
-    5U,	// LDQ_L
-    11U,	// LDQl
-    9U,	// LDQr
-    5U,	// LDS
-    9U,	// LDSr
-    5U,	// LDT
-    9U,	// LDTr
-    5U,	// LDWU
-    9U,	// LDWUr
+    36U,	// LDAr
+    4U,	// LDBU
+    36U,	// LDBUr
+    4U,	// LDL
+    4U,	// LDL_L
+    36U,	// LDLr
+    4U,	// LDQ
+    4U,	// LDQ_L
+    52U,	// LDQl
+    36U,	// LDQr
+    4U,	// LDS
+    36U,	// LDSr
+    4U,	// LDT
+    36U,	// LDTr
+    4U,	// LDWU
+    36U,	// LDWUr
     0U,	// MB
     0U,	// MULLi
     0U,	// MULLr
@@ -1036,20 +1036,20 @@ std::pair<const char *, uint64_t> AlphaInstPrinter::getMnemonic(const MCInst *MI
     0U,	// SRAr
     0U,	// SRLi
     0U,	// SRLr
-    5U,	// STB
-    9U,	// STBr
-    5U,	// STL
+    1U,	// STB
+    36U,	// STBr
+    4U,	// STL
     12U,	// STL_C
-    9U,	// STLr
-    5U,	// STQ
+    36U,	// STLr
+    4U,	// STQ
     12U,	// STQ_C
-    9U,	// STQr
-    5U,	// STS
-    9U,	// STSr
-    5U,	// STT
-    9U,	// STTr
-    5U,	// STW
-    9U,	// STWr
+    36U,	// STQr
+    4U,	// STS
+    36U,	// STSr
+    4U,	// STT
+    36U,	// STTr
+    4U,	// STW
+    36U,	// STWr
     0U,	// SUBLi
     0U,	// SUBLr
     0U,	// SUBQi
@@ -1092,11 +1092,11 @@ void AlphaInstPrinter::printInstruction(const MCInst *MI, uint64_t Address, raw_
     return;
     break;
   case 1:
-    // ADJUSTSTACKDOWN, ADJUSTSTACKUP, ALTENT, MEMLABEL, PCLABEL, BR, BSR, CO...
+    // ADJUSTSTACKDOWN, ADJUSTSTACKUP, ALTENT, MEMLABEL, PCLABEL, BEQ, BGE, B...
     printOperand(MI, 0, O);
     break;
   case 2:
-    // ADDLi, ADDLr, ADDQi, ADDQr, ADDS, ADDT, ANDi, ANDr, BEQ, BGE, BGT, BIC...
+    // ADDLi, ADDLr, ADDQi, ADDQr, ADDS, ADDT, ANDi, ANDr, BICi, BICr, BISi, ...
     printOperand(MI, 1, O);
     SStream_concat1(O, ',');
     break;
@@ -1112,7 +1112,7 @@ void AlphaInstPrinter::printInstruction(const MCInst *MI, uint64_t Address, raw_
   }
 
 
-  // Fragment 1 encoded into 4 bits for 13 unique commands.
+  // Fragment 1 encoded into 4 bits for 14 unique commands.
   switch ((Bits >> 13) & 15) {
   default: llvm_unreachable("Invalid command number.");
   case 0:
@@ -1141,15 +1141,20 @@ void AlphaInstPrinter::printInstruction(const MCInst *MI, uint64_t Address, raw_
     return;
     break;
   case 4:
-    // ADDLi, ADDLr, ADDQi, ADDQr, ADDS, ADDT, ANDi, ANDr, BEQ, BGE, BGT, BIC...
+    // ADDLi, ADDLr, ADDQi, ADDQr, ADDS, ADDT, ANDi, ANDr, BICi, BICr, BISi, ...
     printOperand(MI, 2, O);
     break;
   case 5:
+    // BEQ, BGE, BGT, BLBC, BLBS, BLE, BLT, BNE, FBEQ, FBGE, FBGT, FBLE, FBLT...
+    SStream_concat1(O, ',');
+    printOperand(MI, 1, O);
+    break;
+  case 6:
     // BSR
     SStream_concat0(O, "..ng");
     return;
     break;
-  case 6:
+  case 7:
     // COND_BRANCH_F
     SStream_concat0(O, ", F8RC:");
     printOperand(MI, 1, O);
@@ -1157,7 +1162,7 @@ void AlphaInstPrinter::printInstruction(const MCInst *MI, uint64_t Address, raw_
     printOperand(MI, 2, O);
     return;
     break;
-  case 7:
+  case 8:
     // COND_BRANCH_I
     SStream_concat0(O, ", GPRC:");
     printOperand(MI, 1, O);
@@ -1165,30 +1170,23 @@ void AlphaInstPrinter::printInstruction(const MCInst *MI, uint64_t Address, raw_
     printOperand(MI, 2, O);
     return;
     break;
-  case 8:
+  case 9:
     // CTLZ, CTPOP, CTTZ, CVTQS, CVTQT, CVTST, CVTTQ, CVTTS, FTOIS, FTOIT, IT...
     printOperand(MI, 0, O);
     return;
     break;
-  case 9:
+  case 10:
     // JMP
-    SStream_concat0(O, "),0");
+    SStream_concat0(O, ",0");
     return;
     break;
-  case 10:
+  case 11:
     // JSR_COROUTINE
     SStream_concat0(O, ",(");
     printOperand(MI, 1, O);
     SStream_concat0(O, "),");
     printOperand(MI, 2, O);
     return;
-    break;
-  case 11:
-    // LDA, LDAH, LDAHr, LDAr, LDBU, LDBUr, LDL, LDL_L, LDLr, LDQ, LDQ_L, LDQ...
-    SStream_concat1(O, ',');
-    printOperand(MI, 1, O);
-    SStream_concat1(O, '(');
-    printOperand(MI, 2, O);
     break;
   case 12:
     // LDAHg, LDAg
@@ -1198,11 +1196,20 @@ void AlphaInstPrinter::printInstruction(const MCInst *MI, uint64_t Address, raw_
     printOperand(MI, 3, O);
     return;
     break;
+  case 13:
+    // STB
+    SStream_concat0(O, ", ");
+    printOperand(MI, 1, O);
+    SStream_concat0(O, " ( ");
+    printOperand(MI, 2, O);
+    SStream_concat0(O, " )");
+    return;
+    break;
   }
 
 
-  // Fragment 2 encoded into 3 bits for 7 unique commands.
-  switch ((Bits >> 17) & 7) {
+  // Fragment 2 encoded into 2 bits for 3 unique commands.
+  switch ((Bits >> 17) & 3) {
   default: llvm_unreachable("Invalid command number.");
   case 0:
     // ADDLi, ADDLr, ADDQi, ADDQr, ADDS, ADDT, ANDi, ANDr, BICi, BICr, BISi, ...
@@ -1215,30 +1222,45 @@ void AlphaInstPrinter::printInstruction(const MCInst *MI, uint64_t Address, raw_
     return;
     break;
   case 2:
-    // LDA, LDAH, LDBU, LDL, LDL_L, LDQ, LDQ_L, LDS, LDT, LDWU, STB, STL, STQ...
-    SStream_concat1(O, ')');
+    // LDA, LDAH, LDAHr, LDAr, LDBU, LDBUr, LDL, LDL_L, LDLr, LDQ, LDQ_L, LDQ...
+    SStream_concat0(O, " ( ");
+    break;
+  }
+
+
+  // Fragment 3 encoded into 1 bits for 2 unique commands.
+  if ((Bits >> 19) & 1) {
+    // STL_C, STQ_C
+    printOperand(MI, 3, O);
+    SStream_concat0(O, " )");
+    return;
+  } else {
+    // LDA, LDAH, LDAHr, LDAr, LDBU, LDBUr, LDL, LDL_L, LDLr, LDQ, LDQ_L, LDQ...
+    printOperand(MI, 2, O);
+  }
+
+
+  // Fragment 4 encoded into 2 bits for 4 unique commands.
+  switch ((Bits >> 20) & 3) {
+  default: llvm_unreachable("Invalid command number.");
+  case 0:
+    // LDA, LDAH, LDBU, LDL, LDL_L, LDQ, LDQ_L, LDS, LDT, LDWU, STL, STQ, STS...
+    SStream_concat0(O, " )");
+    return;
+    break;
+  case 1:
+    // LDAHr
+    SStream_concat0(O, " )\t\t!gprelhigh");
+    return;
+    break;
+  case 2:
+    // LDAr, LDBUr, LDLr, LDQr, LDSr, LDTr, LDWUr, STBr, STLr, STQr, STSr, ST...
+    SStream_concat0(O, " )\t\t!gprellow");
     return;
     break;
   case 3:
-    // LDAHr
-    SStream_concat0(O, ")\t\t!gprelhigh");
-    return;
-    break;
-  case 4:
-    // LDAr, LDBUr, LDLr, LDQr, LDSr, LDTr, LDWUr, STBr, STLr, STQr, STSr, ST...
-    SStream_concat0(O, ")\t\t!gprellow");
-    return;
-    break;
-  case 5:
     // LDQl
-    SStream_concat0(O, ")\t\t!literal");
-    return;
-    break;
-  case 6:
-    // STL_C, STQ_C
-    SStream_concat1(O, '(');
-    printOperand(MI, 3, O);
-    SStream_concat1(O, ')');
+    SStream_concat0(O, " )\t\t!literal");
     return;
     break;
   }

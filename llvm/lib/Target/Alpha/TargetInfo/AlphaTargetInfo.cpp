@@ -8,9 +8,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "Alpha.h"
-#include "llvm/Module.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/IR/Module.h"
+#include "llvm/MC/TargetRegistry.h"
 using namespace llvm;
+
+namespace llvm {
+Target &getTheAlphaTarget() {
+  static Target TheAlphaTarget;
+  return TheAlphaTarget;
+}
+} // namespace llvm
 
 llvm::Target llvm::TheAlphaTarget;
 

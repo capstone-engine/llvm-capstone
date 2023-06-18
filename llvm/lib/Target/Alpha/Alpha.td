@@ -48,7 +48,9 @@ include "AlphaSchedule.td"
 include "AlphaInstrInfo.td"
 
 def AlphaInstrInfo : InstrInfo {
+  let noNamedPositionallyEncodedOperands = 1;
   let useDeprecatedPositionallyEncodedOperands = 1;
+  let decodePositionallyEncodedOperands = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -48,10 +48,10 @@ def invX : SDNodeXForm<imm, [{ //invert
 def negX : SDNodeXForm<imm, [{ //negate
   return getI64Imm(~N->getZExtValue() + 1);
 }]>;
-def SExt32 : SDNodeXForm<imm, [{ //signed extend int to long
+def SExt32 : SDNodeXForm<imm, [{ /_signed extend int to long
   return getI64Imm(((int64_t)N->getZExtValue() << 32) >> 32);
 }]>;
-def SExt16 : SDNodeXForm<imm, [{ //signed extend int to long
+def SExt16 : SDNodeXForm<imm, [{ /_signed extend int to long
   return getI64Imm(((int64_t)N->getZExtValue() << 48) >> 48);
 }]>;
 def LL16 : SDNodeXForm<imm, [{ //lda part of constant
@@ -158,14 +158,12 @@ def ADJUSTSTACKDOWN : PseudoInstAlpha<(outs), (ins s64imm:$amt1, s64imm:$amt2),
                 [(callseq_end timm:$amt1, timm:$amt2)], s_pseudo>;
 }
 
-let isCodeGenOnly = 1 in {
 def ALTENT : PseudoInstAlpha<(outs), (ins s64imm:$TARGET), "$$$TARGET..ng:\n", [], s_pseudo>;
 def PCLABEL : PseudoInstAlpha<(outs), (ins s64imm:$num), "PCMARKER_$num:\n",[], s_pseudo>;
 def MEMLABEL : PseudoInstAlpha<(outs), (ins s64imm:$i, s64imm:$j, s64imm:$k, s64imm:$m),
          "LSMARKER$$$i$$$j$$$k$$$m:", [], s_pseudo>;
-}
 
-let usesCustomInserter = 1, isCodeGenOnly = 1 in {   // Expanded after instruction selection.
+let usesCustomInserter = 1 in {   // Expanded after instruction selection.
 def CAS32 : PseudoInstAlpha<(outs GPRC:$dst), (ins GPRC:$ptr, GPRC:$cmp, GPRC:$swp), "",
       [(set GPRC:$dst, (atomic_cmp_swap_32 GPRC:$ptr, GPRC:$cmp, GPRC:$swp))], s_pseudo>;
 def CAS64 : PseudoInstAlpha<(outs GPRC:$dst), (ins GPRC:$ptr, GPRC:$cmp, GPRC:$swp), "",
@@ -394,20 +392,21 @@ def : Pat<(setune GPRC:$X, immUExt8:$Y), (CMPEQi (CMPEQ GPRC:$X, immUExt8:$Y), 0
 
 let isReturn = 1, isTerminator = 1, isBarrier = 1, Ra = 31, Rb = 26, disp = 1, Uses = [R26] in {
   def RETDAG : MbrForm< 0x1A, 0x02, (ins), "ret $$31,($$26),1", s_jsr>; //Return from subroutine
+  let DecoderNamespace = "Other" in
   def RETDAGp : MbrpForm< 0x1A, 0x02, (ins), "ret $$31,($$26),1", [(retflag)], s_jsr>; //Return from subroutine
 }
 
-let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1, Ra = 31, disp = 0, isCodeGenOnly = 1 in
-def JMP : MbrpForm< 0x1A, 0x00, (ins GPRC:$RS), "jmp $$31,($RS),0", 
+let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1, Ra = 31, disp = 0 in
+def JMP : MbrpForm< 0x1A, 0x00, (ins GPRC:$RS), "jmp $$31,{$RS},0", 
           [(brind GPRC:$RS)], s_jsr>; //Jump
 
-let isCall = 1, Ra = 26, isCodeGenOnly = 1,
+let isCall = 1, Ra = 26,
     Defs = [R0, R1, R2, R3, R4, R5, R6, R7, R8, R16, R17, R18, R19,
             R20, R21, R22, R23, R24, R25, R26, R27, R28, R29,
             F0, F1,
             F10, F11, F12, F13, F14, F15, F16, F17, F18, F19,
             F20, F21, F22, F23, F24, F25, F26, F27, F28, F29, F30], Uses = [R29] in {
-    def BSR : BFormD<0x34, "bsr $$26,$$$DISP..ng", [], s_jsr>; //Branch to subroutine
+    def BSR : BFormD<0x34, "bsr $$26,$$$DISP ..ng", [], s_jsr>; //Branch to subroutine
 }
 let isCall = 1, Ra = 26, Rb = 27, disp = 0,
     Defs = [R0, R1, R2, R3, R4, R5, R6, R7, R8, R16, R17, R18, R19,
@@ -422,83 +421,95 @@ let isCall = 1, Ra = 23, Rb = 27, disp = 0,
     Defs = [R23, R24, R25, R27, R28], Uses = [R24, R25, R27] in
   def JSRs : MbrForm< 0x1A, 0x01, (ins), "jsr $$23,($$27),0", s_jsr>; //Jump to div or rem
 
-let isCodeGenOnly = 1 in
-def JSR_COROUTINE : MbrForm< 0x1A, 0x03, (ins GPRC:$RD, GPRC:$RS, s14imm:$DISP), "jsr_coroutine $RD,($RS),$DISP", s_jsr>; //Jump to subroutine return
+def JSR_COROUTINE : MbrForm< 0x1A, 0x03, (ins GPRC:$RD, GPRC:$RS, s14imm:$DISP), "jsr_coroutine $RD,( $RS ),$DISP", s_jsr>; //Jump to subroutine return
 
 
-let OutOperandList = (outs GPRC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB), isCodeGenOnly = 1 in {
-def LDQ   : MForm<0x29, 1, "ldq $RA,$DISP($RB)",
+let OutOperandList = (outs GPRC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB) in {
+def LDQ   : MForm<0x29, 1, "ldq $RA,$DISP ( $RB )",
                  [(set GPRC:$RA, (load (add GPRC:$RB, immSExt16:$DISP)))], s_ild>;
-def LDQr  : MForm<0x29, 1, "ldq $RA,$DISP($RB)\t\t!gprellow",
+let DecoderNamespace = "Other" in
+def LDQr  : MForm<0x29, 1, "ldq $RA,$DISP ( $RB )\t\t!gprellow",
                  [(set GPRC:$RA, (load (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB)))], s_ild>;
-def LDL   : MForm<0x28, 1, "ldl $RA,$DISP($RB)",
+def LDL   : MForm<0x28, 1, "ldl $RA,$DISP ( $RB )",
                  [(set GPRC:$RA, (sextloadi32 (add GPRC:$RB, immSExt16:$DISP)))], s_ild>;
-def LDLr  : MForm<0x28, 1, "ldl $RA,$DISP($RB)\t\t!gprellow",
+let DecoderNamespace = "Other" in
+def LDLr  : MForm<0x28, 1, "ldl $RA,$DISP ( $RB )\t\t!gprellow",
                  [(set GPRC:$RA, (sextloadi32 (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB)))], s_ild>;
-def LDBU  : MForm<0x0A, 1, "ldbu $RA,$DISP($RB)",
+def LDBU  : MForm<0x0A, 1, "ldbu $RA,$DISP ( $RB )",
                  [(set GPRC:$RA, (zextloadi8 (add GPRC:$RB, immSExt16:$DISP)))], s_ild>;
-def LDBUr : MForm<0x0A, 1, "ldbu $RA,$DISP($RB)\t\t!gprellow",
+let DecoderNamespace = "Other" in
+def LDBUr : MForm<0x0A, 1, "ldbu $RA,$DISP ( $RB )\t\t!gprellow",
                  [(set GPRC:$RA, (zextloadi8 (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB)))], s_ild>;
-def LDWU  : MForm<0x0C, 1, "ldwu $RA,$DISP($RB)",
+def LDWU  : MForm<0x0C, 1, "ldwu $RA,$DISP ( $RB )",
                  [(set GPRC:$RA, (zextloadi16 (add GPRC:$RB, immSExt16:$DISP)))], s_ild>;
-def LDWUr : MForm<0x0C, 1, "ldwu $RA,$DISP($RB)\t\t!gprellow",
+let DecoderNamespace = "Other" in
+def LDWUr : MForm<0x0C, 1, "ldwu $RA,$DISP ( $RB )\t\t!gprellow",
                  [(set GPRC:$RA, (zextloadi16 (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB)))], s_ild>;
 }
 
-
-let OutOperandList = (outs), InOperandList = (ins GPRC:$RA, s64imm:$DISP, GPRC:$RB), isCodeGenOnly = 1 in {
-def STB   : MForm<0x0E, 0, "stb $RA,$DISP($RB)",
-                 [(truncstorei8 GPRC:$RA, (add GPRC:$RB, immSExt16:$DISP))], s_ist>;
-def STBr  : MForm<0x0E, 0, "stb $RA,$DISP($RB)\t\t!gprellow",
-                 [(truncstorei8 GPRC:$RA, (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB))], s_ist>;
-def STW   : MForm<0x0D, 0, "stw $RA,$DISP($RB)",
+let OutOperandList = (outs), InOperandList = (ins GPRC:$RA, s64imm:$DISP, GPRC:$RB) in {
+def STB   : MForm<0x0E, 0, "stb $RA, $DISP ( $RB )",
                  [(truncstorei16 GPRC:$RA, (add GPRC:$RB, immSExt16:$DISP))], s_ist>;
-def STWr  : MForm<0x0D, 0, "stw $RA,$DISP($RB)\t\t!gprellow",
+let DecoderNamespace = "Other" in
+def STBr  : MForm<0x0E, 0, "stb $RA,$DISP ( $RB )\t\t!gprellow",
+                 [(truncstorei8 GPRC:$RA, (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB))], s_ist>;
+def STW   : MForm<0x0D, 0, "stw $RA,$DISP ( $RB )",
+                 [(truncstorei16 GPRC:$RA, (add GPRC:$RB, immSExt16:$DISP))], s_ist>;
+let DecoderNamespace = "Other" in
+def STWr  : MForm<0x0D, 0, "stw $RA,$DISP ( $RB )\t\t!gprellow",
                  [(truncstorei16 GPRC:$RA, (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB))], s_ist>;
-def STL   : MForm<0x2C, 0, "stl $RA,$DISP($RB)",
+def STL   : MForm<0x2C, 0, "stl $RA,$DISP ( $RB )",
                  [(truncstorei32 GPRC:$RA, (add GPRC:$RB, immSExt16:$DISP))], s_ist>;
-def STLr  : MForm<0x2C, 0, "stl $RA,$DISP($RB)\t\t!gprellow",
+let DecoderNamespace = "Other" in 
+def STLr  : MForm<0x2C, 0, "stl $RA,$DISP ( $RB )\t\t!gprellow",
                  [(truncstorei32 GPRC:$RA, (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB))], s_ist>;
-def STQ   : MForm<0x2D, 0, "stq $RA,$DISP($RB)",
+def STQ   : MForm<0x2D, 0, "stq $RA,$DISP ( $RB )",
                  [(store GPRC:$RA, (add GPRC:$RB, immSExt16:$DISP))], s_ist>;
-def STQr  : MForm<0x2D, 0, "stq $RA,$DISP($RB)\t\t!gprellow",
+let DecoderNamespace = "Other" in 
+def STQr  : MForm<0x2D, 0, "stq $RA,$DISP ( $RB )\t\t!gprellow",
                  [(store GPRC:$RA, (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB))], s_ist>;
 }
 
 //Load address
-let OutOperandList = (outs GPRC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB), isCodeGenOnly = 1 in {
-def LDA   : MForm<0x08, 0, "lda $RA,$DISP($RB)",
+let OutOperandList = (outs GPRC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB) in {
+def LDA   : MForm<0x08, 0, "lda $RA,$DISP ( $RB )",
                  [(set GPRC:$RA, (add GPRC:$RB, immSExt16:$DISP))], s_lda>;
-def LDAr  : MForm<0x08, 0, "lda $RA,$DISP($RB)\t\t!gprellow",
+let DecoderNamespace = "Other" in
+def LDAr  : MForm<0x08, 0, "lda $RA,$DISP ( $RB )\t\t!gprellow",
                  [(set GPRC:$RA, (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB))], s_lda>;  //Load address
-def LDAH  : MForm<0x09, 0, "ldah $RA,$DISP($RB)",
+def LDAH  : MForm<0x09, 0, "ldah $RA,$DISP ( $RB )",
                  [], s_lda>;  //Load address high
-def LDAHr : MForm<0x09, 0, "ldah $RA,$DISP($RB)\t\t!gprelhigh",
+let DecoderNamespace = "Other" in                 
+def LDAHr : MForm<0x09, 0, "ldah $RA,$DISP ( $RB )\t\t!gprelhigh",
                  [(set GPRC:$RA, (Alpha_gprelhi tglobaladdr:$DISP, GPRC:$RB))], s_lda>;  //Load address high
 }
 
-let OutOperandList = (outs), InOperandList = (ins F4RC:$RA, s64imm:$DISP, GPRC:$RB), isCodeGenOnly = 1 in {
-def STS  : MForm<0x26, 0, "sts $RA,$DISP($RB)",
+let OutOperandList = (outs), InOperandList = (ins F4RC:$RA, s64imm:$DISP, GPRC:$RB) in {
+def STS  : MForm<0x26, 0, "sts $RA,$DISP ( $RB )",
                 [(store F4RC:$RA, (add GPRC:$RB, immSExt16:$DISP))], s_fst>;
-def STSr : MForm<0x26, 0, "sts $RA,$DISP($RB)\t\t!gprellow",
+let DecoderNamespace = "Other" in
+def STSr : MForm<0x26, 0, "sts $RA,$DISP ( $RB )\t\t!gprellow",
                 [(store F4RC:$RA, (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB))], s_fst>;
 }
-let OutOperandList = (outs F4RC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB), isCodeGenOnly = 1 in {
-def LDS  : MForm<0x22, 1, "lds $RA,$DISP($RB)",
+let OutOperandList = (outs F4RC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB) in {
+def LDS  : MForm<0x22, 1, "lds $RA,$DISP ( $RB )",
                 [(set F4RC:$RA, (load (add GPRC:$RB, immSExt16:$DISP)))], s_fld>;
-def LDSr : MForm<0x22, 1, "lds $RA,$DISP($RB)\t\t!gprellow",
+let DecoderNamespace = "Other" in
+def LDSr : MForm<0x22, 1, "lds $RA,$DISP ( $RB )\t\t!gprellow",
                 [(set F4RC:$RA, (load (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB)))], s_fld>;
 }
-let OutOperandList = (outs), InOperandList = (ins F8RC:$RA, s64imm:$DISP, GPRC:$RB), isCodeGenOnly = 1 in {
-def STT  : MForm<0x27, 0, "stt $RA,$DISP($RB)",
+let OutOperandList = (outs), InOperandList = (ins F8RC:$RA, s64imm:$DISP, GPRC:$RB) in {
+def STT  : MForm<0x27, 0, "stt $RA,$DISP ( $RB )",
                  [(store F8RC:$RA, (add GPRC:$RB, immSExt16:$DISP))], s_fst>;
-def STTr : MForm<0x27, 0, "stt $RA,$DISP($RB)\t\t!gprellow",
+let DecoderNamespace = "Other" in
+def STTr : MForm<0x27, 0, "stt $RA,$DISP ( $RB )\t\t!gprellow",
                  [(store F8RC:$RA, (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB))], s_fst>;
 }
-let OutOperandList = (outs F8RC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB), isCodeGenOnly = 1 in {
-def LDT  : MForm<0x23, 1, "ldt $RA,$DISP($RB)",
+let OutOperandList = (outs F8RC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB) in {
+def LDT  : MForm<0x23, 1, "ldt $RA,$DISP ( $RB )",
                 [(set F8RC:$RA, (load (add GPRC:$RB, immSExt16:$DISP)))], s_fld>;
-def LDTr : MForm<0x23, 1, "ldt $RA,$DISP($RB)\t\t!gprellow",
+let DecoderNamespace = "Other" in
+def LDTr : MForm<0x23, 1, "ldt $RA,$DISP ( $RB )\t\t!gprellow",
                 [(set F8RC:$RA, (load (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB)))], s_fld>;
 }
 
@@ -573,14 +584,14 @@ def : Pat<(truncstorei8 GPRC:$DATA, GPRC:$addr),
 //load address, rellocated gpdist form
 let OutOperandList = (outs GPRC:$RA),
     InOperandList = (ins s16imm:$DISP, GPRC:$RB, s16imm:$NUM),
-    mayLoad = 1, isCodeGenOnly = 1 in {
-def LDAg  : MForm<0x08, 1, "lda $RA,0($RB)\t\t!gpdisp!$NUM", [], s_lda>;  //Load address
-def LDAHg : MForm<0x09, 1, "ldah $RA,0($RB)\t\t!gpdisp!$NUM", [], s_lda>;  //Load address
+    mayLoad = 1, DecoderNamespace = "gOther" in {
+def LDAg  : MForm<0x08, 1, "lda $RA,0( $RB )\t\t!gpdisp!$NUM", [], s_lda>;  //Load address
+def LDAHg : MForm<0x09, 1, "ldah $RA,0( $RB )\t\t!gpdisp!$NUM", [], s_lda>;  //Load address
 }
 
 //Load quad, rellocated literal form
-let OutOperandList = (outs GPRC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB), isCodeGenOnly = 1 in 
-def LDQl : MForm<0x29, 1, "ldq $RA,$DISP($RB)\t\t!literal",
+let OutOperandList = (outs GPRC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB), DecoderNamespace = "lInst" in 
+def LDQl : MForm<0x29, 1, "ldq $RA,$DISP ( $RB )\t\t!literal",
                  [(set GPRC:$RA, (Alpha_rellit tglobaladdr:$DISP, GPRC:$RB))], s_ild>;
 def : Pat<(Alpha_rellit texternalsym:$ext, GPRC:$RB),
           (LDQl texternalsym:$ext, GPRC:$RB)>;
@@ -588,15 +599,15 @@ def : Pat<(Alpha_rellit texternalsym:$ext, GPRC:$RB),
 let OutOperandList = (outs GPRC:$RR),
     InOperandList = (ins GPRC:$RA, s64imm:$DISP, GPRC:$RB),
     Constraints = "$RA = $RR",
-    DisableEncoding = "$RR", isCodeGenOnly = 1 in {
-def STQ_C : MForm<0x2F, 0, "stq_l $RA,$DISP($RB)", [], s_ist>;
-def STL_C : MForm<0x2E, 0, "stl_l $RA,$DISP($RB)", [], s_ist>;
+    DisableEncoding = "$RR" in {
+def STQ_C : MForm<0x2F, 0, "stq_l $RA,$DISP ( $RB )", [], s_ist>;
+def STL_C : MForm<0x2E, 0, "stl_l $RA,$DISP ( $RB )", [], s_ist>;
 }
 let OutOperandList = (outs GPRC:$RA),
     InOperandList = (ins s64imm:$DISP, GPRC:$RB),
-    mayLoad = 1, isCodeGenOnly = 1 in {
-def LDQ_L : MForm<0x2B, 1, "ldq_l $RA,$DISP($RB)", [], s_ild>;
-def LDL_L : MForm<0x2A, 1, "ldl_l $RA,$DISP($RB)", [], s_ild>;
+    mayLoad = 1 in {
+def LDQ_L : MForm<0x2B, 1, "ldq_l $RA,$DISP ( $RB )", [], s_ild>;
+def LDL_L : MForm<0x2A, 1, "ldl_l $RA,$DISP ( $RB )", [], s_ild>;
 }
 
 def RPCC : MfcForm<0x18, 0xC000, "rpcc $RA", s_rpcc>; //Read process cycle counter
@@ -615,22 +626,23 @@ def : Pat<(atomic_fence (imm), (imm)), (MB)>;
 //Floats
 
 let OutOperandList = (outs F4RC:$RC), InOperandList = (ins F4RC:$RB), Fa = 31 in 
-def SQRTS : FPForm<0x14, 0x58B, "sqrts/su $RB,$RC",
+def SQRTS : FPForm<0x14, 0x58B, "sqrts_su $RB,$RC",
                    [(set F4RC:$RC, (fsqrt F4RC:$RB))], s_fsqrts>;
 
 let OutOperandList = (outs F4RC:$RC), InOperandList = (ins F4RC:$RA, F4RC:$RB) in {
-def ADDS  : FPForm<0x16, 0x580, "adds/su $RA,$RB,$RC",
+def ADDS  : FPForm<0x16, 0x580, "adds_su $RA,$RB,$RC",
                    [(set F4RC:$RC, (fadd F4RC:$RA, F4RC:$RB))], s_fadd>;
-def SUBS  : FPForm<0x16, 0x581, "subs/su $RA,$RB,$RC",
+def SUBS  : FPForm<0x16, 0x581, "subs_su $RA,$RB,$RC",
                    [(set F4RC:$RC, (fsub F4RC:$RA, F4RC:$RB))], s_fadd>;
-def DIVS  : FPForm<0x16, 0x583, "divs/su $RA,$RB,$RC",
+def DIVS  : FPForm<0x16, 0x583, "divs_su $RA,$RB,$RC",
                    [(set F4RC:$RC, (fdiv F4RC:$RA, F4RC:$RB))], s_fdivs>;
-def MULS  : FPForm<0x16, 0x582, "muls/su $RA,$RB,$RC",
+def MULS  : FPForm<0x16, 0x582, "muls_su $RA,$RB,$RC",
                    [(set F4RC:$RC, (fmul F4RC:$RA, F4RC:$RB))], s_fmul>;
 
 def CPYSS  : FPForm<0x17, 0x020, "cpys $RA,$RB,$RC",
                    [(set F4RC:$RC, (fcopysign F4RC:$RB, F4RC:$RA))], s_fadd>;
 def CPYSES : FPForm<0x17, 0x022, "cpyse $RA,$RB,$RC",[], s_fadd>; //Copy sign and exponent
+let DecoderNamespace = "Other" in
 def CPYSNS : FPForm<0x17, 0x021, "cpysn $RA,$RB,$RC",
                    [(set F4RC:$RC, (fneg (fcopysign F4RC:$RB, F4RC:$RA)))], s_fadd>;
 }
@@ -638,43 +650,44 @@ def CPYSNS : FPForm<0x17, 0x021, "cpysn $RA,$RB,$RC",
 //Doubles
 
 let OutOperandList = (outs F8RC:$RC), InOperandList = (ins F8RC:$RB), Fa = 31 in 
-def SQRTT : FPForm<0x14, 0x5AB, "sqrtt/su $RB,$RC",
+def SQRTT : FPForm<0x14, 0x5AB, "sqrtt_su $RB,$RC",
                    [(set F8RC:$RC, (fsqrt F8RC:$RB))], s_fsqrtt>;
 
 let OutOperandList = (outs F8RC:$RC), InOperandList = (ins F8RC:$RA, F8RC:$RB) in {
-def ADDT  : FPForm<0x16, 0x5A0, "addt/su $RA,$RB,$RC",
+def ADDT  : FPForm<0x16, 0x5A0, "addt_su $RA,$RB,$RC",
                    [(set F8RC:$RC, (fadd F8RC:$RA, F8RC:$RB))], s_fadd>;
-def SUBT  : FPForm<0x16, 0x5A1, "subt/su $RA,$RB,$RC",
+def SUBT  : FPForm<0x16, 0x5A1, "subt_su $RA,$RB,$RC",
                    [(set F8RC:$RC, (fsub F8RC:$RA, F8RC:$RB))], s_fadd>;
-def DIVT  : FPForm<0x16, 0x5A3, "divt/su $RA,$RB,$RC",
+def DIVT  : FPForm<0x16, 0x5A3, "divt_su $RA,$RB,$RC",
                    [(set F8RC:$RC, (fdiv F8RC:$RA, F8RC:$RB))], s_fdivt>;
-def MULT  : FPForm<0x16, 0x5A2, "mult/su $RA,$RB,$RC",
+def MULT  : FPForm<0x16, 0x5A2, "mult_su $RA,$RB,$RC",
                    [(set F8RC:$RC, (fmul F8RC:$RA, F8RC:$RB))], s_fmul>;
-
+let DecoderNamespace = "Other" in
 def CPYST  : FPForm<0x17, 0x020, "cpys $RA,$RB,$RC",
                    [(set F8RC:$RC, (fcopysign F8RC:$RB, F8RC:$RA))], s_fadd>;
+let DecoderNamespace = "Other" in
 def CPYSET : FPForm<0x17, 0x022, "cpyse $RA,$RB,$RC",[], s_fadd>; //Copy sign and exponent
 def CPYSNT : FPForm<0x17, 0x021, "cpysn $RA,$RB,$RC",
                    [(set F8RC:$RC, (fneg (fcopysign F8RC:$RB, F8RC:$RA)))], s_fadd>;
 
-def CMPTEQ : FPForm<0x16, 0x5A5, "cmpteq/su $RA,$RB,$RC", [], s_fadd>;
+def CMPTEQ : FPForm<0x16, 0x5A5, "cmpteq_su $RA,$RB,$RC", [], s_fadd>;
 //                    [(set F8RC:$RC, (seteq F8RC:$RA, F8RC:$RB))]>;
-def CMPTLE : FPForm<0x16, 0x5A7, "cmptle/su $RA,$RB,$RC", [], s_fadd>;
+def CMPTLE : FPForm<0x16, 0x5A7, "cmptle_su $RA,$RB,$RC", [], s_fadd>;
 //                    [(set F8RC:$RC, (setle F8RC:$RA, F8RC:$RB))]>;
-def CMPTLT : FPForm<0x16, 0x5A6, "cmptlt/su $RA,$RB,$RC", [], s_fadd>;
+def CMPTLT : FPForm<0x16, 0x5A6, "cmptlt_su $RA,$RB,$RC", [], s_fadd>;
 //                    [(set F8RC:$RC, (setlt F8RC:$RA, F8RC:$RB))]>;
-def CMPTUN : FPForm<0x16, 0x5A4, "cmptun/su $RA,$RB,$RC", [], s_fadd>;
+def CMPTUN : FPForm<0x16, 0x5A4, "cmptun_su $RA,$RB,$RC", [], s_fadd>;
 //                    [(set F8RC:$RC, (setuo F8RC:$RA, F8RC:$RB))]>;
 }
 
 //More CPYS forms:
-let OutOperandList = (outs F8RC:$RC), InOperandList = (ins F4RC:$RA, F8RC:$RB) in {
+let OutOperandList = (outs F8RC:$RC), InOperandList = (ins F4RC:$RA, F8RC:$RB), DecoderNamespace = "sInst" in {
 def CPYSTs  : FPForm<0x17, 0x020, "cpys $RA,$RB,$RC",
                    [(set F8RC:$RC, (fcopysign F8RC:$RB, F4RC:$RA))], s_fadd>;
 def CPYSNTs : FPForm<0x17, 0x021, "cpysn $RA,$RB,$RC",
                    [(set F8RC:$RC, (fneg (fcopysign F8RC:$RB, F4RC:$RA)))], s_fadd>;
 }
-let OutOperandList = (outs F4RC:$RC), InOperandList = (ins F8RC:$RA, F4RC:$RB) in {
+let OutOperandList = (outs F4RC:$RC), InOperandList = (ins F8RC:$RA, F4RC:$RB), DecoderNamespace = "tInst" in {
 def CPYSSt  : FPForm<0x17, 0x020, "cpys $RA,$RB,$RC",
                    [(set F4RC:$RC, (fcopysign F4RC:$RB, F8RC:$RA))], s_fadd>;
 def CPYSESt : FPForm<0x17, 0x022, "cpyse $RA,$RB,$RC",[], s_fadd>; //Copy sign and exponent
@@ -701,6 +714,7 @@ def FCMOVLES : FPForm<0x17, 0x02E,
 def FCMOVLTS : FPForm<0x17, 0x02C,
                       "fcmovlt $RCOND,$RTRUE,$RDEST",
                       [], s_fcmov>; // FCMOVE if < zero
+let DecoderNamespace = "Other" in
 def FCMOVNES : FPForm<0x17, 0x02B, 
                       "fcmovne $RCOND,$RTRUE,$RDEST",
                       [], s_fcmov>; //FCMOVE if != zero
@@ -709,10 +723,15 @@ def FCMOVNES : FPForm<0x17, 0x02B,
 let OutOperandList = (outs F8RC:$RDEST), 
     InOperandList = (ins F8RC:$RFALSE, F8RC:$RTRUE, F8RC:$RCOND),
     Constraints = "$RTRUE = $RDEST" in {
+let DecoderNamespace = "Other" in
 def FCMOVEQT : FPForm<0x17, 0x02A, "fcmoveq $RCOND,$RTRUE,$RDEST", [], s_fcmov>;
+let DecoderNamespace = "Other" in
 def FCMOVGET : FPForm<0x17, 0x02D, "fcmovge $RCOND,$RTRUE,$RDEST", [], s_fcmov>;
+let DecoderNamespace = "Other" in
 def FCMOVGTT : FPForm<0x17, 0x02F, "fcmovgt $RCOND,$RTRUE,$RDEST", [], s_fcmov>;
+let DecoderNamespace = "Other" in
 def FCMOVLET : FPForm<0x17, 0x02E, "fcmovle $RCOND,$RTRUE,$RDEST", [], s_fcmov>;
+let DecoderNamespace = "Other" in
 def FCMOVLTT : FPForm<0x17, 0x02C, "fcmovlt $RCOND,$RTRUE,$RDEST", [], s_fcmov>;
 def FCMOVNET : FPForm<0x17, 0x02B, "fcmovne $RCOND,$RTRUE,$RDEST", [], s_fcmov>;
 }
@@ -822,19 +841,19 @@ def ITOFT : FPForm<0x14, 0x024, "itoft $RA,$RC",
 
 
 let OutOperandList = (outs F4RC:$RC), InOperandList = (ins F8RC:$RB), Fa = 31 in 
-def CVTQS : FPForm<0x16, 0x7BC, "cvtqs/sui $RB,$RC",
+def CVTQS : FPForm<0x16, 0x7BC, "cvtqs_sui $RB,$RC",
         [(set F4RC:$RC, (Alpha_cvtqs F8RC:$RB))], s_fadd>;
 let OutOperandList = (outs F8RC:$RC), InOperandList = (ins F8RC:$RB), Fa = 31 in 
-def CVTQT : FPForm<0x16, 0x7BE, "cvtqt/sui $RB,$RC",
+def CVTQT : FPForm<0x16, 0x7BE, "cvtqt_sui $RB,$RC",
         [(set F8RC:$RC, (Alpha_cvtqt F8RC:$RB))], s_fadd>;
 let OutOperandList = (outs F8RC:$RC), InOperandList = (ins F8RC:$RB), Fa = 31 in 
-def CVTTQ : FPForm<0x16, 0x52F, "cvttq/svc $RB,$RC",
+def CVTTQ : FPForm<0x16, 0x52F, "cvttq_svc $RB,$RC",
         [(set F8RC:$RC, (Alpha_cvttq F8RC:$RB))], s_fadd>;
 let OutOperandList = (outs F8RC:$RC), InOperandList = (ins F4RC:$RB), Fa = 31 in 
-def CVTST : FPForm<0x16, 0x6AC, "cvtst/s $RB,$RC",
+def CVTST : FPForm<0x16, 0x6AC, "cvtst_s $RB,$RC",
                    [(set F8RC:$RC, (fpextend F4RC:$RB))], s_fadd>;
 let OutOperandList = (outs F4RC:$RC), InOperandList = (ins F8RC:$RB), Fa = 31 in 
-def CVTTS : FPForm<0x16, 0x7AC, "cvtts/sui $RB,$RC",
+def CVTTS : FPForm<0x16, 0x7AC, "cvtts_sui $RB,$RC",
                    [(set F4RC:$RC, (fpround F8RC:$RB))], s_fadd>;
 
 def :  Pat<(select GPRC:$RC, F8RC:$st, F8RC:$sf),
@@ -846,10 +865,10 @@ def :  Pat<(select GPRC:$RC, F4RC:$st, F4RC:$sf),
 //Branching
 /////////////////////////////////////////////////////////
 class br_icc<bits<6> opc, string asmstr>
-  : BFormN<opc, (ins u64imm:$opc, GPRC:$R, target:$dst), 
+  : BFormN<opc, (ins /*u64imm:$opc,*/ GPRC:$R, target:$dst), 
     !strconcat(asmstr, " $R,$dst"),  s_icbr>;
 class br_fcc<bits<6> opc, string asmstr>
-  : BFormN<opc, (ins u64imm:$opc, F8RC:$R, target:$dst), 
+  : BFormN<opc, (ins /*u64imm:$opc,*/ F8RC:$R, target:$dst), 
     !strconcat(asmstr, " $R,$dst"),  s_fbr>;
 
 let isBranch = 1, isTerminator = 1, hasCtrlDep = 1 in {
@@ -857,10 +876,11 @@ let Ra = 31, isBarrier = 1 in
 def BR : BFormD<0x30, "br $$31,$DISP", [(br bb:$DISP)], s_ubr>;
 
 def COND_BRANCH_I : BFormN<0, (ins u64imm:$opc, GPRC:$R, target:$dst), 
-                    "{:comment} COND_BRANCH imm:$opc, GPRC:$R, bb:$dst", 
+                    "COND_BRANCH imm:$opc, GPRC:$R, bb:$dst", 
                     s_icbr>;
+let DecoderNamespace = "Other" in 
 def COND_BRANCH_F : BFormN<0, (ins u64imm:$opc, F8RC:$R, target:$dst), 
-                    "{:comment} COND_BRANCH imm:$opc, F8RC:$R, bb:$dst",
+                    "COND_BRANCH imm:$opc, F8RC:$R, bb:$dst",
                     s_fbr>;
 //Branches, int
 def BEQ  : br_icc<0x39, "beq">;
@@ -878,6 +898,7 @@ def FBGE : br_fcc<0x36, "fbge">;
 def FBGT : br_fcc<0x37, "fbgt">;
 def FBLE : br_fcc<0x33, "fble">;
 def FBLT : br_fcc<0x32, "fblt">;
+let DecoderNamespace = "Other" in
 def FBNE : br_fcc<0x36, "fbne">;
 }
 

@@ -14,7 +14,7 @@
 #ifndef ALPHASUBTARGET_H
 #define ALPHASUBTARGET_H
 
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include <string>
 

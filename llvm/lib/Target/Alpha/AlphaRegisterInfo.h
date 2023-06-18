@@ -14,7 +14,7 @@
 #ifndef ALPHAREGISTERINFO_H
 #define ALPHAREGISTERINFO_H
 
-#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
 #include "AlphaGenRegisterInfo.inc"

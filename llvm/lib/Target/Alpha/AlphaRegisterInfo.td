@@ -123,13 +123,13 @@ def GPRC : RegisterClass<"Alpha", [i64], 64, (add
      // Non-volatile
      R9, R10, R11, R12, R13, R14,
 // Don't allocate 15, 30, 31
-     R15, R30, R31)>; //zero
+     R15, R30, R31)>;
 
 def F4RC : RegisterClass<"Alpha", [f32], 64, (add F0, F1,
         F10, F11, F12, F13, F14, F15, F16, F17, F18, F19,
         F20, F21, F22, F23, F24, F25, F26, F27, F28, F29, F30,
         // Saved:
         F2, F3, F4, F5, F6, F7, F8, F9,
-        F31)>; //zero
+        F31)>;
 
 def F8RC : RegisterClass<"Alpha", [f64], 64, (add F4RC)>;
