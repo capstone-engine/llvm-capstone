@@ -23,18 +23,6 @@ using namespace llvm;
 
 static bool isIdentChar(char C) { return isAlnum(C) || C == '_'; }
 
-static std::string resolveTemplateCall(std::string const &Dec) {
-  unsigned const B = Dec.find_first_of("<");
-  unsigned const E = Dec.find(">");
-  std::string const &DecName = Dec.substr(0, B);
-  std::string Args = Dec.substr(B + 1, E - B - 1);
-  Args = std::regex_replace(Args, std::regex("true"), "1");
-  Args = std::regex_replace(Args, std::regex("false"), "0");
-  std::string Decoder =
-      DecName + "_" + std::regex_replace(Args, std::regex("\\s*,\\s*"), "_");
-  return Decoder;
-}
-
 std::string AsmWriterOperand::getCode(bool PassSubtarget) const {
   if (OperandType == isLiteralTextOperand) {
     std::string Res;
@@ -67,11 +55,7 @@ std::string AsmWriterOperand::getCode(bool PassSubtarget) const {
   } else
     Result = Str;
 
-  if (Str.find("<") != std::string::npos &&
-      LangCS)
-    Result = resolveTemplateCall(Result) + "(MI";
-  else
-    Result = Result + "(MI";
+  Result = Result + "(MI";
 
   if (PCRel)
     Result += ", Address";

@@ -30,7 +30,7 @@ typedef enum {
   ST_NONE,
   ST_DECL_OS,
   ST_IMPL_OS,
-  ST_ENUM_OS,
+  ST_ENUM_SYSOPS_OS,
 } StreamType;
 
 namespace llvm {
@@ -949,7 +949,7 @@ public:
   virtual void searchableTablesEmitIsContiguousCase(StringRef const &IndexName,
                                                     const GenericTable &Table,
                                                     const SearchIndex &Index,
-                                                    bool IsPrimary) const;
+                                                    bool IsPrimary);
   virtual void searchableTablesEmitIndexArrayV() const;
   virtual void searchableTablesEmitIndexArrayIV(
       std::pair<Record *, unsigned> const &Entry) const;
@@ -957,12 +957,11 @@ public:
                                                  std::string Repr) const;
   virtual void searchableTablesEmitIndexArrayII() const;
   virtual void searchableTablesEmitIndexArrayI() const;
-  virtual void
-  searchableTablesEmitIndexTypeStruct(const GenericTable &Table,
-                                      const SearchIndex &Index) const;
+  virtual void searchableTablesEmitIndexTypeStruct(const GenericTable &Table,
+                                                   const SearchIndex &Index);
   virtual void searchableTablesEmitReturns(const GenericTable &Table,
                                            const SearchIndex &Index,
-                                           bool IsPrimary) const;
+                                           bool IsPrimary);
   virtual void
   searchableTablesEmitIndexLamda(const SearchIndex &Index,
                                  StringRef const &IndexName,
@@ -991,7 +990,9 @@ public:
 ///
 /// Output language: C
 class PrinterCapstone : public PrinterLLVM {
-  bool DoNotEmit = false;
+  // TODO: Toggle a flag is not nice to skip the search functions by strings
+  // is ugly. We should support them in the future.
+  bool EmittingNameLookup = false;
 
 public:
   using PrinterLLVM::PrinterLLVM;
@@ -1007,6 +1008,9 @@ public:
   void emitIncludeToggle(std::string const &Name, bool Begin,
                          bool Newline = true,
                          bool UndefAtEnd = false) const override;
+
+  static std::string translateToC(std::string const &TargetName,
+                                  std::string const &Dec);
 
   //------------------------
   // Backend: RegisterInfo
@@ -1795,7 +1799,7 @@ public:
   void searchableTablesEmitIsContiguousCase(StringRef const &IndexName,
                                             const GenericTable &Table,
                                             const SearchIndex &Index,
-                                            bool IsPrimary) const override;
+                                            bool IsPrimary) override;
   void searchableTablesEmitIndexArrayV() const override;
   void searchableTablesEmitIndexArrayIV(
       std::pair<Record *, unsigned> const &Entry) const override;
@@ -1803,12 +1807,11 @@ public:
                                          std::string Repr) const override;
   void searchableTablesEmitIndexArrayII() const override;
   void searchableTablesEmitIndexArrayI() const override;
-  void
-  searchableTablesEmitIndexTypeStruct(const GenericTable &Table,
-                                      const SearchIndex &Index) const override;
+  void searchableTablesEmitIndexTypeStruct(const GenericTable &Table,
+                                           const SearchIndex &Index) override;
   void searchableTablesEmitReturns(const GenericTable &Table,
                                    const SearchIndex &Index,
-                                   bool IsPrimary) const override;
+                                   bool IsPrimary) override;
   void
   searchableTablesEmitIndexLamda(const SearchIndex &Index,
                                  StringRef const &IndexName,

@@ -984,14 +984,15 @@ void AsmWriterEmitter::run() {
 namespace llvm {
 
 void EmitAsmWriter(RecordKeeper &RK, raw_ostream &OS) {
+  CodeGenTarget CGTarget(RK);
   PrinterLanguage const PL = PrinterLLVM::getLanguage();
   PrinterLLVM *PI;
 
   formatted_raw_ostream FOS(OS);
   if (PL == PRINTER_LANG_CPP) {
-    PI = new PrinterLLVM(FOS);
+    PI = new PrinterLLVM(FOS, CGTarget.getName().str());
   } else if (PL == PRINTER_LANG_CAPSTONE_C) {
-    PI = new PrinterCapstone(FOS);
+    PI = new PrinterCapstone(FOS, CGTarget.getName().str());
   } else {
     llvm_unreachable("AsmWriterEmitter does not support the given output language.");
   }

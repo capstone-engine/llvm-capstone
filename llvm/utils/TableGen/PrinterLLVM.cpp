@@ -6146,7 +6146,7 @@ void PrinterLLVM::searchableTablesEmitLookupDeclaration(
 }
 
 void PrinterLLVM::searchableTablesEmitIndexTypeStruct(
-    const GenericTable &Table, const SearchIndex &Index) const {
+    const GenericTable &Table, const SearchIndex &Index) {
   OS << "  struct IndexType {\n";
   for (const auto &Field : Index.Fields) {
     OS << "    "
@@ -6177,7 +6177,7 @@ void PrinterLLVM::searchableTablesEmitIndexArrayV() const { OS << "  };\n\n"; }
 
 void PrinterLLVM::searchableTablesEmitIsContiguousCase(
     StringRef const &IndexName, const GenericTable &Table,
-    const SearchIndex &Index, bool IsPrimary) const {
+    const SearchIndex &Index, bool IsPrimary) {
     OS << "  auto Table = ArrayRef(" << IndexName << ");\n";
     OS << "  size_t Idx = " << Index.Fields[0].Name << ";\n";
     OS << "  return Idx >= Table.size() ? nullptr : ";
@@ -6262,7 +6262,7 @@ void PrinterLLVM::searchableTablesEmitIndexLamda(
 
 void PrinterLLVM::searchableTablesEmitReturns(const GenericTable &Table,
                                               const SearchIndex &Index,
-                                              bool IsPrimary) const {
+                                              bool IsPrimary) {
   OS << "  if (Idx == Table.end()";
 
   for (const auto &Field : Index.Fields)
