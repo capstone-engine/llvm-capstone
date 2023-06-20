@@ -2537,7 +2537,7 @@ std::string getArchSupplInfo(StringRef const &TargetName,
                              raw_string_ostream &PPCFormatEnum) {
   if (TargetName == "PPC")
     return getArchSupplInfoPPC(TargetName, CGI, PPCFormatEnum);
-  return "{ 0 }";
+  return "{{ 0 }}";
 }
 
 Record *argInitOpToRecord(Init *ArgInit) {
