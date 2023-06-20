@@ -642,8 +642,8 @@ void patchIsGetImmReg(std::string &Code) {
 }
 
 std::string edgeCaseTemplArg(std::string &Code) {
-  unsigned long const B = Code.find_first_of("<");
-  unsigned long const E = Code.find(">");
+  size_t const B = Code.find_first_of("<");
+  size_t const E = Code.find(">");
   if (B == std::string::npos) {
     // No template
     PrintFatalNote("Edge case for C++ code not handled: " + Code);
@@ -690,8 +690,8 @@ static std::string handleDefaultArg(const std::string &TargetName,
 
 static void patchTemplateArgs(const std::string &TargetName,
                               std::string &Code) {
-  unsigned long const B = Code.find_first_of("<");
-  unsigned long const E = Code.find(">");
+  size_t const B = Code.find_first_of("<");
+  size_t const E = Code.find(">");
   if (B == std::string::npos) {
     Code = handleDefaultArg(TargetName, Code);
     return;
@@ -2752,7 +2752,7 @@ void printInsnMapEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
     InsnMap << getArchSupplInfo(TargetName, CGI, PPCFormatEnum) << ",\n";
     InsnMap.indent(4) << getCSOpcodeEncoding(CGI);
   } else {
-    InsnMap.indent(4) << "{ 0 }, { 0 }, { 0 }, 0, 0, {{ 0 }}, { 0 }\n";
+    InsnMap.indent(4) << "{ 0 }, { 0 }, { 0 }, 0, 0, {{ 0 }}, { 0 }";
   }
   InsnMap << '\n';
   InsnMap.indent(2) << "#endif\n";
@@ -2866,8 +2866,7 @@ void addComplexOperand(CodeGenInstruction const *CGI,
     // If so update its access flags.
     std::string OpName = ArgName.str() + " - " + SubOp->getName().str();
     InsOps.push_back(OpData{SubOp, std::move(OpName), std::move(OperandType),
-                            std::move(OpDataTypes), AccessFlag,
-                            std::move(Encoding)});
+                            std::move(OpDataTypes), AccessFlag, Encoding});
   }
 }
 
