@@ -1323,8 +1323,8 @@ class T1pILdStEncode<bits<3> opcode, dag oops, dag iops, AddrMode am,
     T1LoadStore<0b0101, opcode> {
   bits<3> Rt;
   bits<8> addr;
-  let Inst{8-6} = addr{5-3};    // Rm
-  let Inst{5-3} = addr{2-0};    // Rn
+  let Inst{8-6} = addr{2-0};   // Rm
+  let Inst{5-3} = addr{5-3};   // Rn
   let Inst{2-0} = Rt;
 }
 class T1pILdStEncodeImm<bits<4> opA, bit opB, dag oops, dag iops, AddrMode am,
@@ -1334,8 +1334,8 @@ class T1pILdStEncodeImm<bits<4> opA, bit opB, dag oops, dag iops, AddrMode am,
     T1LoadStore<opA, {opB,?,?}> {
   bits<3> Rt;
   bits<8> addr;
-  let Inst{10-6} = addr{7-3};   // imm5
-  let Inst{5-3}  = addr{2-0};   // Rn
+  let Inst{10-6} = addr{4-0};   // imm5
+  let Inst{5-3}  = addr{7-5};   // Rn
   let Inst{2-0}  = Rt;
 }
 

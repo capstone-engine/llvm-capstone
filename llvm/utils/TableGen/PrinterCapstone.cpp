@@ -2792,7 +2792,8 @@ std::string getCSOperandType(StringRef const &TargetName,
 }
 
 std::string getCSOperandEncoding(CodeGenInstruction const *CGI,
-                                 Record const *OpRec, StringRef const &OpName) {
+                                 Init const *ArgInit,
+                                 const StringRef &OpName) {
   BitsInit const *const InstrBits =
       !CGI->TheDef->getValueAsBit("isPseudo")
           ? CGI->TheDef->getValueAsBitsInit("Inst")
@@ -2802,6 +2803,14 @@ std::string getCSOperandEncoding(CodeGenInstruction const *CGI,
 
   std::string ResultStr;
   raw_string_ostream Result(ResultStr);
+  std::set<StringRef> OpNames{OpName};
+
+  if (auto const *Dag = dyn_cast<DagInit>(ArgInit)) {
+    for (auto begin = Dag->name_begin(), end = Dag->name_end(); begin != end;
+         ++begin)
+      OpNames.insert((*begin)->getValue());
+  }
+
   int64_t const Size = CGI->TheDef->getValueAsInt("Size") * 8;
   // For some reason even on 2 byte THUMB instructions the Inst field has 32
   // bits with the first 16 left as 0, so we skip them.
@@ -2818,19 +2827,17 @@ std::string getCSOperandEncoding(CodeGenInstruction const *CGI,
   // scan all bits one by one to try and find any references of the operand
   for (unsigned InstrBitIdx = StartIdx; InstrBitIdx != BitCount;
        ++InstrBitIdx) {
-    VarBitInit const *VarBit;
-    if ((VarBit = dyn_cast<VarBitInit>(
-             InstrBits->getBit(BitCount - InstrBitIdx - 1))) &&
-        VarBit->getBitVar()->getAsString() == OpName) {
+    // We check to see if current bit is one of the operands we are looking for
+    if (auto const *VarBit = dyn_cast<VarBitInit>(
+            InstrBits->getBit(BitCount - InstrBitIdx - 1))) {
+      std::string VarBitStr = VarBit->getBitVar()->getAsString();
+      if (OpNames.find(VarBitStr) == OpNames.end())
+        continue;
       unsigned const BitNum = (InstrBitIdx + VarBit->getBitNum()) >= BitCount
                                   ? BitCount - InstrBitIdx - 1
                                   : VarBit->getBitNum();
       if (EncodingData.OperandPiecesCount == 8)
         llvm_unreachable("Too many operand pieces in the instruction!");
-
-      // place current index
-      EncodingData.Indexes[EncodingData.OperandPiecesCount] =
-          InstrBitIdx - StartIdx;
 
       unsigned VarBitIdx;
       // this is meant for getting the size of the operand and to also see
@@ -2839,21 +2846,20 @@ std::string getCSOperandEncoding(CodeGenInstruction const *CGI,
         VarBit = dyn_cast<VarBitInit>(
             InstrBits->getBit(BitCount - (InstrBitIdx + VarBitIdx) - 1));
 
-        if (VarBit && VarBit->getBitVar()->getAsString() == OpName)
+        if (VarBit && VarBit->getBitVar()->getAsString() == VarBitStr)
           continue;
         break;
       }
       // place current size
       EncodingData.Sizes[EncodingData.OperandPiecesCount] = VarBitIdx;
+      // place current index
+      // current index on ISA is not just (InstrBitIdx - StartIdx) since we are
+      // iterating in reverse order So we subtract current index & the size of
+      // the operand from the size of the instruction
+      EncodingData.Indexes[EncodingData.OperandPiecesCount] =
+          Size - ((InstrBitIdx - StartIdx) + VarBitIdx);
       ++EncodingData.OperandPiecesCount;
-
-      // if we broke out of the loop before it finishes, it means we aren't
-      // done here. more pieces of the operand are to be found
-      if (VarBitIdx <= BitNum) {
-        InstrBitIdx += VarBitIdx - 1;
-        continue;
-      }
-      break;
+      InstrBitIdx += VarBitIdx - 1;
     }
   }
 
@@ -3117,7 +3123,7 @@ void printInsnOpMapEntry(
   unsigned E = OutDI->getNumArgs() + InDI->getNumArgs();
   bool IsOutOp;
   std::vector<OpData> InsOps;
-  // Interate over every In and Out operand and get its Def.
+  // Iterate over every In and Out operand and get its Def.
   for (unsigned I = 0; I != E; ++I) {
     Init *ArgInit;
     StringRef ArgName;
@@ -3131,7 +3137,7 @@ void printInsnOpMapEntry(
     }
     Record *Rec = argInitOpToRecord(ArgInit);
 
-    std::string const &Encoding = getCSOperandEncoding(CGI, Rec, ArgName);
+    std::string const &Encoding = getCSOperandEncoding(CGI, ArgInit, ArgName);
 
     // Add complex operands.
     // Operands which effectively consists of two or more operands.

@@ -1249,13 +1249,13 @@ multiclass T2I_ld<bit signed, bits<2> opcod, string opc,
     let Inst{24} = signed;
     let Inst{22-21} = opcod;
     let Inst{20} = 1; // load
-    let Inst{19-16} = 0b1111; // Rn
 
     bits<4> Rt;
     let Inst{15-12} = Rt{3-0};
 
-    bits<13> addr;
-    let Inst{23} = addr{12}; // add = (U == '1')
+    bits<17> addr;
+    let Inst{23} = addr{16}; // add = (U == '1')
+    let Inst{19-16} = addr{15-12}; // Rn
     let Inst{11-0}  = addr{11-0};
 
     let DecoderMethod = "DecodeT2LoadLabel";
@@ -1945,11 +1945,11 @@ class T2Iplpci<bits<1> inst, string opc> : T2Ipc<(outs), (ins t2ldrlabel:$addr),
   let Inst{31-25} = 0b1111100;
   let Inst{24} = inst;
   let Inst{22-20} = 0b001;
-  let Inst{19-16} = 0b1111;
   let Inst{15-12} = 0b1111;
 
-  bits<13> addr;
-  let Inst{23}   = addr{12};   // add = (U == '1')
+  bits<17> addr;
+  let Inst{23}   = addr{16};   // add = (U == '1')
+  let Inst{19-16} = addr{15-12}; // pc
   let Inst{11-0} = addr{11-0}; // imm12
 
   let DecoderMethod = "DecodeT2LoadLabel";
