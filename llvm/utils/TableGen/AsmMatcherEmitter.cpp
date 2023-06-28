@@ -601,6 +601,19 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
       IsIsolatedToken = false;
       break;
 
+    case '(': 
+    case ')': {
+      if (InTok) {
+        addAsmOperand(String.slice(Prev, i), IsIsolatedToken);
+        InTok = false;
+        IsIsolatedToken = false;
+      }
+      addAsmOperand(String.slice(i, i + 1), IsIsolatedToken);
+      Prev = i + 1;
+      IsIsolatedToken = false;
+      break;
+    }
+
     case '$': {
       if (InTok) {
         addAsmOperand(String.slice(Prev, i), IsIsolatedToken);
