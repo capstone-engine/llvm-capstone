@@ -2465,6 +2465,7 @@ static inline std::string normalizedMnemonic(StringRef const &Mn,
   std::replace(Mnemonic.begin(), Mnemonic.end(), '+', 'p');
   std::replace(Mnemonic.begin(), Mnemonic.end(), '-', 'm');
   std::replace(Mnemonic.begin(), Mnemonic.end(), '/', 's');
+
   Mnemonic = StringRef(Regex("[{}]").sub("", Mnemonic));
   return Mnemonic;
 }
