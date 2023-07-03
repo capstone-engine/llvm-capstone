@@ -2748,6 +2748,11 @@ class RFEI<bit wb, string asm>
   let Inst{20} = 1;
   let Inst{19-16} = Rn;
   let Inst{15-0} = 0xa00;
+
+  let OutOperandList = !cond(!eq(wb, 0b1): (outs GPR:$Rn_wb),
+                             true: (outs));
+  let Constraints = !cond(!eq(wb, 0b1): "$Rn_wb = $Rn",
+                          true: "");
 }
 
 def RFEDA : RFEI<0, "rfeda\t$Rn"> {
