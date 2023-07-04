@@ -2813,9 +2813,7 @@ let mayLoad = 1 in {
 defm LDR  : AI_ldr1<0, "ldr", IIC_iLoad_r, IIC_iLoad_si, load>;
 defm LDRB : AI_ldr1nopc<1, "ldrb", IIC_iLoad_bh_r, IIC_iLoad_bh_si,
                         zextloadi8>;
-defm STR  : AI_str1<0, "str", IIC_iStore_r, IIC_iStore_si, store>;
-defm STRB : AI_str1nopc<1, "strb", IIC_iStore_bh_r, IIC_iStore_bh_si,
-                        truncstorei8>;
+}
 
 // Special LDR for loads from non-pc-relative constpools.
 let canFoldAsLoad = 1, mayLoad = 1, hasSideEffects = 0,
@@ -3125,11 +3123,15 @@ def LDRConstPool
                  (ins const_pool_asm_imm:$immediate, pred:$q),
                  (outs GPR:$Rt)>;
 } // mayLoad = 1
-} // mayLoad = 1
 
 // Store
 
 let mayStore = 1 in {
+
+defm STR  : AI_str1<0, "str", IIC_iStore_r, IIC_iStore_si, store>;
+defm STRB : AI_str1nopc<1, "strb", IIC_iStore_bh_r, IIC_iStore_bh_si,
+                        truncstorei8>;
+
 // Stores with truncate
 def STRH : AI3str<0b1011, (outs), (ins GPR:$Rt, addrmode3:$addr), StMiscFrm,
                IIC_iStore_bh_r, "strh", "\t$Rt, $addr",
