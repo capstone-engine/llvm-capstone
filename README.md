@@ -14,9 +14,10 @@ Please note that within LLVM we speak of a `Target` if we refer to an architectu
 
 The TableGen emitter backends are located in `llvm/utils/TableGen/`.
 
-The target definition files (`.td`), which define the
-instructions, operands, features etc., can be
-found in `llvm/lib/Target/<ARCH>/`.
+The target definition files (`.td`) define the
+instructions, operands, features and other things. This is the source of all our information.
+If something is wrongly defined there, it will be wrong in the generated files.
+You can find the `td` files in `llvm/lib/Target/<ARCH>/`.
 
 ### Code generation overview
 
@@ -69,14 +70,13 @@ We use the following emitter backends
 | InstrInfoEmitter | Tables with instruction information (instruction enum, instr. operand information...) | |
 | RegisterInfoEmitter | Tables with register information (register enum, register type info...) | |
 | SubtargetEmitter | Table about the target features. | |
-| SearchableTablesEmitter | Usually used to generate tables and decoding functions for system registers. | **1.** Not all targets use this. |
-| | | **2.** Backend can't access the target name. Wherever the target name is needed `__ARCH__` or `##ARCH##` is printed and later replaced. |
+| SearchableTablesEmitter | Usually used to generate tables and decoding functions for system operands. | **1.** Not all targets use this. |
 
 ## Developer notes
 
 - If you find C++ code within the generated files you need to extend `PrinterCapstone::translateToC()`.
 If this still doesn't fix the problem, the code snipped wasn't passed through `translateToC()` before emitting.
-So you need to figure out where this specific code snipped is printed and add `translateToC()`.
+So you need to figure out where this specific code snipped is printed and pass it to `translateToC()`.
 
 - If the mapping files miss operand types or access information, then the `.td` files are incomplete (happens surprisingly often).
 You need to search for the instruction or operands with missing or incorrect values and fix them.
@@ -86,8 +86,8 @@ You need to search for the instruction or operands with missing or incorrect val
       - Memory: The "mayLoad" or "mayStore" variable is not set for the instruction.
 
     Operand type is invalid:
-      - The "OperandType" variable is unset for this operand type.
+      - The "OperandType" variable is unset for this operand.
   ```
 
-- If certain target features (e.g. architecture extensions) were removed from LLVM or you want to add your own,
+- If certain target features (e.g. architecture extensions) were removed from upstream LLVM or you want to add your own,
 checkout [DeprecatedFeatures.md](DeprecatedFeatures.md).
