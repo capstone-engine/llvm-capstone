@@ -49,6 +49,7 @@ def s_fsqrtt: InstrItinClass;
 def s_ftoi  : InstrItinClass;
 def s_itof  : InstrItinClass;
 def s_pseudo : InstrItinClass;
+def s_nop: InstrItinClass;
 
 //Table 2-4 Instruction Class Latency in Cycles
 //modified some

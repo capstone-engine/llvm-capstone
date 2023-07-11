@@ -63,6 +63,17 @@ class MfcForm<bits<6> opcode, bits<16> fc, string asmstr, InstrItinClass itin>
   let Inst{20-16} = 0;
   let Inst{15-0} = fc;
 }
+class MfcForm2<bits<6> opcode, bits<16> fc, string asmstr, InstrItinClass itin> 
+        : I<opcode, asmstr, itin> {    
+  bits<5> Ra;
+  bits<5> Rb;
+
+  let OutOperandList = (outs GPRC:$RA);
+  let InOperandList = (ins GPRC:$RB);
+  let Inst{25-21} = Ra;
+  let Inst{20-16} = Rb;
+  let Inst{15-0} = fc;
+}
 class MfcPForm<bits<6> opcode, bits<16> fc, string asmstr, InstrItinClass itin> 
         : I<opcode, asmstr, itin> {    
   let OutOperandList = (outs);

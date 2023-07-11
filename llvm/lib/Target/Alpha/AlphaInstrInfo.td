@@ -291,47 +291,58 @@ def SEXTB    : OForm2<0x1C, 0x00, "sextb $RB,$RC",
 def SEXTW    : OForm2<0x1C, 0x01, "sextw $RB,$RC", 
                       [(set GPRC:$RC, (sext_inreg GPRC:$RB, i16))], s_ishf>;
 
-//def EXTBLi   : OFormL<0x12, 0x06, "EXTBL $RA,$L,$RC", []>; //Extract byte low
-//def EXTLH    : OForm< 0x12, 0x6A, "EXTLH $RA,$RB,$RC", []>; //Extract longword high
-//def EXTLHi   : OFormL<0x12, 0x6A, "EXTLH $RA,$L,$RC", []>; //Extract longword high
-//def EXTLLi   : OFormL<0x12, 0x26, "EXTLL $RA,$L,$RC", []>; //Extract longword low
-//def EXTQH    : OForm< 0x12, 0x7A, "EXTQH $RA,$RB,$RC", []>; //Extract quadword high
-//def EXTQHi   : OFormL<0x12, 0x7A, "EXTQH $RA,$L,$RC", []>; //Extract quadword high
-//def EXTQ     : OForm< 0x12, 0x36, "EXTQ $RA,$RB,$RC", []>; //Extract quadword low
-//def EXTQi    : OFormL<0x12, 0x36, "EXTQ $RA,$L,$RC", []>; //Extract quadword low
-//def EXTWH    : OForm< 0x12, 0x5A, "EXTWH $RA,$RB,$RC", []>; //Extract word high
-//def EXTWHi   : OFormL<0x12, 0x5A, "EXTWH $RA,$L,$RC", []>; //Extract word high
-//def EXTWLi   : OFormL<0x12, 0x16, "EXTWL $RA,$L,$RC", []>; //Extract word low
+def EXTBLi   : OFormL<0x12, 0x06, "EXTBL $RA,$L,$RC", 
+                      [(set GPRC:$RC, (and (srl GPRC:$RA, (shl u8imm:$L, 3)), 255))], s_ishf>; //Extract byte low
+def EXTLH    : OForm< 0x12, 0x6A, "EXTLH $RA,$RB,$RC", 
+                      [(set GPRC:$RC, (and (shl GPRC:$RA, (sub 64, (shl GPRC:$RB, 3))), 4294967295))], s_ishf>; //Extract longword high
+def EXTLHi   : OFormL<0x12, 0x6A, "EXTLH $RA,$L,$RC", 
+                      [(set GPRC:$RC, (and (shl GPRC:$RA, (sub 64, (shl u8imm:$L, 3))), 4294967295))], s_ishf>; //Extract longword high
+def EXTLLi   : OFormL<0x12, 0x26, "EXTLL $RA,$L,$RC", 
+                      [(set GPRC:$RC, (and (srl GPRC:$RA, (shl u8imm:$L, 3)), 4294967295))], s_ishf>; //Extract longword low
+def EXTQH    : OForm< 0x12, 0x7A, "EXTQH $RA,$RB,$RC", 
+                      [(set GPRC:$RC, (and (shl GPRC:$RA, (sub 64, (shl GPRC:$RB, 3))), 18446744073709551615))], s_ishf>; //Extract quadword high
+def EXTQHi   : OFormL<0x12, 0x7A, "EXTQH $RA,$L,$RC", 
+                      [(set GPRC:$RC, (and (shl GPRC:$RA, (sub 64, (shl u8imm:$L, 3))), 18446744073709551615))], s_ishf>; //Extract quadword high
+def EXTQL     : OForm< 0x12, 0x36, "EXTQL $RA,$RB,$RC", 
+                      [(set GPRC:$RC, (and (srl GPRC:$RA, (shl GPRC:$RB, 3)), 18446744073709551615))], s_ishf>; //Extract quadword low
+def EXTQLi    : OFormL<0x12, 0x36, "EXTQL $RA,$L,$RC", 
+                      [(set GPRC:$RC, (and (srl GPRC:$RA, (shl u8imm:$L, 3)), 18446744073709551615))], s_ishf>; //Extract quadword low
+def EXTWH    : OForm< 0x12, 0x5A, "EXTWH $RA,$RB,$RC", 
+                      [(set GPRC:$RC, (and (shl GPRC:$RA, (sub 64, (shl GPRC:$RB, 3))), 65535))], s_ishf>; //Extract word high
+def EXTWHi   : OFormL<0x12, 0x5A, "EXTWH $RA,$L,$RC", 
+                      [(set GPRC:$RC, (and (shl GPRC:$RA, (sub 64, (shl u8imm:$L, 3))), 65535))], s_ishf>; //Extract word high
+def EXTWLi   : OFormL<0x12, 0x16, "EXTWL $RA,$L,$RC", 
+                      [(set GPRC:$RC, (and (srl GPRC:$RA, (shl u8imm:$L, 3)), 65535))], s_ishf>; //Extract word low
 
-//def INSBL    : OForm< 0x12, 0x0B, "INSBL $RA,$RB,$RC", []>; //Insert byte low
-//def INSBLi   : OFormL<0x12, 0x0B, "INSBL $RA,$L,$RC", []>; //Insert byte low
-//def INSLH    : OForm< 0x12, 0x67, "INSLH $RA,$RB,$RC", []>; //Insert longword high
-//def INSLHi   : OFormL<0x12, 0x67, "INSLH $RA,$L,$RC", []>; //Insert longword high
-//def INSLL    : OForm< 0x12, 0x2B, "INSLL $RA,$RB,$RC", []>; //Insert longword low
-//def INSLLi   : OFormL<0x12, 0x2B, "INSLL $RA,$L,$RC", []>; //Insert longword low
-//def INSQH    : OForm< 0x12, 0x77, "INSQH $RA,$RB,$RC", []>; //Insert quadword high
-//def INSQHi   : OFormL<0x12, 0x77, "INSQH $RA,$L,$RC", []>; //Insert quadword high
-//def INSQL    : OForm< 0x12, 0x3B, "INSQL $RA,$RB,$RC", []>; //Insert quadword low
-//def INSQLi   : OFormL<0x12, 0x3B, "INSQL $RA,$L,$RC", []>; //Insert quadword low
-//def INSWH    : OForm< 0x12, 0x57, "INSWH $RA,$RB,$RC", []>; //Insert word high
-//def INSWHi   : OFormL<0x12, 0x57, "INSWH $RA,$L,$RC", []>; //Insert word high
-//def INSWL    : OForm< 0x12, 0x1B, "INSWL $RA,$RB,$RC", []>; //Insert word low
-//def INSWLi   : OFormL<0x12, 0x1B, "INSWL $RA,$L,$RC", []>; //Insert word low
+def INSBL    : OForm< 0x12, 0x0B, "INSBL $RA,$RB,$RC", [], s_ishf>; //Insert byte low
+def INSBLi   : OFormL<0x12, 0x0B, "INSBL $RA,$L,$RC", [], s_ishf>; //Insert byte low
+def INSLH    : OForm< 0x12, 0x67, "INSLH $RA,$RB,$RC", [], s_ishf>; //Insert longword high
+def INSLHi   : OFormL<0x12, 0x67, "INSLH $RA,$L,$RC", [], s_ishf>; //Insert longword high
+def INSLL    : OForm< 0x12, 0x2B, "INSLL $RA,$RB,$RC", [], s_ishf>; //Insert longword low
+def INSLLi   : OFormL<0x12, 0x2B, "INSLL $RA,$L,$RC", [], s_ishf>; //Insert longword low
+def INSQH    : OForm< 0x12, 0x77, "INSQH $RA,$RB,$RC", [], s_ishf>; //Insert quadword high
+def INSQHi   : OFormL<0x12, 0x77, "INSQH $RA,$L,$RC", [], s_ishf>; //Insert quadword high
+def INSQL    : OForm< 0x12, 0x3B, "INSQL $RA,$RB,$RC", [], s_ishf>; //Insert quadword low
+def INSQLi   : OFormL<0x12, 0x3B, "INSQL $RA,$L,$RC", [], s_ishf>; //Insert quadword low
+def INSWH    : OForm< 0x12, 0x57, "INSWH $RA,$RB,$RC", [], s_ishf>; //Insert word high
+def INSWHi   : OFormL<0x12, 0x57, "INSWH $RA,$L,$RC", [], s_ishf>; //Insert word high
+def INSWL    : OForm< 0x12, 0x1B, "INSWL $RA,$RB,$RC", [], s_ishf>; //Insert word low
+def INSWLi   : OFormL<0x12, 0x1B, "INSWL $RA,$L,$RC", [], s_ishf>; //Insert word low
 
-//def MSKBL    : OForm< 0x12, 0x02, "MSKBL $RA,$RB,$RC", []>; //Mask byte low
-//def MSKBLi   : OFormL<0x12, 0x02, "MSKBL $RA,$L,$RC", []>; //Mask byte low
-//def MSKLH    : OForm< 0x12, 0x62, "MSKLH $RA,$RB,$RC", []>; //Mask longword high
-//def MSKLHi   : OFormL<0x12, 0x62, "MSKLH $RA,$L,$RC", []>; //Mask longword high
-//def MSKLL    : OForm< 0x12, 0x22, "MSKLL $RA,$RB,$RC", []>; //Mask longword low
-//def MSKLLi   : OFormL<0x12, 0x22, "MSKLL $RA,$L,$RC", []>; //Mask longword low
-//def MSKQH    : OForm< 0x12, 0x72, "MSKQH $RA,$RB,$RC", []>; //Mask quadword high
-//def MSKQHi   : OFormL<0x12, 0x72, "MSKQH $RA,$L,$RC", []>; //Mask quadword high
-//def MSKQL    : OForm< 0x12, 0x32, "MSKQL $RA,$RB,$RC", []>; //Mask quadword low
-//def MSKQLi   : OFormL<0x12, 0x32, "MSKQL $RA,$L,$RC", []>; //Mask quadword low
-//def MSKWH    : OForm< 0x12, 0x52, "MSKWH $RA,$RB,$RC", []>; //Mask word high
-//def MSKWHi   : OFormL<0x12, 0x52, "MSKWH $RA,$L,$RC", []>; //Mask word high
-//def MSKWL    : OForm< 0x12, 0x12, "MSKWL $RA,$RB,$RC", []>; //Mask word low
-//def MSKWLi   : OFormL<0x12, 0x12, "MSKWL $RA,$L,$RC", []>; //Mask word low
+def MSKBL    : OForm< 0x12, 0x02, "MSKBL $RA,$RB,$RC", [], s_ishf>; //Mask byte low
+def MSKBLi   : OFormL<0x12, 0x02, "MSKBL $RA,$L,$RC", [], s_ishf>; //Mask byte low
+def MSKLH    : OForm< 0x12, 0x62, "MSKLH $RA,$RB,$RC", [], s_ishf>; //Mask longword high
+def MSKLHi   : OFormL<0x12, 0x62, "MSKLH $RA,$L,$RC", [], s_ishf>; //Mask longword high
+def MSKLL    : OForm< 0x12, 0x22, "MSKLL $RA,$RB,$RC", [], s_ishf>; //Mask longword low
+def MSKLLi   : OFormL<0x12, 0x22, "MSKLL $RA,$L,$RC", [], s_ishf>; //Mask longword low
+def MSKQH    : OForm< 0x12, 0x72, "MSKQH $RA,$RB,$RC", [], s_ishf>; //Mask quadword high
+def MSKQHi   : OFormL<0x12, 0x72, "MSKQH $RA,$L,$RC", [], s_ishf>; //Mask quadword high
+def MSKQL    : OForm< 0x12, 0x32, "MSKQL $RA,$RB,$RC", [], s_ishf>; //Mask quadword low
+def MSKQLi   : OFormL<0x12, 0x32, "MSKQL $RA,$L,$RC", [], s_ishf>; //Mask quadword low
+def MSKWH    : OForm< 0x12, 0x52, "MSKWH $RA,$RB,$RC", [], s_ishf>; //Mask word high
+def MSKWHi   : OFormL<0x12, 0x52, "MSKWH $RA,$L,$RC", [], s_ishf>; //Mask word high
+def MSKWL    : OForm< 0x12, 0x12, "MSKWL $RA,$RB,$RC", [], s_ishf>; //Mask word low
+def MSKWLi   : OFormL<0x12, 0x12, "MSKWL $RA,$L,$RC", [], s_ishf>; //Mask word low
                       
 def ZAPNOTi  : OFormL<0x12, 0x31, "zapnot $RA,$L,$RC", [], s_ishf>;
 
@@ -440,6 +451,8 @@ def LDBU  : MForm<0x0A, 1, "ldbu $RA,$DISP($RB)",
 let DecoderNamespace = "LDr" in
 def LDBUr : MForm<0x0A, 1, "ldbu $RA,$DISP($RB)\t\t!gprellow",
                  [(set GPRC:$RA, (zextloadi8 (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB)))], s_ild>;
+def LDQ_U : MForm<0x0B, 1, "ldq_u $RA,$DISP($RB)",
+                 [(set GPRC:$RA, (load (and (add GPRC:$RB, immSExt16:$DISP), (not 7))))], s_ild>;
 def LDWU  : MForm<0x0C, 1, "ldwu $RA,$DISP($RB)",
                  [(set GPRC:$RA, (zextloadi16 (add GPRC:$RB, immSExt16:$DISP)))], s_ild>;
 let DecoderNamespace = "LDr" in
@@ -468,6 +481,8 @@ def STQ   : MForm<0x2D, 0, "stq $RA,$DISP($RB)",
 let DecoderNamespace = "STr" in 
 def STQr  : MForm<0x2D, 0, "stq $RA,$DISP($RB)\t\t!gprellow",
                  [(store GPRC:$RA, (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB))], s_ist>;
+def STQ_U : MForm<0x0F, 0, "stq_u $RA, $DISP($RB)",
+                 [(store GPRC:$RA, (and (add GPRC:$RB, immSExt16:$DISP), (not 7)))], s_ist>;
 }
 
 //Load address
@@ -610,9 +625,18 @@ def LDQ_L : MForm<0x2B, 1, "ldq/l $RA,$DISP($RB)", [], s_ild>;
 def LDL_L : MForm<0x2A, 1, "ldl/l $RA,$DISP($RB)", [], s_ild>;
 }
 
-def RPCC : MfcForm<0x18, 0xC000, "rpcc $RA", s_rpcc>; //Read process cycle counter
+def TRAPB : MfcPForm<0x18, 0x0000, "trapb", s_nop>; // trap barrier
+def EXCB : MfcPForm<0x18, 0x0400, "excb",  s_nop>; //exception barrier
 def MB  : MfcPForm<0x18, 0x4000, "mb",  s_imisc>; //memory barrier
 def WMB : MfcPForm<0x18, 0x4400, "wmb", s_imisc>; //write memory barrier
+def FETCH : MfcForm2<0x18, 0x8000, "fetch ($RB)",  s_nop>; //prefetch data
+def FETCH_M : MfcForm2<0x18, 0xA000, "fetch_m ($RB)",  s_nop>; //prefetch data, modify intent
+def RPCC : MfcForm<0x18, 0xC000, "rpcc $RA", s_rpcc>; // read process cycle counter
+def RC : MfcForm<0x18, 0xE000, "rc $RA",  s_rx>; //read and clear
+def ECB : MfcForm2<0x18, 0xE800, "ecb ($RB)",  s_imisc>; //evict cache block
+def RS : MfcForm<0x18, 0xF000, "rs $RA",  s_rx>; //read and set
+def WH64 : MfcForm2<0x18, 0xF800, "wh64 ($RB)",  s_imisc>; //write hint - 64 bytes
+def WH64EN : MfcForm2<0x18, 0xFC00, "wh64en ($RB)",  s_imisc>; //write hint - 64 bytes, evict next
 
 def : Pat<(membarrier),
           (WMB)>;
