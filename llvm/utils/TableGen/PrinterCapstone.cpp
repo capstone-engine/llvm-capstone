@@ -1001,7 +1001,7 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
      << "}\n\n";
 
   std::set<std::string> HasTwoByteInsns = {"ARM"};
-  std::set<std::string> HasFourByteInsns = {"ARM", "PPC", "AArch64"};
+  std::set<std::string> HasFourByteInsns = {"ARM", "AArch64"};
 
   if (HasTwoByteInsns.find(TargetName) != HasTwoByteInsns.end())
     OS << "FieldFromInstruction(fieldFromInstruction_2, uint16_t)\n"
@@ -1011,6 +1011,13 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
   if (HasFourByteInsns.find(TargetName) != HasFourByteInsns.end())
     OS << "FieldFromInstruction(fieldFromInstruction_4, uint32_t)\n"
        << "DecodeToMCInst(decodeToMCInst_4, fieldFromInstruction_4, uint32_t)\n"
+       << "DecodeInstruction(decodeInstruction_4, fieldFromInstruction_4, "
+          "decodeToMCInst_4, uint32_t)\n";
+  // Special case: The LLVM disassembler uses uint64_t values for decoding.
+  // Although PPC instructions are 4 bytes wide.
+  if (TargetName == "PPC")
+    OS << "FieldFromInstruction(fieldFromInstruction_4, uint64_t)\n"
+       << "DecodeToMCInst(decodeToMCInst_4, fieldFromInstruction_4, uint64_t)\n"
        << "DecodeInstruction(decodeInstruction_4, fieldFromInstruction_4, "
           "decodeToMCInst_4, uint32_t)\n";
 }
