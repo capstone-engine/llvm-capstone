@@ -3655,7 +3655,7 @@ void PrinterCapstone::searchableTablesEmitMapIII(const GenericTable &Table,
       OpName = Regex("\"").sub("", OpName);
     EnumName = TargetName + "_" + StringRef(Table.CppTypeName).upper() + "_" +
                StringRef(OpName).upper();
-    Repr = "\"" + OpName + "\", { " + EnumName + " }";
+    Repr = "\"" + OpName + "\", { ." + StringRef(Table.CppTypeName).lower() + " = " + EnumName + " }";
     OutS << Repr;
 
     // Emit enum name
