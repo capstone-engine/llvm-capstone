@@ -1471,7 +1471,9 @@ void PrinterCapstone::asmWriterEmitInstruction(
   for (unsigned I = 0, E = FirstInst.Operands.size(); I != E; ++I) {
     if (I != DifferingOperand) {
       // If the operand is the same for all instructions, just print it.
-      OS << "    " << translateToC(TargetName, FirstInst.Operands[I].getCode(PassSubtarget));
+      OS << "    "
+         << translateToC(TargetName,
+                         FirstInst.Operands[I].getCode(PassSubtarget));
     } else {
       // If this is the operand that varies between all of the instructions,
       // emit a switch for just this operand now.
@@ -2550,40 +2552,40 @@ Record *argInitOpToRecord(Init *ArgInit) {
   return Rec;
 }
 
-std::string getPrimaryCSOperandType(Record const* OpRec) {
-    std::string OperandType;
-    if (OpRec->isSubClassOf("PredicateOperand"))
-        return "CS_OP_PRED";
+std::string getPrimaryCSOperandType(Record const *OpRec) {
+  std::string OperandType;
+  if (OpRec->isSubClassOf("PredicateOperand"))
+    return "CS_OP_PRED";
 
-    if (OpRec->isSubClassOf("RegisterClass") ||
-        OpRec->isSubClassOf("PointerLikeRegClass"))
-        OperandType = "OPERAND_REGISTER";
-    else if (OpRec->isSubClassOf("Operand") ||
-        OpRec->isSubClassOf("RegisterOperand"))
-        OperandType = std::string(OpRec->getValueAsString("OperandType"));
-    else
-        return "CS_OP_INVALID";
+  if (OpRec->isSubClassOf("RegisterClass") ||
+      OpRec->isSubClassOf("PointerLikeRegClass"))
+    OperandType = "OPERAND_REGISTER";
+  else if (OpRec->isSubClassOf("Operand") ||
+           OpRec->isSubClassOf("RegisterOperand"))
+    OperandType = std::string(OpRec->getValueAsString("OperandType"));
+  else
+    return "CS_OP_INVALID";
 
-    if (OperandType == "OPERAND_UNKNOWN") {
-        if (OpRec->getValueAsDef("Type")->getValueAsInt("Size") == 0)
-            // Pseudo type
-            return "CS_OP_INVALID";
-        OperandType = "OPERAND_IMMEDIATE";
-    }
-    if (OperandType == "OPERAND_PCREL" || OperandType == "OPERAND_IMMEDIATE")
-        OperandType = "CS_OP_IMM";
-    else if (OperandType == "OPERAND_MEMORY")
-        OperandType = "CS_OP_MEM";
-    else if (OperandType == "OPERAND_REGISTER")
-        OperandType = "CS_OP_REG";
-    // Arch dependent special Op types
-    else if (OperandType == "OPERAND_VPRED_N" || OperandType == "OPERAND_VPRED_R")
-        return "CS_OP_INVALID";
-    else if (OperandType == "OPERAND_IMPLICIT_IMM_0")
-        return "CS_OP_IMM";
-    else
-        PrintFatalNote("Unhandled OperandType: " + OperandType);
-    return OperandType;
+  if (OperandType == "OPERAND_UNKNOWN") {
+    if (OpRec->getValueAsDef("Type")->getValueAsInt("Size") == 0)
+      // Pseudo type
+      return "CS_OP_INVALID";
+    OperandType = "OPERAND_IMMEDIATE";
+  }
+  if (OperandType == "OPERAND_PCREL" || OperandType == "OPERAND_IMMEDIATE")
+    OperandType = "CS_OP_IMM";
+  else if (OperandType == "OPERAND_MEMORY")
+    OperandType = "CS_OP_MEM";
+  else if (OperandType == "OPERAND_REGISTER")
+    OperandType = "CS_OP_REG";
+  // Arch dependent special Op types
+  else if (OperandType == "OPERAND_VPRED_N" || OperandType == "OPERAND_VPRED_R")
+    return "CS_OP_INVALID";
+  else if (OperandType == "OPERAND_IMPLICIT_IMM_0")
+    return "CS_OP_IMM";
+  else
+    PrintFatalNote("Unhandled OperandType: " + OperandType);
+  return OperandType;
 }
 
 std::string getCSOperandType(Record const *OpRec) {
@@ -2623,7 +2625,7 @@ std::string getCSOperandEncoding(CodeGenInstruction const *CGI,
     VarBitInit const *VarBit;
     if ((VarBit = dyn_cast<VarBitInit>(
              InstrBits->getBit(BitCount - InstrBitIdx - 1))) &&
-            VarBit->getBitVar()->getAsString() == OpName) {
+        VarBit->getBitVar()->getAsString() == OpName) {
       unsigned const BitNum = (InstrBitIdx + VarBit->getBitNum()) >= BitCount
                                   ? BitCount - InstrBitIdx - 1
                                   : VarBit->getBitNum();
@@ -2659,7 +2661,8 @@ std::string getCSOperandEncoding(CodeGenInstruction const *CGI,
     }
   }
 
-  // if no references were found we exit, otherwise we add the encoding to the string
+  // if no references were found we exit, otherwise we add the encoding to the
+  // string
   if (!EncodingData.OperandPiecesCount)
     return "{ 0 }";
   Result << "{ " << EncodingData.OperandPiecesCount << ", { ";
@@ -2711,7 +2714,8 @@ std::string getCSOpcodeEncoding(CodeGenInstruction const *CGI) {
     }
   }
 
-  // Most likely unreachable since there is no instruction to my knowledge that doesn't have any opcode bits
+  // Most likely unreachable since there is no instruction to my knowledge that
+  // doesn't have any opcode bits
   if (!OpcodeData.BitCount)
     llvm_unreachable("Instruction without opcode bits!");
 
@@ -2839,9 +2843,9 @@ uint8_t getOpAccess(CodeGenInstruction const *CGI, std::string OperandType,
   return IsOutOp ? 2 : 1;
 }
 
-void addComplexOperand(CodeGenInstruction const *CGI,
-                       Record const *ComplexOp, StringRef const &ArgName,
-                       bool IsOutOp, std::string const &Encoding,
+void addComplexOperand(CodeGenInstruction const *CGI, Record const *ComplexOp,
+                       StringRef const &ArgName, bool IsOutOp,
+                       std::string const &Encoding,
                        std::vector<OpData> &InsOps) {
   DagInit *SubOps = ComplexOp->getValueAsDag("MIOperandInfo");
 
