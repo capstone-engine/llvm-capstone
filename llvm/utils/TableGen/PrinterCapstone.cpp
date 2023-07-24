@@ -12,6 +12,7 @@
 
 #include "Printer.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/MC/MCInst.h"
@@ -19,10 +20,12 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
-#include <unordered_map>
 #include <bitset>
+#include <unordered_map>
 
 static void emitDefaultSourceFileHeader(raw_ostream &OS) {
   OS << "/* Capstone Disassembly Engine, https://www.capstone-engine.org */\n"
@@ -3068,6 +3071,40 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
   }
 }
 
+void printInsnAliasEnum(CodeGenTarget const &Target,
+                        raw_string_ostream &AliasEnum,
+                        raw_string_ostream &AliasMnemMap) {
+  RecordKeeper &Records = Target.getTargetRecord()->getRecords();
+  std::vector<Record *> AllInstAliases =
+      Records.getAllDerivedDefinitions("InstAlias");
+  std::set<std::string> AliasMnemonicsSeen;
+
+  for (Record *AliasRec : AllInstAliases) {
+    int Priority = AliasRec->getValueAsInt("EmitPriority");
+    if (Priority < 1)
+      continue; // Aliases with priority 0 are never emitted.
+    const DagInit *AliasDag = AliasRec->getValueAsDag("ResultInst");
+    DefInit *DI = dyn_cast<DefInit>(AliasDag->getOperator());
+    CodeGenInstruction *RealInst = &Target.getInstruction(DI->getDef());
+
+    StringRef AliasAsm = AliasRec->getValueAsString("AsmString");
+    SmallVector<StringRef, 1> Matches;
+    // Some Alias only differ by operands. Get only the mnemonic part.
+    Regex("^[a-zA-Z0-9+-.]+").match(AliasAsm, &Matches);
+    StringRef &AliasMnemonic = Matches[0];
+    std::string NormAliasMnem =
+        Target.getName().str() + "_INS_ALIAS_" + normalizedMnemonic(AliasMnemonic);
+    if (AliasMnemonicsSeen.find(NormAliasMnem) != AliasMnemonicsSeen.end())
+        continue;
+    AliasMnemonicsSeen.emplace(NormAliasMnem);
+    AliasEnum << "\t" + NormAliasMnem + ", // Real instr.: " +
+                     getLLVMInstEnumName(Target.getName(), RealInst) + "\n";
+    AliasMnemMap << "\t{ \"" + AliasMnemonic + "\", " + NormAliasMnem + " },\n";
+  }
+  AliasEnum << "\t" + Target.getName() + "_INS_ALIAS_ENDING,\n";
+  AliasMnemMap << "\t{ NULL, " + Target.getName() + "_INS_ALIAS_ENDING },\n";
+}
+
 } // namespace
 
 /// This function emits all the mapping files and
@@ -3084,6 +3121,8 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   std::string FeatureNameArrayStr;
   std::string OpGroupStr;
   std::string PPCFormatEnumStr;
+  std::string AliasEnumStr;
+  std::string AliasMnemMapStr;
   raw_string_ostream InsnMap(InsnMapStr);
   raw_string_ostream InsnOpMap(InsnOpMapStr);
   raw_string_ostream InsnNameMap(InsnNameMapStr);
@@ -3092,6 +3131,8 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   raw_string_ostream FeatureNameArray(FeatureNameArrayStr);
   raw_string_ostream OpGroups(OpGroupStr);
   raw_string_ostream PPCFormatEnum(PPCFormatEnumStr);
+  raw_string_ostream AliasEnum(AliasEnumStr);
+  raw_string_ostream AliasMnemMap(AliasMnemMapStr);
   emitDefaultSourceFileHeader(InsnMap);
   emitDefaultSourceFileHeader(InsnOpMap);
   emitDefaultSourceFileHeader(InsnNameMap);
@@ -3100,6 +3141,8 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   emitDefaultSourceFileHeader(FeatureNameArray);
   emitDefaultSourceFileHeader(OpGroups);
   emitDefaultSourceFileHeader(PPCFormatEnum);
+  emitDefaultSourceFileHeader(AliasEnum);
+  emitDefaultSourceFileHeader(AliasMnemMap);
 
   // Currently we ignore any other Asm variant then the primary.
   Record *AsmVariant = Target.getAsmParserVariant(0);
@@ -3141,6 +3184,7 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
 
     ++InsnNum;
   }
+  printInsnAliasEnum(Target, AliasEnum, AliasMnemMap);
 
   std::string TName = Target.getName().str();
   std::string InsnMapFilename = TName + "GenCSMappingInsn.inc";
@@ -3157,6 +3201,10 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   writeFile(InsnMapFilename, FeatureNameArrayStr);
   InsnMapFilename = TName + "GenCSOpGroup.inc";
   writeFile(InsnMapFilename, OpGroupStr);
+  InsnMapFilename = TName + "GenCSAliasEnum.inc";
+  writeFile(InsnMapFilename, AliasEnumStr);
+  InsnMapFilename = TName + "GenCSAliasMnemMap.inc";
+  writeFile(InsnMapFilename, AliasMnemMapStr);
   if (TName == "PPC") {
     InsnMapFilename = "PPCGenCSInsnFormatsEnum.inc";
     writeFile(InsnMapFilename, PPCFormatEnumStr);
@@ -3655,7 +3703,8 @@ void PrinterCapstone::searchableTablesEmitMapIII(const GenericTable &Table,
       OpName = Regex("\"").sub("", OpName);
     EnumName = TargetName + "_" + StringRef(Table.CppTypeName).upper() + "_" +
                StringRef(OpName).upper();
-    Repr = "\"" + OpName + "\", { ." + StringRef(Table.CppTypeName).lower() + " = " + EnumName + " }";
+    Repr = "\"" + OpName + "\", { ." + StringRef(Table.CppTypeName).lower() +
+           " = " + EnumName + " }";
     OutS << Repr;
 
     // Emit enum name
