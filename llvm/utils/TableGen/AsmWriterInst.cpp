@@ -51,6 +51,8 @@ std::string AsmWriterOperand::getCode(bool PassSubtarget) const {
     else if (Str.find("printAdrLabelOperand") == 0) {
       unsigned TemplArgsIdx = Str.find("<");
       Result = Str.substr(0, TemplArgsIdx) + "Addr" + Str.substr(TemplArgsIdx);
+    } else {
+      Result = Str;
     }
   } else
     Result = Str;
