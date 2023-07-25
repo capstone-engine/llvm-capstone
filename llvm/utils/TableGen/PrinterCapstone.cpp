@@ -3100,13 +3100,15 @@ void printInsnAliasEnum(CodeGenTarget const &Target,
         Target.getName().str() + "_INS_ALIAS_" + normalizedMnemonic(AliasMnemonic);
     if (AliasMnemonicsSeen.find(NormAliasMnem) != AliasMnemonicsSeen.end())
         continue;
+
     AliasMnemonicsSeen.emplace(NormAliasMnem);
+
     AliasEnum << "\t" + NormAliasMnem + ", // Real instr.: " +
                      getLLVMInstEnumName(Target.getName(), RealInst) + "\n";
-    AliasMnemMap << "\t{ \"" + AliasMnemonic + "\", " + NormAliasMnem + " },\n";
+
+    AliasMnemMap << "\t{ " + NormAliasMnem + ", \"" + AliasMnemonic + "\" },\n";
   }
-  AliasEnum << "\t" + Target.getName() + "_INS_ALIAS_ENDING,\n";
-  AliasMnemMap << "\t{ NULL, " + Target.getName() + "_INS_ALIAS_ENDING },\n";
+  AliasMnemMap << "\t{ " + Target.getName() + "_INS_ALIAS_END, NULL },\n";
 }
 
 } // namespace
