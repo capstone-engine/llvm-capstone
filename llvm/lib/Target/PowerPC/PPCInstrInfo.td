@@ -2214,7 +2214,7 @@ def SUBFIC : DForm_2< 8, (outs gprc:$rD), (ins gprc:$rA, s16imm:$imm),
                      "subfic $rD, $rA, $imm", IIC_IntGeneral,
                      [(set i32:$rD, (subc imm32SExt16:$imm, i32:$rA))]>;
 
-let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1 in {
+let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1, isCodeGenOnly=1 in {
   def LI  : DForm_2_r0<14, (outs gprc:$rD), (ins s16imm:$imm),
                        "li $rD, $imm", IIC_IntSimple,
                        [(set i32:$rD, imm32SExt16:$imm)]>, SExt32To64;
