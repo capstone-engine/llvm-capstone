@@ -3108,7 +3108,6 @@ void printInsnAliasEnum(CodeGenTarget const &Target,
 
     AliasMnemMap << "\t{ " + NormAliasMnem + ", \"" + AliasMnemonic + "\" },\n";
   }
-  AliasMnemMap << "\t{ " + Target.getName() + "_INS_ALIAS_END, NULL },\n";
 }
 
 } // namespace
