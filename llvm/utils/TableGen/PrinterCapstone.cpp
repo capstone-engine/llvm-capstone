@@ -1734,6 +1734,7 @@ void PrinterCapstone::asmWriterEmitPrintAliasInstrBody(
 
   OS << "  if (AsmString[I] != '\\0') {\n";
   OS << "    if (AsmString[I] == ' ' || AsmString[I] == '\\t') {\n";
+  OS << "      SStream_concat1(OS, ' ');\n";
   OS << "      ++I;\n";
   OS << "    }\n";
   OS << "    do {\n";
