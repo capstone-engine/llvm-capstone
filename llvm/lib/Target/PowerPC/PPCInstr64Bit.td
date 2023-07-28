@@ -100,24 +100,6 @@ let Defs = [LR8] in
   def MovePCtoLR8 : PPCEmitTimePseudo<(outs), (ins), "#MovePCtoLR8", []>,
                     PPC970_Unit_BRU;
 
-let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
-  let Defs = [CTR8], Uses = [CTR8] in {
-    def BDZ8  : BForm_1<16, 18, 0, 0, (outs), (ins condbrtarget:$dst),
-                        "bdz $dst">;
-    def BDNZ8 : BForm_1<16, 16, 0, 0, (outs), (ins condbrtarget:$dst),
-                        "bdnz $dst">;
-  }
-
-  let isReturn = 1, Defs = [CTR8], Uses = [CTR8, LR8, RM] in {
-    def BDZLR8  : XLForm_2_ext<19, 16, 18, 0, 0, (outs), (ins),
-                              "bdzlr", IIC_BrB, []>;
-    def BDNZLR8 : XLForm_2_ext<19, 16, 16, 0, 0, (outs), (ins),
-                              "bdnzlr", IIC_BrB, []>;
-  }
-}
-
-
-
 let isCall = 1, PPC970_Unit = 7, Defs = [LR8], hasSideEffects = 0 in {
   // Convenient aliases for call instructions
   let Uses = [RM] in {
