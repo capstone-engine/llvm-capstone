@@ -809,6 +809,7 @@ def memri34 : Operand<iPTR> { // memri, imm is a 34-bit value.
   let MIOperandInfo = (ops dispRI34:$imm, ptr_rc_nor0:$reg);
   let EncoderMethod = "getMemRI34Encoding";
   let DecoderMethod = "decodeMemRI34Operands";
+  let OperandType = "OPERAND_MEMORY";
 }
 // memri, imm is a 34-bit value for pc-relative instructions where
 // base register is set to zero.
@@ -817,6 +818,7 @@ def memri34_pcrel : Operand<iPTR> { // memri, imm is a 34-bit value.
   let MIOperandInfo = (ops dispRI34:$imm, immZero:$reg);
   let EncoderMethod = "getMemRI34PCRelEncoding";
   let DecoderMethod = "decodeMemRI34PCRelOperands";
+  let OperandType = "OPERAND_MEMORY";
 }
 
 // A version of ptr_rc usable with the asm parser.
