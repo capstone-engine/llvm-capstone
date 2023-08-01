@@ -1019,7 +1019,7 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
     OS << "FieldFromInstruction(fieldFromInstruction_4, uint64_t)\n"
        << "DecodeToMCInst(decodeToMCInst_4, fieldFromInstruction_4, uint64_t)\n"
        << "DecodeInstruction(decodeInstruction_4, fieldFromInstruction_4, "
-          "decodeToMCInst_4, uint32_t)\n";
+          "decodeToMCInst_4, uint64_t)\n";
 }
 
 void PrinterCapstone::decoderEmitterEmitTable(
