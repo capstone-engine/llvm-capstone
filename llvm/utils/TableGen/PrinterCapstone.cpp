@@ -12,6 +12,7 @@
 
 #include "Printer.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/MC/MCInst.h"
@@ -19,10 +20,12 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
-#include <unordered_map>
 #include <bitset>
+#include <unordered_map>
 
 static void emitDefaultSourceFileHeader(raw_ostream &OS) {
   OS << "/* Capstone Disassembly Engine, https://www.capstone-engine.org */\n"
@@ -1475,7 +1478,9 @@ void PrinterCapstone::asmWriterEmitInstruction(
   for (unsigned I = 0, E = FirstInst.Operands.size(); I != E; ++I) {
     if (I != DifferingOperand) {
       // If the operand is the same for all instructions, just print it.
-      OS << "    " << translateToC(TargetName, FirstInst.Operands[I].getCode(PassSubtarget));
+      OS << "    "
+         << translateToC(TargetName,
+                         FirstInst.Operands[I].getCode(PassSubtarget));
     } else {
       // If this is the operand that varies between all of the instructions,
       // emit a switch for just this operand now.
@@ -2555,40 +2560,40 @@ Record *argInitOpToRecord(Init *ArgInit) {
   return Rec;
 }
 
-std::string getPrimaryCSOperandType(Record const* OpRec) {
-    std::string OperandType;
-    if (OpRec->isSubClassOf("PredicateOperand"))
-        return "CS_OP_PRED";
+std::string getPrimaryCSOperandType(Record const *OpRec) {
+  std::string OperandType;
+  if (OpRec->isSubClassOf("PredicateOperand"))
+    return "CS_OP_PRED";
 
-    if (OpRec->isSubClassOf("RegisterClass") ||
-        OpRec->isSubClassOf("PointerLikeRegClass"))
-        OperandType = "OPERAND_REGISTER";
-    else if (OpRec->isSubClassOf("Operand") ||
-        OpRec->isSubClassOf("RegisterOperand"))
-        OperandType = std::string(OpRec->getValueAsString("OperandType"));
-    else
-        return "CS_OP_INVALID";
+  if (OpRec->isSubClassOf("RegisterClass") ||
+      OpRec->isSubClassOf("PointerLikeRegClass"))
+    OperandType = "OPERAND_REGISTER";
+  else if (OpRec->isSubClassOf("Operand") ||
+           OpRec->isSubClassOf("RegisterOperand"))
+    OperandType = std::string(OpRec->getValueAsString("OperandType"));
+  else
+    return "CS_OP_INVALID";
 
-    if (OperandType == "OPERAND_UNKNOWN") {
-        if (OpRec->getValueAsDef("Type")->getValueAsInt("Size") == 0)
-            // Pseudo type
-            return "CS_OP_INVALID";
-        OperandType = "OPERAND_IMMEDIATE";
-    }
-    if (OperandType == "OPERAND_PCREL" || OperandType == "OPERAND_IMMEDIATE")
-        OperandType = "CS_OP_IMM";
-    else if (OperandType == "OPERAND_MEMORY")
-        OperandType = "CS_OP_MEM";
-    else if (OperandType == "OPERAND_REGISTER")
-        OperandType = "CS_OP_REG";
-    // Arch dependent special Op types
-    else if (OperandType == "OPERAND_VPRED_N" || OperandType == "OPERAND_VPRED_R")
-        return "CS_OP_INVALID";
-    else if (OperandType == "OPERAND_IMPLICIT_IMM_0")
-        return "CS_OP_IMM";
-    else
-        PrintFatalNote("Unhandled OperandType: " + OperandType);
-    return OperandType;
+  if (OperandType == "OPERAND_UNKNOWN") {
+    if (OpRec->getValueAsDef("Type")->getValueAsInt("Size") == 0)
+      // Pseudo type
+      return "CS_OP_INVALID";
+    OperandType = "OPERAND_IMMEDIATE";
+  }
+  if (OperandType == "OPERAND_PCREL" || OperandType == "OPERAND_IMMEDIATE")
+    OperandType = "CS_OP_IMM";
+  else if (OperandType == "OPERAND_MEMORY")
+    OperandType = "CS_OP_MEM";
+  else if (OperandType == "OPERAND_REGISTER")
+    OperandType = "CS_OP_REG";
+  // Arch dependent special Op types
+  else if (OperandType == "OPERAND_VPRED_N" || OperandType == "OPERAND_VPRED_R")
+    return "CS_OP_INVALID";
+  else if (OperandType == "OPERAND_IMPLICIT_IMM_0")
+    return "CS_OP_IMM";
+  else
+    PrintFatalNote("Unhandled OperandType: " + OperandType);
+  return OperandType;
 }
 
 std::string getCSOperandType(Record const *OpRec) {
@@ -2628,7 +2633,7 @@ std::string getCSOperandEncoding(CodeGenInstruction const *CGI,
     VarBitInit const *VarBit;
     if ((VarBit = dyn_cast<VarBitInit>(
              InstrBits->getBit(BitCount - InstrBitIdx - 1))) &&
-            VarBit->getBitVar()->getAsString() == OpName) {
+        VarBit->getBitVar()->getAsString() == OpName) {
       unsigned const BitNum = (InstrBitIdx + VarBit->getBitNum()) >= BitCount
                                   ? BitCount - InstrBitIdx - 1
                                   : VarBit->getBitNum();
@@ -2664,7 +2669,8 @@ std::string getCSOperandEncoding(CodeGenInstruction const *CGI,
     }
   }
 
-  // if no references were found we exit, otherwise we add the encoding to the string
+  // if no references were found we exit, otherwise we add the encoding to the
+  // string
   if (!EncodingData.OperandPiecesCount)
     return "{ 0 }";
   Result << "{ " << EncodingData.OperandPiecesCount << ", { ";
@@ -2716,7 +2722,8 @@ std::string getCSOpcodeEncoding(CodeGenInstruction const *CGI) {
     }
   }
 
-  // Most likely unreachable since there is no instruction to my knowledge that doesn't have any opcode bits
+  // Most likely unreachable since there is no instruction to my knowledge that
+  // doesn't have any opcode bits
   if (!OpcodeData.BitCount)
     llvm_unreachable("Instruction without opcode bits!");
 
@@ -2844,9 +2851,9 @@ uint8_t getOpAccess(CodeGenInstruction const *CGI, std::string OperandType,
   return IsOutOp ? 2 : 1;
 }
 
-void addComplexOperand(CodeGenInstruction const *CGI,
-                       Record const *ComplexOp, StringRef const &ArgName,
-                       bool IsOutOp, std::string const &Encoding,
+void addComplexOperand(CodeGenInstruction const *CGI, Record const *ComplexOp,
+                       StringRef const &ArgName, bool IsOutOp,
+                       std::string const &Encoding,
                        std::vector<OpData> &InsOps) {
   DagInit *SubOps = ComplexOp->getValueAsDag("MIOperandInfo");
 
@@ -3076,6 +3083,41 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
   }
 }
 
+void printInsnAliasEnum(CodeGenTarget const &Target,
+                        raw_string_ostream &AliasEnum,
+                        raw_string_ostream &AliasMnemMap) {
+  RecordKeeper &Records = Target.getTargetRecord()->getRecords();
+  std::vector<Record *> AllInstAliases =
+      Records.getAllDerivedDefinitions("InstAlias");
+  std::set<std::string> AliasMnemonicsSeen;
+
+  for (Record *AliasRec : AllInstAliases) {
+    int Priority = AliasRec->getValueAsInt("EmitPriority");
+    if (Priority < 1)
+      continue; // Aliases with priority 0 are never emitted.
+    const DagInit *AliasDag = AliasRec->getValueAsDag("ResultInst");
+    DefInit *DI = dyn_cast<DefInit>(AliasDag->getOperator());
+    CodeGenInstruction *RealInst = &Target.getInstruction(DI->getDef());
+
+    StringRef AliasAsm = AliasRec->getValueAsString("AsmString");
+    SmallVector<StringRef, 1> Matches;
+    // Some Alias only differ by operands. Get only the mnemonic part.
+    Regex("^[a-zA-Z0-9+-.]+").match(AliasAsm, &Matches);
+    StringRef &AliasMnemonic = Matches[0];
+    std::string NormAliasMnem =
+        Target.getName().str() + "_INS_ALIAS_" + normalizedMnemonic(AliasMnemonic);
+    if (AliasMnemonicsSeen.find(NormAliasMnem) != AliasMnemonicsSeen.end())
+        continue;
+
+    AliasMnemonicsSeen.emplace(NormAliasMnem);
+
+    AliasEnum << "\t" + NormAliasMnem + ", // Real instr.: " +
+                     getLLVMInstEnumName(Target.getName(), RealInst) + "\n";
+
+    AliasMnemMap << "\t{ " + NormAliasMnem + ", \"" + AliasMnemonic + "\" },\n";
+  }
+}
+
 } // namespace
 
 /// This function emits all the mapping files and
@@ -3092,6 +3134,8 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   std::string FeatureNameArrayStr;
   std::string OpGroupStr;
   std::string PPCFormatEnumStr;
+  std::string AliasEnumStr;
+  std::string AliasMnemMapStr;
   raw_string_ostream InsnMap(InsnMapStr);
   raw_string_ostream InsnOpMap(InsnOpMapStr);
   raw_string_ostream InsnNameMap(InsnNameMapStr);
@@ -3100,6 +3144,8 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   raw_string_ostream FeatureNameArray(FeatureNameArrayStr);
   raw_string_ostream OpGroups(OpGroupStr);
   raw_string_ostream PPCFormatEnum(PPCFormatEnumStr);
+  raw_string_ostream AliasEnum(AliasEnumStr);
+  raw_string_ostream AliasMnemMap(AliasMnemMapStr);
   emitDefaultSourceFileHeader(InsnMap);
   emitDefaultSourceFileHeader(InsnOpMap);
   emitDefaultSourceFileHeader(InsnNameMap);
@@ -3108,6 +3154,8 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   emitDefaultSourceFileHeader(FeatureNameArray);
   emitDefaultSourceFileHeader(OpGroups);
   emitDefaultSourceFileHeader(PPCFormatEnum);
+  emitDefaultSourceFileHeader(AliasEnum);
+  emitDefaultSourceFileHeader(AliasMnemMap);
 
   // Currently we ignore any other Asm variant then the primary.
   Record *AsmVariant = Target.getAsmParserVariant(0);
@@ -3149,6 +3197,7 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
 
     ++InsnNum;
   }
+  printInsnAliasEnum(Target, AliasEnum, AliasMnemMap);
 
   std::string TName = Target.getName().str();
   std::string InsnMapFilename = TName + "GenCSMappingInsn.inc";
@@ -3165,6 +3214,10 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   writeFile(InsnMapFilename, FeatureNameArrayStr);
   InsnMapFilename = TName + "GenCSOpGroup.inc";
   writeFile(InsnMapFilename, OpGroupStr);
+  InsnMapFilename = TName + "GenCSAliasEnum.inc";
+  writeFile(InsnMapFilename, AliasEnumStr);
+  InsnMapFilename = TName + "GenCSAliasMnemMap.inc";
+  writeFile(InsnMapFilename, AliasMnemMapStr);
   if (TName == "PPC") {
     InsnMapFilename = "PPCGenCSInsnFormatsEnum.inc";
     writeFile(InsnMapFilename, PPCFormatEnumStr);
@@ -3663,7 +3716,8 @@ void PrinterCapstone::searchableTablesEmitMapIII(const GenericTable &Table,
       OpName = Regex("\"").sub("", OpName);
     EnumName = TargetName + "_" + StringRef(Table.CppTypeName).upper() + "_" +
                StringRef(OpName).upper();
-    Repr = "\"" + OpName + "\", { ." + StringRef(Table.CppTypeName).lower() + " = " + EnumName + " }";
+    Repr = "\"" + OpName + "\", { ." + StringRef(Table.CppTypeName).lower() +
+           " = " + EnumName + " }";
     OutS << Repr;
 
     // Emit enum name
