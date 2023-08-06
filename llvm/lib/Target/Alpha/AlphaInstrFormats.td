@@ -17,13 +17,6 @@
 //Floating-point
 //PALcode
 
-def u8imm   : Operand<i64>;
-def s14imm  : Operand<i64>;
-def s16imm  : Operand<i64>;
-def s21imm  : Operand<i64>;
-def s64imm  : Operand<i64>;
-def u64imm  : Operand<i64>;
-
 //===----------------------------------------------------------------------===//
 // Instruction format superclass
 //===----------------------------------------------------------------------===//
@@ -113,8 +106,6 @@ class MbrpForm<bits<6> opcode, bits<2> TB, dag OL, string asmstr, list<dag> patt
   let Inst{13-0} = disp;
 }
 
-//3.3.2
-def target : Operand<OtherVT> {}
 
 let isBranch = 1, isTerminator = 1, hasCtrlDep = 1 in {
 class BFormN<bits<6> opcode, dag OL, string asmstr, InstrItinClass itin>

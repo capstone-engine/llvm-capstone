@@ -435,7 +435,7 @@ let isCall = 1, Ra = 23, Rb = 27, disp = 0,
 def JSR_COROUTINE : MbrForm< 0x1A, 0x03, (ins GPRC:$RD, GPRC:$RS, s14imm:$DISP), "jsr_coroutine $RD,($RS),$DISP", s_jsr>; //Jump to subroutine return
 
 
-let OutOperandList = (outs GPRC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB) in {
+let OutOperandList = (outs GPRC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB), mayLoad = 1 in {
 def LDQ   : MForm<0x29, 1, "ldq $RA,$DISP($RB)",
                  [(set GPRC:$RA, (load (add GPRC:$RB, immSExt16:$DISP)))], s_ild>;
 let DecoderNamespace = "LDr" in
@@ -460,7 +460,7 @@ def LDWUr : MForm<0x0C, 1, "ldwu $RA,$DISP($RB)\t\t!gprellow",
                  [(set GPRC:$RA, (zextloadi16 (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB)))], s_ild>;
 }
 
-let OutOperandList = (outs), InOperandList = (ins GPRC:$RA, s64imm:$DISP, GPRC:$RB) in {
+let OutOperandList = (outs), InOperandList = (ins GPRC:$RA, s64imm:$DISP, GPRC:$RB), mayStore = 1 in {
 def STB   : MForm<0x0E, 0, "stb $RA, $DISP($RB)",
                  [(truncstorei16 GPRC:$RA, (add GPRC:$RB, immSExt16:$DISP))], s_ist>;
 let DecoderNamespace = "STr" in
@@ -486,7 +486,7 @@ def STQ_U : MForm<0x0F, 0, "stq_u $RA, $DISP($RB)",
 }
 
 //Load address
-let OutOperandList = (outs GPRC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB) in {
+let OutOperandList = (outs GPRC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB), mayLoad = 1 in {
 def LDA   : MForm<0x08, 0, "lda $RA,$DISP($RB)",
                  [(set GPRC:$RA, (add GPRC:$RB, immSExt16:$DISP))], s_lda>;
 let DecoderNamespace = "LDr" in
@@ -499,28 +499,28 @@ def LDAHr : MForm<0x09, 0, "ldah $RA,$DISP($RB)\t\t!gprelhigh",
                  [(set GPRC:$RA, (Alpha_gprelhi tglobaladdr:$DISP, GPRC:$RB))], s_lda>;  //Load address high
 }
 
-let OutOperandList = (outs), InOperandList = (ins F4RC:$RA, s64imm:$DISP, GPRC:$RB) in {
+let OutOperandList = (outs), InOperandList = (ins F4RC:$RA, s64imm:$DISP, GPRC:$RB), mayStore = 1 in {
 def STS  : MForm<0x26, 0, "sts $RA,$DISP($RB)",
                 [(store F4RC:$RA, (add GPRC:$RB, immSExt16:$DISP))], s_fst>;
 let DecoderNamespace = "STr" in
 def STSr : MForm<0x26, 0, "sts $RA,$DISP($RB)\t\t!gprellow",
                 [(store F4RC:$RA, (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB))], s_fst>;
 }
-let OutOperandList = (outs F4RC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB) in {
+let OutOperandList = (outs F4RC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB), mayLoad = 1 in {
 def LDS  : MForm<0x22, 1, "lds $RA,$DISP($RB)",
                 [(set F4RC:$RA, (load (add GPRC:$RB, immSExt16:$DISP)))], s_fld>;
 let DecoderNamespace = "LDr" in
 def LDSr : MForm<0x22, 1, "lds $RA,$DISP($RB)\t\t!gprellow",
                 [(set F4RC:$RA, (load (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB)))], s_fld>;
 }
-let OutOperandList = (outs), InOperandList = (ins F8RC:$RA, s64imm:$DISP, GPRC:$RB) in {
+let OutOperandList = (outs), InOperandList = (ins F8RC:$RA, s64imm:$DISP, GPRC:$RB), mayStore = 1 in {
 def STT  : MForm<0x27, 0, "stt $RA,$DISP($RB)",
                  [(store F8RC:$RA, (add GPRC:$RB, immSExt16:$DISP))], s_fst>;
 let DecoderNamespace = "STr" in
 def STTr : MForm<0x27, 0, "stt $RA,$DISP($RB)\t\t!gprellow",
                  [(store F8RC:$RA, (Alpha_gprello tglobaladdr:$DISP, GPRC:$RB))], s_fst>;
 }
-let OutOperandList = (outs F8RC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB) in {
+let OutOperandList = (outs F8RC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB), mayLoad = 1 in {
 def LDT  : MForm<0x23, 1, "ldt $RA,$DISP($RB)",
                 [(set F8RC:$RA, (load (add GPRC:$RB, immSExt16:$DISP)))], s_fld>;
 let DecoderNamespace = "LDr" in
@@ -605,7 +605,10 @@ def LDAHg : MForm<0x09, 1, "ldah $RA,0($RB)\t\t!gpdisp!$NUM", [], s_lda>;  //Loa
 }
 
 //Load quad, rellocated literal form
-let OutOperandList = (outs GPRC:$RA), InOperandList = (ins s64imm:$DISP, GPRC:$RB), DecoderNamespace = "LDl" in 
+let OutOperandList = (outs GPRC:$RA), 
+    InOperandList = (ins s64imm:$DISP, GPRC:$RB), 
+    DecoderNamespace = "LDl",
+    mayLoad = 1 in 
 def LDQl : MForm<0x29, 1, "ldq $RA,$DISP($RB)\t\t!literal",
                  [(set GPRC:$RA, (Alpha_rellit tglobaladdr:$DISP, GPRC:$RB))], s_ild>;
 def : Pat<(Alpha_rellit texternalsym:$ext, GPRC:$RB),
@@ -614,7 +617,8 @@ def : Pat<(Alpha_rellit texternalsym:$ext, GPRC:$RB),
 let OutOperandList = (outs GPRC:$RR),
     InOperandList = (ins GPRC:$RA, s64imm:$DISP, GPRC:$RB),
     Constraints = "$RA = $RR",
-    DisableEncoding = "$RR" in {
+    DisableEncoding = "$RR",
+    mayStore = 1 in {
 def STQ_C : MForm<0x2F, 0, "stq_c $RA,$DISP($RB)", [], s_ist>;
 def STL_C : MForm<0x2E, 0, "stl_c $RA,$DISP($RB)", [], s_ist>;
 }

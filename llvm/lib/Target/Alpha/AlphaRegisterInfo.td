@@ -36,6 +36,30 @@ class FPR<bits<5> num, string n> : AlphaReg<n> {
 //#define GP    $29
 //#define SP    $30
 
+// Operands 
+def u8imm   : Operand<i64> {
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+def s14imm  : Operand<i64> {
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+def s16imm  : Operand<i64> {
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+def s21imm  : Operand<i64> {
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+def s64imm  : Operand<i64> {
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+def u64imm  : Operand<i64> {
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+def target : Operand<OtherVT> {
+  let OperandType = "OPERAND_PCREL";
+}
+
 // General-purpose registers
 def R0  : GPR< 0,  "$0">, DwarfRegNum<[0]>;
 def R1  : GPR< 1,  "$1">, DwarfRegNum<[1]>;
