@@ -4750,12 +4750,12 @@ multiclass BranchSimpleMnemonic4<string name, string pm, int at, int bo> {
   def : InstAlias<"b"#name#""#pm#" $dst", (gBCAat bo, at, CR0LT, abscondbrtarget:$dst)>;
 }
 
-defm : BranchSimpleMnemonic4<"dz", "", 18, 0>;
-defm : BranchSimpleMnemonic4<"dnz", "", 16, 0>;
-defm : BranchSimpleMnemonic4<"dz", "+", 27, 3>;
-defm : BranchSimpleMnemonic4<"dnz", "+", 25, 3>;
-defm : BranchSimpleMnemonic4<"dz", "-", 26, 2>;
-defm : BranchSimpleMnemonic4<"dnz", "-", 24, 2>;
+defm : BranchSimpleMnemonic4<"dz", "", 0, 18>;
+defm : BranchSimpleMnemonic4<"dnz", "", 0, 16>;
+defm : BranchSimpleMnemonic4<"dz", "+", 3, 27>;
+defm : BranchSimpleMnemonic4<"dnz", "+", 3, 25>;
+defm : BranchSimpleMnemonic4<"dz", "-", 2, 26>;
+defm : BranchSimpleMnemonic4<"dnz", "-", 2, 24>;
 
 defm : BranchSimpleMnemonic3<"dz", "", 18>;
 defm : BranchSimpleMnemonic3<"dnz", "", 16>;
@@ -4775,6 +4775,18 @@ defm : BranchSimpleMnemonic1<"dnzt", "", 8>;
 defm : BranchSimpleMnemonic1<"dnzf", "", 0>;
 defm : BranchSimpleMnemonic1<"dzt", "", 10>;
 defm : BranchSimpleMnemonic1<"dzf", "", 2>;
+
+/// Conditional branches which branch always
+def : InstAlias<"b $dst", (gBC 20, CR0LT, condbrtarget:$dst)>;
+def : InstAlias<"ba $dst", (gBCA 20, CR0LT, abscondbrtarget:$dst)>;
+def : InstAlias<"bl $dst", (gBCL 20, CR0LT, condbrtarget:$dst)>;
+def : InstAlias<"bla $dst", (gBCLA 20, CR0LT, abscondbrtarget:$dst)>;
+foreach bh = [0, 1, 3] in {
+  def : InstAlias<"blr", (gBCLR 20, CR0LT, bh)>;
+  def : InstAlias<"blrl", (gBCLRL 20, CR0LT, bh)>;
+  def : InstAlias<"bctr", (gBCCTR 20, CR0LT, bh)>;
+  def : InstAlias<"bctrl", (gBCCTRL 20, CR0LT, bh)>;
+}
 
 multiclass BranchExtendedMnemonicPM<string name, string pm, int bibo> {
   def : InstAlias<"b"#name#pm#" $cc, $dst",
