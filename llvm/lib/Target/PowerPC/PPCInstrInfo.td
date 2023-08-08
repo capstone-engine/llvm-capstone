@@ -4712,13 +4712,9 @@ multiclass BranchSimpleMnemonic1<string name, string pm, int bo> {
   def : InstAlias<"b"#name#pm#" $bi, $dst", (gBC bo, crbitrc:$bi, condbrtarget:$dst)>;
   def : InstAlias<"b"#name#"a"#pm#" $bi, $dst", (gBCA bo, crbitrc:$bi, abscondbrtarget:$dst)>;
   def : InstAlias<"b"#name#"lr"#pm#" $bi", (gBCLR bo, crbitrc:$bi, 0)>;
-  def : InstAlias<"b"#name#"lr"#pm#" $bi", (gBCLR bo, crbitrc:$bi, 1)>;
-  def : InstAlias<"b"#name#"lr"#pm#" $bi", (gBCLR bo, crbitrc:$bi, 3)>;
   def : InstAlias<"b"#name#"l"#pm#" $bi, $dst", (gBCL bo, crbitrc:$bi, condbrtarget:$dst)>;
   def : InstAlias<"b"#name#"la"#pm#" $bi, $dst", (gBCLA bo, crbitrc:$bi, abscondbrtarget:$dst)>;
   def : InstAlias<"b"#name#"lrl"#pm#" $bi", (gBCLRL bo, crbitrc:$bi, 0)>;
-  def : InstAlias<"b"#name#"lrl"#pm#" $bi", (gBCLRL bo, crbitrc:$bi, 1)>;
-  def : InstAlias<"b"#name#"lrl"#pm#" $bi", (gBCLRL bo, crbitrc:$bi, 3)>;
 }
 
 /// No CTR decement, check CR T/F, branch to CTR, save/don't save LR
@@ -4726,20 +4722,12 @@ multiclass BranchSimpleMnemonic2<string name, string pm, int bo>
   : BranchSimpleMnemonic1<name, pm, bo> {
   def : InstAlias<"b"#name#"ctr"#pm#" $bi", (gBCCTR bo, crbitrc:$bi, 0)>;
   def : InstAlias<"b"#name#"ctrl"#pm#" $bi", (gBCCTRL bo, crbitrc:$bi, 0)>;
-  def : InstAlias<"b"#name#"ctr"#pm#" $bi", (gBCCTR bo, crbitrc:$bi, 1)>;
-  def : InstAlias<"b"#name#"ctrl"#pm#" $bi", (gBCCTRL bo, crbitrc:$bi, 1)>;
-  def : InstAlias<"b"#name#"ctr"#pm#" $bi", (gBCCTR bo, crbitrc:$bi, 3)>;
-  def : InstAlias<"b"#name#"ctrl"#pm#" $bi", (gBCCTRL bo, crbitrc:$bi, 3)>;
 }
 
 /// CTR decrement, no CR check, branch to LR, save/don't save LR
 multiclass BranchSimpleMnemonic3<string name, string pm, int bo> {
   def : InstAlias<"b"#name#"lr"#pm, (gBCLR bo, CR0LT, 0)>;
   def : InstAlias<"b"#name#"lrl"#pm, (gBCLRL bo, CR0LT, 0)>;
-  def : InstAlias<"b"#name#"lr"#pm, (gBCLR bo, CR0LT, 1)>;
-  def : InstAlias<"b"#name#"lrl"#pm, (gBCLRL bo, CR0LT, 1)>;
-  def : InstAlias<"b"#name#"lr"#pm, (gBCLR bo, CR0LT, 3)>;
-  def : InstAlias<"b"#name#"lrl"#pm, (gBCLRL bo, CR0LT, 3)>;
 }
 
 /// CTR decrement, no CR check, save/don't save LR, branch relative/absolute alias.
@@ -4781,12 +4769,10 @@ def : InstAlias<"b $dst", (gBC 20, CR0LT, condbrtarget:$dst)>;
 def : InstAlias<"ba $dst", (gBCA 20, CR0LT, abscondbrtarget:$dst)>;
 def : InstAlias<"bl $dst", (gBCL 20, CR0LT, condbrtarget:$dst)>;
 def : InstAlias<"bla $dst", (gBCLA 20, CR0LT, abscondbrtarget:$dst)>;
-foreach bh = [0, 1, 3] in {
-  def : InstAlias<"blr", (gBCLR 20, CR0LT, bh)>;
-  def : InstAlias<"blrl", (gBCLRL 20, CR0LT, bh)>;
-  def : InstAlias<"bctr", (gBCCTR 20, CR0LT, bh)>;
-  def : InstAlias<"bctrl", (gBCCTRL 20, CR0LT, bh)>;
-}
+def : InstAlias<"blr", (gBCLR 20, CR0LT, 0)>;
+def : InstAlias<"blrl", (gBCLRL 20, CR0LT, 0)>;
+def : InstAlias<"bctr", (gBCCTR 20, CR0LT, 0)>;
+def : InstAlias<"bctrl", (gBCCTRL 20, CR0LT, 0)>;
 
 multiclass BranchExtendedMnemonicPM<string name, string pm, int bibo> {
   def : InstAlias<"b"#name#pm#" $cc, $dst",
