@@ -3052,7 +3052,11 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
       "SVELogicalImm_int16_t",
       "SVELogicalImm_int32_t",
       "SVELogicalImm_int64_t",
-      "ZPRasFPR_128"};
+      "ZPRasFPR_128"
+    };
+  static const std::set<std::string> PPCExceptions = {
+      "S12ImmOperand", // PS S12 immediates. Used as memory disponent.
+  };
 
   bool NoExceptions = false;
   const std::set<std::string> *Exc;
@@ -3060,6 +3064,8 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
     Exc = &ARMExceptions;
   else if (TargetName == "AArch64")
     Exc = &AArch64Exceptions;
+  else if (TargetName == "PPC")
+    Exc = &PPCExceptions;
   else
     NoExceptions = true;
 
