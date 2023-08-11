@@ -2600,7 +2600,7 @@ std::string getPrimaryCSOperandType(Record const *OpRec) {
 /// part of a pattern of type iPTR.
 /// This means it is a memory operand.
 /// Otherwise it returns false.
-bool opIsPartOfMemPattern(CodeGenInstruction const  *CGI, Record const *OpRec) {
+bool opIsPartOfMemPattern(CodeGenInstruction const *CGI, Record const *OpRec) {
   ListInit *PatternL = CGI->TheDef->getValueAsListInit("Pattern");
   if (PatternL->empty())
     return false;
@@ -2616,7 +2616,8 @@ bool opIsPartOfMemPattern(CodeGenInstruction const  *CGI, Record const *OpRec) {
 
     StringRef const &OperandName = OpRec->getName();
     for (unsigned J = 0; J < DagArg->getNumArgs(); ++J) {
-      StringRef const &PatOpName = argInitOpToRecord(DagArg->getArg(J))->getName();
+      StringRef const &PatOpName =
+          argInitOpToRecord(DagArg->getArg(J))->getName();
       if (OperandName.equals(PatOpName))
         return true;
     }
@@ -2624,7 +2625,8 @@ bool opIsPartOfMemPattern(CodeGenInstruction const  *CGI, Record const *OpRec) {
   return false;
 }
 
-std::string getCSOperandType(CodeGenInstruction const *CGI, Record const *OpRec) {
+std::string getCSOperandType(CodeGenInstruction const *CGI,
+                             Record const *OpRec) {
   std::string OperandType = getPrimaryCSOperandType(OpRec);
   if (OperandType == "CS_OP_MEM")
     // It is only marked as mem, we treat it as immediate.
@@ -2816,7 +2818,8 @@ static std::string getCSAccess(short Access) {
     PrintFatalNote("Invalid access flags set.");
 }
 
-/// @brief Returns the operand data type. If it is a float it updates OperandType as well.
+/// @brief Returns the operand data type. If it is a float it updates
+/// OperandType as well.
 /// @param Op The operand.
 /// @param OperandType The operand type.
 /// @return The strig of data types.
@@ -2831,7 +2834,8 @@ std::string getOperandDataTypes(Record const *Op, std::string &OperandType) {
   if (!(Op->getValue("Type") || Op->getValue("RegTypes")))
     return "{ CS_DATA_TYPE_LAST }";
 
-  if (OperandType.find("CS_OP_REG") != std::string::npos && Op->getValue("RegTypes")) {
+  if (OperandType.find("CS_OP_REG") != std::string::npos &&
+      Op->getValue("RegTypes")) {
     OpDataTypes = Op->getValueAsListOfDefs("RegTypes");
   } else {
     Record *OpType = Op->getValueAsDef("Type");
@@ -3088,8 +3092,7 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
       "SVELogicalImm_int16_t",
       "SVELogicalImm_int32_t",
       "SVELogicalImm_int64_t",
-      "ZPRasFPR_128"
-    };
+      "ZPRasFPR_128"};
   static const std::set<std::string> PPCExceptions = {
       "S12ImmOperand", // PS S12 immediates. Used as memory disponent.
   };
@@ -3146,10 +3149,10 @@ void printInsnAliasEnum(CodeGenTarget const &Target,
     // Some Alias only differ by operands. Get only the mnemonic part.
     Regex("^[a-zA-Z0-9+-.]+").match(AliasAsm, &Matches);
     StringRef &AliasMnemonic = Matches[0];
-    std::string NormAliasMnem =
-        Target.getName().str() + "_INS_ALIAS_" + normalizedMnemonic(AliasMnemonic);
+    std::string NormAliasMnem = Target.getName().str() + "_INS_ALIAS_" +
+                                normalizedMnemonic(AliasMnemonic);
     if (AliasMnemonicsSeen.find(NormAliasMnem) != AliasMnemonicsSeen.end())
-        continue;
+      continue;
 
     AliasMnemonicsSeen.emplace(NormAliasMnem);
 
