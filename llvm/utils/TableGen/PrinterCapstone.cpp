@@ -10,22 +10,22 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenTarget.h"
 #include "Printer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
 #include <bitset>
-#include <unordered_map>
 
 static void emitDefaultSourceFileHeader(raw_ostream &OS) {
   OS << "/* Capstone Disassembly Engine, https://www.capstone-engine.org */\n"
@@ -2596,10 +2596,41 @@ std::string getPrimaryCSOperandType(Record const *OpRec) {
   return OperandType;
 }
 
-std::string getCSOperandType(Record const *OpRec) {
+/// Returns true if the given operand is
+/// part of a pattern of type iPTR.
+/// This means it is a memory operand.
+/// Otherwise it returns false.
+bool opIsPartOfMemPattern(CodeGenInstruction const  *CGI, Record const *OpRec) {
+  ListInit *PatternL = CGI->TheDef->getValueAsListInit("Pattern");
+  if (PatternL->empty())
+    return false;
+
+  DagInit *PatternDag = dyn_cast<DagInit>(PatternL->getValues()[0]);
+  for (unsigned I = 0; I < PatternDag->getNumArgs(); ++I) {
+    DagInit *DagArg = dyn_cast<DagInit>(PatternDag->getArg(I));
+    Record *PatRec = argInitOpToRecord(PatternDag->getArg(I));
+    if (!PatRec->getValue("Ty"))
+      continue;
+    if (getValueType(PatRec->getValueAsDef("Ty")) != MVT::SimpleValueType::iPTR)
+      continue;
+
+    StringRef const &OperandName = OpRec->getName();
+    for (unsigned J = 0; J < DagArg->getNumArgs(); ++J) {
+      StringRef const &PatOpName = argInitOpToRecord(DagArg->getArg(J))->getName();
+      if (OperandName.equals(PatOpName))
+        return true;
+    }
+  }
+  return false;
+}
+
+std::string getCSOperandType(CodeGenInstruction const *CGI, Record const *OpRec) {
   std::string OperandType = getPrimaryCSOperandType(OpRec);
   if (OperandType == "CS_OP_MEM")
+    // It is only marked as mem, we treat it as immediate.
     OperandType += " | CS_OP_IMM";
+  else if (opIsPartOfMemPattern(CGI, OpRec))
+    OperandType += " | CS_OP_MEM";
   return OperandType;
 }
 
@@ -2785,18 +2816,22 @@ static std::string getCSAccess(short Access) {
     PrintFatalNote("Invalid access flags set.");
 }
 
+/// @brief Returns the operand data type. If it is a float it updates OperandType as well.
+/// @param Op The operand.
+/// @param OperandType The operand type.
+/// @return The strig of data types.
 std::string getOperandDataTypes(Record const *Op, std::string &OperandType) {
   MVT::SimpleValueType VT;
   std::vector<Record *> OpDataTypes;
 
   if (!Op->getValue("RegTypes") && Op->getValue("RegClass") &&
-      OperandType == "CS_OP_REG")
+      OperandType.find("CS_OP_REG") != std::string::npos)
     Op = Op->getValueAsDef("RegClass");
 
   if (!(Op->getValue("Type") || Op->getValue("RegTypes")))
     return "{ CS_DATA_TYPE_LAST }";
 
-  if (OperandType == "CS_OP_REG" && Op->getValue("RegTypes")) {
+  if (OperandType.find("CS_OP_REG") != std::string::npos && Op->getValue("RegTypes")) {
     OpDataTypes = Op->getValueAsListOfDefs("RegTypes");
   } else {
     Record *OpType = Op->getValueAsDef("Type");
@@ -2863,16 +2898,17 @@ void addComplexOperand(CodeGenInstruction const *CGI, Record const *ComplexOp,
   for (unsigned I = 0; I != E; ++I) {
     Init *ArgInit = SubOps->getArg(I);
     Record *SubOp = argInitOpToRecord(ArgInit);
-
     // Determine Operand type
     std::string OperandType;
     std::string SubOperandType = getPrimaryCSOperandType(SubOp);
     if (ComplOperandType == "CS_OP_MEM")
       OperandType = ComplOperandType + " | " + SubOperandType;
+    else if (opIsPartOfMemPattern(CGI, ComplexOp))
+      OperandType = "CS_OP_MEM | " + SubOperandType;
     else
       OperandType = SubOperandType;
-    unsigned AccessFlag = getOpAccess(CGI, OperandType, IsOutOp);
 
+    unsigned AccessFlag = getOpAccess(CGI, OperandType, IsOutOp);
     std::string OpDataTypes = getOperandDataTypes(SubOp, SubOperandType);
 
     // Check if Operand was already seen before (as In or Out operand).
@@ -2938,7 +2974,7 @@ void printInsnOpMapEntry(CodeGenTarget const &Target,
     }
 
     // Determine Operand type
-    std::string OperandType = getCSOperandType(Rec);
+    std::string OperandType = getCSOperandType(CGI, Rec);
     if (OperandType == "")
       continue;
 
