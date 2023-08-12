@@ -2596,43 +2596,58 @@ std::string getPrimaryCSOperandType(Record const *OpRec) {
   return OperandType;
 }
 
-/// Returns true if the given operand is
-/// part of a pattern of type iPTR.
+/// Returns true if the given operand is part of a pattern of type iPTR.
 /// This means it is a memory operand.
 /// Otherwise it returns false.
-bool opIsPartOfMemPattern(CodeGenInstruction const *CGI, Record const *OpRec) {
-  ListInit *PatternL = CGI->TheDef->getValueAsListInit("Pattern");
-  if (PatternL->empty())
-    return false;
+bool opIsPartOfiPTRPattern(StringRef const &OpName, DagInit *PatternDag,
+                           bool PartOfPTRPattern) {
 
-  DagInit *PatternDag = dyn_cast<DagInit>(PatternL->getValues()[0]);
   for (unsigned I = 0; I < PatternDag->getNumArgs(); ++I) {
     DagInit *DagArg = dyn_cast<DagInit>(PatternDag->getArg(I));
-    Record *PatRec = argInitOpToRecord(PatternDag->getArg(I));
-    if (!PatRec->getValue("Ty"))
-      continue;
-    if (getValueType(PatRec->getValueAsDef("Ty")) != MVT::SimpleValueType::iPTR)
-      continue;
+    if (DagArg) { // Another pattern. Search in it.
+      Record *DagRec = dyn_cast<DefInit>(DagArg->getOperator())->getDef();
 
-    StringRef const &OperandName = OpRec->getName();
-    for (unsigned J = 0; J < DagArg->getNumArgs(); ++J) {
-      StringRef const &PatOpName =
-          argInitOpToRecord(DagArg->getArg(J))->getName();
-      if (OperandName.equals(PatOpName))
+      // Check if DAG operator is of type iPTR.
+      if (DagRec->getValue("Value") &&
+          getValueType(DagRec) == MVT::SimpleValueType::iPTR)
+        PartOfPTRPattern = true;
+      // Complex patterns define their type in "Ty"
+      if (DagRec->getValue("Ty") && getValueType(DagRec->getValueAsDef("Ty")) ==
+                                        MVT::SimpleValueType::iPTR)
+        PartOfPTRPattern = true;
+      if (opIsPartOfiPTRPattern(OpName, DagArg, PartOfPTRPattern))
         return true;
+      continue;
+    }
+
+    DefInit *LeaveDef = dyn_cast<DefInit>(PatternDag->getArg(I));
+    if (!LeaveDef)
+      return false;
+    Record *LeaveRecord = LeaveDef->getDef();
+    StringRef const &OperandName = OpName;
+    StringRef const &PatOpName = PatternDag->getArgNameStr(I);
+    if (OperandName.equals(PatOpName)) {
+      if (!PartOfPTRPattern)
+        return false;
+      return true;
     }
   }
   return false;
 }
 
-std::string getCSOperandType(CodeGenInstruction const *CGI,
-                             Record const *OpRec) {
+std::string getCSOperandType(CodeGenInstruction const *CGI, Record const *OpRec,
+                             StringRef const &OpName) {
   std::string OperandType = getPrimaryCSOperandType(OpRec);
   if (OperandType == "CS_OP_MEM")
     // It is only marked as mem, we treat it as immediate.
     OperandType += " | CS_OP_IMM";
-  else if (opIsPartOfMemPattern(CGI, OpRec))
-    OperandType += " | CS_OP_MEM";
+  else if (!CGI->TheDef->getValueAsListInit("Pattern")->empty()) {
+    // Check if operand is part of a pattern with a memory type (iPTR)
+    ListInit *PatternList = CGI->TheDef->getValueAsListInit("Pattern");
+    DagInit *PatternDag = dyn_cast<DagInit>(PatternList->getValues()[0]);
+    if (PatternDag && opIsPartOfiPTRPattern(OpName, PatternDag, false))
+      OperandType += " | CS_OP_MEM";
+  }
   return OperandType;
 }
 
@@ -2904,12 +2919,18 @@ void addComplexOperand(CodeGenInstruction const *CGI, Record const *ComplexOp,
     Record *SubOp = argInitOpToRecord(ArgInit);
     // Determine Operand type
     std::string OperandType;
-    std::string SubOperandType = getPrimaryCSOperandType(SubOp);
+    std::string SubOperandType =
+        getCSOperandType(CGI, SubOp, SubOp->getName().str());
+    std::string ComplOperandType = getCSOperandType(CGI, ComplexOp, ArgName);
     if (ComplOperandType == "CS_OP_MEM")
       OperandType = ComplOperandType + " | " + SubOperandType;
-    else if (opIsPartOfMemPattern(CGI, ComplexOp))
-      OperandType = "CS_OP_MEM | " + SubOperandType;
-    else
+    else if (!CGI->TheDef->getValueAsListInit("Pattern")->empty()) {
+      ListInit *PatternList = CGI->TheDef->getValueAsListInit("Pattern");
+      DagInit *PatternDag = dyn_cast<DagInit>(PatternList->getValues()[0]);
+      if (!PatternDag &&
+          opIsPartOfiPTRPattern(SubOp->getName().str(), PatternDag, false))
+        OperandType = "CS_OP_MEM | " + SubOperandType;
+    } else
       OperandType = SubOperandType;
 
     unsigned AccessFlag = getOpAccess(CGI, OperandType, IsOutOp);
@@ -2978,7 +2999,7 @@ void printInsnOpMapEntry(CodeGenTarget const &Target,
     }
 
     // Determine Operand type
-    std::string OperandType = getCSOperandType(CGI, Rec);
+    std::string OperandType = getCSOperandType(CGI, Rec, ArgName);
     if (OperandType == "")
       continue;
 
