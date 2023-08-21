@@ -2600,9 +2600,8 @@ std::string getPrimaryCSOperandType(Record const *OpRec) {
 /// This means it is a memory operand.
 /// Otherwise it returns false.
 /// If MatchByType = true, it compares the types of the operands. Not the names.
-bool opIsPartOfiPTRPattern(Record const *OpRec, DagInit *PatternDag,
+bool opIsPartOfiPTRPattern(Record const *OpRec, StringRef const &OpName, DagInit *PatternDag,
                            bool PartOfPTRPattern, bool MatchByType = false) {
-  StringRef OpName = OpRec->getName();
   for (unsigned I = 0; I < PatternDag->getNumArgs(); ++I) {
     DagInit *DagArg = dyn_cast<DagInit>(PatternDag->getArg(I));
     if (DagArg) { // Another pattern. Search in it.
@@ -2616,7 +2615,7 @@ bool opIsPartOfiPTRPattern(Record const *OpRec, DagInit *PatternDag,
       if (DagRec->getValue("Ty") && getValueType(DagRec->getValueAsDef("Ty")) ==
                                         MVT::SimpleValueType::iPTR)
         PartOfPTRPattern = true;
-      if (opIsPartOfiPTRPattern(OpRec, DagArg, PartOfPTRPattern, MatchByType))
+      if (opIsPartOfiPTRPattern(OpRec, OpName, DagArg, PartOfPTRPattern, MatchByType))
         return true;
       continue;
     }
@@ -2728,13 +2727,13 @@ std::string getCSOperandType(
     bool OpTypeIsPartOfAnyPattern =
         any_of(InsnPatternMap.at(CGIName), [&](Record *PatternDag) {
           return opIsPartOfiPTRPattern(
-              OpRec, PatternDag->getValueAsDag("PatternToMatch"), false, true);
+              OpRec, OpName, PatternDag->getValueAsDag("PatternToMatch"), false, true);
         });
     if (OpTypeIsPartOfAnyPattern)
       OperandType += " | CS_OP_MEM";
     return OperandType;
   }
-  if (PatternDag && opIsPartOfiPTRPattern(OpRec, PatternDag, false))
+  if (PatternDag && opIsPartOfiPTRPattern(OpRec, OpName, PatternDag, false))
     OperandType += " | CS_OP_MEM";
   return OperandType;
 }
@@ -3018,7 +3017,7 @@ void addComplexOperand(
       OperandType = SubOperandType;
       ListInit *PatternList = CGI->TheDef->getValueAsListInit("Pattern");
       DagInit *PatternDag = dyn_cast<DagInit>(PatternList->getValues()[0]);
-      if (PatternDag && opIsPartOfiPTRPattern(SubOp, PatternDag, false))
+      if (PatternDag && opIsPartOfiPTRPattern(SubOp, SubOps->getArgNameStr(I), PatternDag, false))
         OperandType += " | CS_OP_MEM";
     } else
       OperandType = SubOperandType;
