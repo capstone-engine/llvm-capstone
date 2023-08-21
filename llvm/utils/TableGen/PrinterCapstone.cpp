@@ -2596,12 +2596,52 @@ std::string getPrimaryCSOperandType(Record const *OpRec) {
   return OperandType;
 }
 
-/// Returns true if the given operand is part of a pattern of type iPTR.
-/// This means it is a memory operand.
-/// Otherwise it returns false.
-/// If MatchByType = true, it compares the type names of the operands as well.
-bool opIsPartOfiPTRPattern(Record const *OpRec, StringRef const &OpName, DagInit *PatternDag,
-                           bool PartOfPTRPattern, bool MatchByTypeName = false) {
+/// Compares both lists of super classes for any matches.
+/// It ignores very common (Architecture independent)
+/// super classes (DAGOperand, RegisterOperand, PatFrags
+/// etc.). Because those will certainly lead to false positives.
+bool compareTypeSuperClasses(ArrayRef<std::pair<Record *, SMRange>> OpTypeSC,
+                             ArrayRef<std::pair<Record *, SMRange>> PatTypeSC) {
+  std::vector<std::string> IgnoredSC = {
+      "DAGOperand",    "Operand",         "PatFrag",           "PatFrags",
+      "RegisterClass", "RegisterOperand", "SDPatternOperator", "ValueType"};
+  std::vector<Record *> OpSCToTest;
+  std::vector<Record *> PatSCToTest;
+
+  // Go backwards over super clases (backwards over the inheritance tree) until
+  // we find a SC to ignore.
+  for (auto SCPair : reverse(OpTypeSC)) {
+    if (find(IgnoredSC, SCPair.first->getName()) != IgnoredSC.end())
+      break;
+    OpSCToTest.emplace_back(SCPair.first);
+  }
+  for (auto SCPair : reverse(PatTypeSC)) {
+    if (find(IgnoredSC, SCPair.first->getName()) != IgnoredSC.end())
+      break;
+    PatSCToTest.emplace_back(SCPair.first);
+  }
+  return any_of(OpSCToTest, [&](Record *OpSCRec) {
+    return find(PatSCToTest, OpSCRec) != PatSCToTest.end();
+  });
+}
+
+/// @brief Checks if the given operand is part of a pattern of type iPTR.
+/// @param OpRec The operand Record.
+/// @param OpName The operand name (Rn, imm, offset etc.)
+/// @param PatternDag The pattern DAG to search in.
+/// @param PartOfPTRPattern True, if the given pattern is of type iPTR. False
+/// otherwise.
+/// @param MatchByTypeName If true, the same type names are treated as a valid
+/// match.
+/// @param MatchByTypeSuperClasses If true, a valid match is also if any type
+/// super classes are the same.
+/// @return True, if the pattern contains a node with the same name (and
+/// optionally the same type name or same super class type) as the given  operand.
+/// False otherwise.
+bool opIsPartOfiPTRPattern(Record const *OpRec, StringRef const &OpName,
+                           DagInit *PatternDag, bool PartOfPTRPattern,
+                           bool MatchByTypeName = false,
+                           bool MatchByTypeSuperClasses = false) {
   for (unsigned I = 0; I < PatternDag->getNumArgs(); ++I) {
     DagInit *DagArg = dyn_cast<DagInit>(PatternDag->getArg(I));
     if (DagArg) { // Another pattern. Search in it.
@@ -2615,7 +2655,8 @@ bool opIsPartOfiPTRPattern(Record const *OpRec, StringRef const &OpName, DagInit
       if (DagRec->getValue("Ty") && getValueType(DagRec->getValueAsDef("Ty")) ==
                                         MVT::SimpleValueType::iPTR)
         PartOfPTRPattern = true;
-      if (opIsPartOfiPTRPattern(OpRec, OpName, DagArg, PartOfPTRPattern, MatchByTypeName))
+      if (opIsPartOfiPTRPattern(OpRec, OpName, DagArg, PartOfPTRPattern,
+                                MatchByTypeName, MatchByTypeSuperClasses))
         return true;
       continue;
     }
@@ -2630,6 +2671,16 @@ bool opIsPartOfiPTRPattern(Record const *OpRec, StringRef const &OpName, DagInit
       std::string OpInitType = OpRec->getNameInitAsString();
       std::string PatOpType = PatternDag->getArg(I)->getAsString();
       Matches |= OpInitType == PatOpType;
+    }
+    if (MatchByTypeSuperClasses) {
+      std::string OpInitType = OpRec->getNameInitAsString();
+      std::string PatOpType = PatternDag->getArg(I)->getAsString();
+      RecordKeeper &RK = OpRec->getRecords();
+      ArrayRef<std::pair<Record *, SMRange>> OpTypeSC =
+          RK.getDef(OpInitType)->getSuperClasses();
+      ArrayRef<std::pair<Record *, SMRange>> PatTypeSC =
+          RK.getDef(PatOpType)->getSuperClasses();
+      Matches |= compareTypeSuperClasses(OpTypeSC, PatTypeSC);
     }
     if (Matches) {
       if (PartOfPTRPattern)
@@ -2726,7 +2777,8 @@ std::string getCSOperandType(
     bool OpTypeIsPartOfAnyPattern =
         any_of(InsnPatternMap.at(CGIName), [&](Record *PatternDag) {
           return opIsPartOfiPTRPattern(
-              OpRec, OpName, PatternDag->getValueAsDag("PatternToMatch"), false, true);
+              OpRec, OpName, PatternDag->getValueAsDag("PatternToMatch"), false,
+              true);
         });
     if (OpTypeIsPartOfAnyPattern)
       OperandType += " | CS_OP_MEM";
@@ -3016,7 +3068,8 @@ void addComplexOperand(
       OperandType = SubOperandType;
       ListInit *PatternList = CGI->TheDef->getValueAsListInit("Pattern");
       DagInit *PatternDag = dyn_cast<DagInit>(PatternList->getValues()[0]);
-      if (PatternDag && opIsPartOfiPTRPattern(SubOp, SubOps->getArgNameStr(I), PatternDag, false))
+      if (PatternDag && opIsPartOfiPTRPattern(SubOp, SubOps->getArgNameStr(I),
+                                              PatternDag, false))
         OperandType += " | CS_OP_MEM";
     } else
       OperandType = SubOperandType;
