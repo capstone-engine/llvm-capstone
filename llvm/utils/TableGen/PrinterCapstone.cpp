@@ -2599,9 +2599,9 @@ std::string getPrimaryCSOperandType(Record const *OpRec) {
 /// Returns true if the given operand is part of a pattern of type iPTR.
 /// This means it is a memory operand.
 /// Otherwise it returns false.
-/// If MatchByType = true, it compares the types of the operands. Not the names.
+/// If MatchByType = true, it compares the type names of the operands as well.
 bool opIsPartOfiPTRPattern(Record const *OpRec, StringRef const &OpName, DagInit *PatternDag,
-                           bool PartOfPTRPattern, bool MatchByType = false) {
+                           bool PartOfPTRPattern, bool MatchByTypeName = false) {
   for (unsigned I = 0; I < PatternDag->getNumArgs(); ++I) {
     DagInit *DagArg = dyn_cast<DagInit>(PatternDag->getArg(I));
     if (DagArg) { // Another pattern. Search in it.
@@ -2615,7 +2615,7 @@ bool opIsPartOfiPTRPattern(Record const *OpRec, StringRef const &OpName, DagInit
       if (DagRec->getValue("Ty") && getValueType(DagRec->getValueAsDef("Ty")) ==
                                         MVT::SimpleValueType::iPTR)
         PartOfPTRPattern = true;
-      if (opIsPartOfiPTRPattern(OpRec, OpName, DagArg, PartOfPTRPattern, MatchByType))
+      if (opIsPartOfiPTRPattern(OpRec, OpName, DagArg, PartOfPTRPattern, MatchByTypeName))
         return true;
       continue;
     }
@@ -2624,13 +2624,12 @@ bool opIsPartOfiPTRPattern(Record const *OpRec, StringRef const &OpName, DagInit
     if (!LeaveDef)
       return false;
     bool Matches;
-    if (MatchByType) {
+    StringRef const &PatOpName = PatternDag->getArgNameStr(I);
+    Matches = OpName.equals(PatOpName);
+    if (MatchByTypeName) {
       std::string OpInitType = OpRec->getNameInitAsString();
       std::string PatOpType = PatternDag->getArg(I)->getAsString();
-      Matches = OpInitType == PatOpType;
-    } else {
-      StringRef const &PatOpName = PatternDag->getArgNameStr(I);
-      Matches = OpName.equals(PatOpName);
+      Matches |= OpInitType == PatOpType;
     }
     if (Matches) {
       if (PartOfPTRPattern)
