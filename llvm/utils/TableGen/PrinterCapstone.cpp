@@ -2754,10 +2754,18 @@ Record *getMatchingPattern(
   return nullptr;
 }
 
-std::string getCSOperandType(
+std::string getCSOperandType(StringRef const &TargetName,
     CodeGenInstruction const *CGI, Record const *OpRec, StringRef const &OpName,
     std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
   std::string OperandType = getPrimaryCSOperandType(OpRec);
+
+  if (TargetName.equals("AArch64")) {
+    // The definitions of AArch64 are so broken, when it comes to memory operands,
+    // that we just search for the op name enclosed in [].
+    if (Regex("\\[.*\\$" + OpName.str() + ".*]").match(CGI->AsmString))
+      return OperandType += " | CS_OP_MEM";
+  }
+
   DagInit *PatternDag = nullptr;
   if (OperandType == "CS_OP_MEM")
     // It is only marked as mem, we treat it as immediate.
@@ -3044,7 +3052,7 @@ uint8_t getOpAccess(CodeGenInstruction const *CGI, std::string OperandType,
 }
 
 void addComplexOperand(
-    CodeGenInstruction const *CGI, Record const *ComplexOp,
+    StringRef const &TargetName, CodeGenInstruction const *CGI, Record const *ComplexOp,
     StringRef const &ArgName, bool IsOutOp, std::vector<OpData> &InsOps,
     std::string const &Encoding,
     std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
@@ -3059,9 +3067,9 @@ void addComplexOperand(
     // Determine Operand type
     std::string OperandType;
     std::string SubOperandType =
-        getCSOperandType(CGI, SubOp, SubOp->getName().str(), InsnPatternMap);
+        getCSOperandType(TargetName, CGI, SubOp, SubOp->getName().str(), InsnPatternMap);
     std::string ComplOperandType =
-        getCSOperandType(CGI, ComplexOp, ArgName, InsnPatternMap);
+        getCSOperandType(TargetName, CGI, ComplexOp, ArgName, InsnPatternMap);
     if (ComplOperandType == "CS_OP_MEM")
       OperandType = ComplOperandType + " | " + SubOperandType;
     else if (!CGI->TheDef->getValueAsListInit("Pattern")->empty()) {
@@ -3135,15 +3143,15 @@ void printInsnOpMapEntry(
     // Operands which effectively consists of two or more operands.
     if (Rec->getValue("MIOperandInfo")) {
       if (Rec->getValueAsDag("MIOperandInfo")->getNumArgs() > 0) {
-        addComplexOperand(CGI, Rec, ArgName, IsOutOp, InsOps, Encoding,
-                          InsnPatternMap);
+        addComplexOperand(TargetName, CGI, Rec, ArgName, IsOutOp, InsOps,
+              Encoding, InsnPatternMap);
         continue;
       }
     }
 
     // Determine Operand type
     std::string OperandType =
-        getCSOperandType(CGI, Rec, ArgName, InsnPatternMap);
+        getCSOperandType(TargetName, CGI, Rec, ArgName, InsnPatternMap);
     if (OperandType == "")
       continue;
 
