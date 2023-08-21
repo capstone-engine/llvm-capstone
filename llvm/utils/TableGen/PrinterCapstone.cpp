@@ -3015,10 +3015,11 @@ void addComplexOperand(
     if (ComplOperandType == "CS_OP_MEM")
       OperandType = ComplOperandType + " | " + SubOperandType;
     else if (!CGI->TheDef->getValueAsListInit("Pattern")->empty()) {
+      OperandType = SubOperandType;
       ListInit *PatternList = CGI->TheDef->getValueAsListInit("Pattern");
       DagInit *PatternDag = dyn_cast<DagInit>(PatternList->getValues()[0]);
-      if (!PatternDag && opIsPartOfiPTRPattern(SubOp, PatternDag, false))
-        OperandType = "CS_OP_MEM | " + SubOperandType;
+      if (PatternDag && opIsPartOfiPTRPattern(SubOp, PatternDag, false))
+        OperandType += " | CS_OP_MEM";
     } else
       OperandType = SubOperandType;
 
