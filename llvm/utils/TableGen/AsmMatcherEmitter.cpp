@@ -601,6 +601,21 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
       IsIsolatedToken = false;
       break;
 
+    // Handle asm strings of the form $OP1($OP2)
+    // Part of the Capstone changes
+    case '(': 
+    case ')': {
+      if (InTok) {
+        addAsmOperand(String.slice(Prev, i), IsIsolatedToken);
+        InTok = false;
+        IsIsolatedToken = false;
+      }
+      addAsmOperand(String.slice(i, i + 1), IsIsolatedToken);
+      Prev = i + 1;
+      IsIsolatedToken = false;
+      break;
+    }
+
     case '$': {
       if (InTok) {
         addAsmOperand(String.slice(Prev, i), IsIsolatedToken);

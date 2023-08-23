@@ -1004,7 +1004,7 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
      << "}\n\n";
 
   std::set<std::string> HasTwoByteInsns = {"ARM"};
-  std::set<std::string> HasFourByteInsns = {"ARM", "AArch64"};
+  std::set<std::string> HasFourByteInsns = {"ARM", "PPC", "AArch64", "Alpha"};
 
   if (HasTwoByteInsns.find(TargetName) != HasTwoByteInsns.end())
     OS << "FieldFromInstruction(fieldFromInstruction_2, uint16_t)\n"
@@ -2464,6 +2464,8 @@ static inline std::string normalizedMnemonic(StringRef const &Mn,
   std::replace(Mnemonic.begin(), Mnemonic.end(), '.', '_');
   std::replace(Mnemonic.begin(), Mnemonic.end(), '+', 'p');
   std::replace(Mnemonic.begin(), Mnemonic.end(), '-', 'm');
+  std::replace(Mnemonic.begin(), Mnemonic.end(), '/', 's');
+
   Mnemonic = StringRef(Regex("[{}]").sub("", Mnemonic));
   return Mnemonic;
 }
@@ -2508,6 +2510,7 @@ std::string getLLVMInstEnumName(StringRef const &TargetName,
                                 CodeGenInstruction const *CGI) {
   std::string UniqueName = CGI->TheDef->getName().str();
   std::string Enum = TargetName.str() + "_" + UniqueName;
+  std::replace(Enum.begin(), Enum.end(), '/', 's');
   return Enum;
 }
 
