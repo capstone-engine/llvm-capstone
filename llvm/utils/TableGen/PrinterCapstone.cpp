@@ -662,7 +662,7 @@ std::string edgeCaseTemplArg(std::string &Code) {
   PrintFatalNote("Edge case for C++ code not handled: " + Code);
 }
 
-static std::string handleDefaultArg(const std::string &TargetName,
+std::string handleDefaultArg(const std::string &TargetName,
                                     std::string &Code) {
   static SmallVector<std::pair<std::string, std::string>>
       AArch64TemplFuncWithDefaults = {// Default is 1
@@ -674,48 +674,53 @@ static std::string handleDefaultArg(const std::string &TargetName,
     TemplFuncWithDefaults = &AArch64TemplFuncWithDefaults;
   else
     return Code;
-
+  if (Code.find("printVectorIndex") != std::string::npos)
+    PrintNote(Code);
   for (std::pair Func : *TemplFuncWithDefaults) {
-    if (Code.find(Func.first) != std::string::npos) {
+    while (Code.find(Func.first) != std::string::npos) {
       unsigned long const B =
           Code.find(Func.first) + std::string(Func.first).size();
-      if (Code[B] == '<' || Code[B] == '_')
+      if (Code[B] == '_' || Code[B] == '<')
         // False positive or already fixed.
-        continue;
+        break;
       std::string const &DecName = Code.substr(0, B);
       std::string Rest = Code.substr(B);
-      return DecName + "_" + Func.second + Rest;
+      Code = DecName + "_" + Func.second + Rest;
     }
   }
   // No template function, false positive or fixed
   return Code;
 }
 
-static void patchTemplateArgs(const std::string &TargetName,
+void patchTemplateArgs(const std::string &TargetName,
                               std::string &Code) {
-  size_t const B = Code.find_first_of("<");
-  size_t const E = Code.find(">");
-  if (B == std::string::npos) {
-    Code = handleDefaultArg(TargetName, Code);
-    return;
+  Code = handleDefaultArg(TargetName, Code);
+
+  size_t B = Code.find_first_of("<");
+  size_t E = Code.find(">");
+  while (B != std::string::npos && E != std::string::npos) {
+    std::string const &DecName = Code.substr(0, B);
+    std::string Args = Code.substr(B + 1, E - B - 1);
+    std::string Rest = Code.substr(E + 1);
+    if (Args.empty()) {
+      Code = edgeCaseTemplArg(Code);
+      B = Code.find_first_of("<");
+      E = Code.find(">");
+      continue;
+    }
+    while ((Args.find("true") != std::string::npos) ||
+          (Args.find("false") != std::string::npos) ||
+          (Args.find(",") != std::string::npos) ||
+          (Args.find("'") != std::string::npos)) {
+      Args = Regex("true").sub("1", Args);
+      Args = Regex("false").sub("0", Args);
+      Args = Regex(" *, *").sub("_", Args);
+      Args = Regex("'").sub("", Args);
+    }
+    Code = DecName + "_" + Args + Rest;
+    B = Code.find_first_of("<");
+    E = Code.find(">");
   }
-  std::string const &DecName = Code.substr(0, B);
-  std::string Args = Code.substr(B + 1, E - B - 1);
-  std::string Rest = Code.substr(E + 1);
-  if (Args.empty()) {
-    Code = edgeCaseTemplArg(Code);
-    return;
-  }
-  while ((Args.find("true") != std::string::npos) ||
-         (Args.find("false") != std::string::npos) ||
-         (Args.find(",") != std::string::npos) ||
-         (Args.find("'") != std::string::npos)) {
-    Args = Regex("true").sub("1", Args);
-    Args = Regex("false").sub("0", Args);
-    Args = Regex(" *, *").sub("_", Args);
-    Args = Regex("'").sub("", Args);
-  }
-  Code = DecName + "_" + Args + Rest;
 }
 
 std::string PrinterCapstone::translateToC(std::string const &TargetName,
