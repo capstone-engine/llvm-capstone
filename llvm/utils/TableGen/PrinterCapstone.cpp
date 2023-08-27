@@ -3209,7 +3209,7 @@ void printInsnNameMapEnumEntry(StringRef const &TargetName,
   static std::set<std::string> MnemonicsSeen;
   static std::set<std::string> EnumsSeen;
 
-  std::string Mnemonic = MI->Mnemonic.str();
+  std::string Mnemonic = normalizedMnemonic(MI->Mnemonic.str(), false);
   if (MnemonicsSeen.find(Mnemonic) != MnemonicsSeen.end())
     return;
 
@@ -3345,7 +3345,7 @@ void printInsnAliasEnum(CodeGenTarget const &Target,
     AliasEnum << "\t" + NormAliasMnem + ", // Real instr.: " +
                      getLLVMInstEnumName(Target.getName(), RealInst) + "\n";
 
-    AliasMnemMap << "\t{ " + NormAliasMnem + ", \"" + AliasMnemonic + "\" },\n";
+    AliasMnemMap << "\t{ " + NormAliasMnem + ", \"" + normalizedMnemonic(AliasMnemonic, false) + "\" },\n";
   }
 }
 
