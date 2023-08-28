@@ -10,22 +10,22 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenTarget.h"
 #include "Printer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
 #include <bitset>
-#include <unordered_map>
 
 static void emitDefaultSourceFileHeader(raw_ostream &OS) {
   OS << "/* Capstone Disassembly Engine, https://www.capstone-engine.org */\n"
@@ -970,12 +970,16 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
      << "      NumToSkip |= (*Ptr++) << 8; \\\n"
      << "      NumToSkip |= (*Ptr++) << 16; \\\n"
      << "      /* Perform the decode operation. */ \\\n"
-     << "      MCInst_setOpcode(MI, Opc); \\\n"
+     << "      MCInst TmpMI = { 0 }; \\\n"
+     << "      TmpMI.MRI = MI->MRI; \\\n"
+     << "      TmpMI.csh = MI->csh; \\\n"
+     << "      MCInst_setOpcode(&TmpMI, Opc); \\\n"
      << "      bool DecodeComplete; \\\n"
-     << "      S = decoder(S, DecodeIdx, insn, MI, Address, "
+     << "      S = decoder(S, DecodeIdx, insn, &TmpMI, Address, "
      << "Decoder, &DecodeComplete); \\\n"
      << "      if (DecodeComplete) { \\\n"
      << "        /* Decoding complete. */ \\\n"
+     << "        MCInst_updateWithTmpMI(MI, &TmpMI); \\\n"
      << "        return S; \\\n"
      << "      } else { \\\n"
      << "        /* If the decoding was incomplete, skip. */ \\\n"
@@ -1264,6 +1268,7 @@ void PrinterCapstone::decoderEmitterEmitDecoderFunction(
          "*DecodeComplete) \\\n"
       << "{ \\\n";
   Indentation += 2;
+  OS.indent(Indentation) << "*DecodeComplete = true; \\\n";
   OS.indent(Indentation) << "InsnType tmp; \\\n";
   OS.indent(Indentation) << "switch (Idx) { \\\n";
   OS.indent(Indentation)
@@ -2604,10 +2609,204 @@ std::string getPrimaryCSOperandType(Record const *OpRec) {
   return OperandType;
 }
 
-std::string getCSOperandType(Record const *OpRec) {
+/// Compares both lists of super classes for any matches.
+/// It ignores very common (Architecture independent)
+/// super classes (DAGOperand, RegisterOperand, PatFrags
+/// etc.). Because those will certainly lead to false positives.
+bool compareTypeSuperClasses(ArrayRef<std::pair<Record *, SMRange>> OpTypeSC,
+                             ArrayRef<std::pair<Record *, SMRange>> PatTypeSC) {
+  std::vector<std::string> IgnoredSC = {
+      "DAGOperand",    "Operand",         "PatFrag",           "PatFrags",
+      "RegisterClass", "RegisterOperand", "SDPatternOperator", "ValueType"};
+  std::vector<Record *> OpSCToTest;
+  std::vector<Record *> PatSCToTest;
+
+  // Go backwards over super clases (backwards over the inheritance tree) until
+  // we find a SC to ignore.
+  for (auto SCPair : reverse(OpTypeSC)) {
+    if (find(IgnoredSC, SCPair.first->getName()) != IgnoredSC.end())
+      break;
+    OpSCToTest.emplace_back(SCPair.first);
+  }
+  for (auto SCPair : reverse(PatTypeSC)) {
+    if (find(IgnoredSC, SCPair.first->getName()) != IgnoredSC.end())
+      break;
+    PatSCToTest.emplace_back(SCPair.first);
+  }
+  return any_of(OpSCToTest, [&](Record *OpSCRec) {
+    return find(PatSCToTest, OpSCRec) != PatSCToTest.end();
+  });
+}
+
+/// @brief Checks if the given operand is part of a pattern of type iPTR.
+/// @param OpRec The operand Record.
+/// @param OpName The operand name (Rn, imm, offset etc.)
+/// @param PatternDag The pattern DAG to search in.
+/// @param PartOfPTRPattern True, if the given pattern is of type iPTR. False
+/// otherwise.
+/// @param MatchByTypeName If true, the same type names are treated as a valid
+/// match.
+/// @param MatchByTypeSuperClasses If true, a valid match is also if any type
+/// super classes are the same.
+/// @return True, if the pattern contains a node with the same name (and
+/// optionally the same type name or same super class type) as the given  operand.
+/// False otherwise.
+bool opIsPartOfiPTRPattern(Record const *OpRec, StringRef const &OpName,
+                           DagInit *PatternDag, bool PartOfPTRPattern,
+                           bool MatchByTypeName = false,
+                           bool MatchByTypeSuperClasses = false) {
+  for (unsigned I = 0; I < PatternDag->getNumArgs(); ++I) {
+    DagInit *DagArg = dyn_cast<DagInit>(PatternDag->getArg(I));
+    if (DagArg) { // Another pattern. Search in it.
+      Record *DagRec = dyn_cast<DefInit>(DagArg->getOperator())->getDef();
+
+      // Check if DAG operator is of type iPTR.
+      if (DagRec->getValue("Value") &&
+          getValueType(DagRec) == MVT::SimpleValueType::iPTR)
+        PartOfPTRPattern = true;
+      // Complex patterns define their type in "Ty"
+      if (DagRec->getValue("Ty") && getValueType(DagRec->getValueAsDef("Ty")) ==
+                                        MVT::SimpleValueType::iPTR)
+        PartOfPTRPattern = true;
+      if (opIsPartOfiPTRPattern(OpRec, OpName, DagArg, PartOfPTRPattern,
+                                MatchByTypeName, MatchByTypeSuperClasses))
+        return true;
+      continue;
+    }
+
+    DefInit *LeaveDef = dyn_cast<DefInit>(PatternDag->getArg(I));
+    if (!LeaveDef)
+      return false;
+    bool Matches;
+    StringRef const &PatOpName = PatternDag->getArgNameStr(I);
+    Matches = OpName.equals(PatOpName);
+    if (MatchByTypeName) {
+      std::string OpInitType = OpRec->getNameInitAsString();
+      std::string PatOpType = PatternDag->getArg(I)->getAsString();
+      Matches |= OpInitType == PatOpType;
+    }
+    if (MatchByTypeSuperClasses) {
+      std::string OpInitType = OpRec->getNameInitAsString();
+      std::string PatOpType = PatternDag->getArg(I)->getAsString();
+      RecordKeeper &RK = OpRec->getRecords();
+      ArrayRef<std::pair<Record *, SMRange>> OpTypeSC =
+          RK.getDef(OpInitType)->getSuperClasses();
+      ArrayRef<std::pair<Record *, SMRange>> PatTypeSC =
+          RK.getDef(PatOpType)->getSuperClasses();
+      Matches |= compareTypeSuperClasses(OpTypeSC, PatTypeSC);
+    }
+    if (Matches) {
+      if (PartOfPTRPattern)
+        return true;
+      return false;
+    }
+  }
+  return false;
+}
+
+/// Try to match a patterns resulting instr. ops to the operands of a CGI by
+/// type. If it matches it returns the index of the CGI operand from which on
+/// the pattern ops match (counted for OutOps + InOps). If it doens't match it
+/// returns -1
+int comparePatternResultToCGIOps(CodeGenInstruction const *CGI,
+                                 DagInit *PatternResDag) {
+  if (PatternResDag->getNumArgs() == 0)
+    return -1;
+  DagInit *InDI = CGI->TheDef->getValueAsDag("InOperandList");
+  DagInit *OutDI = CGI->TheDef->getValueAsDag("OutOperandList");
+  unsigned NumOuts = OutDI->getNumArgs();
+  unsigned NumOps = OutDI->getNumArgs() + InDI->getNumArgs();
+  int32_t PatMatchStart = -1;
+  for (unsigned I = 0, J = 0; I < NumOps; ++I) {
+    Init *OpInit;
+    bool IsOutOp = I < NumOuts;
+    if (IsOutOp) {
+      OpInit = OutDI->getArg(I);
+    } else {
+      OpInit = InDI->getArg(I - NumOuts);
+    }
+    std::string PatOpType = PatternResDag->getArg(J)->getAsString();
+    std::string OpType = OpInit->getAsString();
+
+    if (PatOpType == OpType) {
+      // Select next pattern op
+      if (PatMatchStart == -1)
+        PatMatchStart = I;
+      J++;
+      if (J >= PatternResDag->getNumArgs())
+        // Done
+        return PatMatchStart;
+    } else if (PatMatchStart != -1) {
+      return -1;
+    }
+  }
+  // Nothing matched
+  return -1;
+}
+
+/// Returns the pattern record which matches the CGI.
+/// Or a nullltr if none matches.
+Record *getMatchingPattern(
+    CodeGenInstruction const *CGI,
+    std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
+  std::vector<Record *> Patterns =
+      InsnPatternMap.at(CGI->TheDef->getName().str());
+  // Search for pattern which matches this instruction.
+  int32_t PatStart = -1;
+  for (Record *Pat : Patterns) {
+    DagInit *PatternResDag = dyn_cast<DagInit>(
+        Pat->getValueAsListInit("ResultInstrs")->getValues()[0]);
+    Pat->dump();
+    // Interate over every In and Out operand and get its Def.
+    // Compare ts type against the pattern.
+    PatStart = comparePatternResultToCGIOps(CGI, PatternResDag);
+    if (PatStart < 0)
+      continue;
+    return Pat;
+  }
+  return nullptr;
+}
+
+std::string getCSOperandType(StringRef const &TargetName,
+    CodeGenInstruction const *CGI, Record const *OpRec, StringRef const &OpName,
+    std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
   std::string OperandType = getPrimaryCSOperandType(OpRec);
+
+  if (TargetName.equals("AArch64")) {
+    // The definitions of AArch64 are so broken, when it comes to memory operands,
+    // that we just search for the op name enclosed in [].
+    if (Regex("\\[.*\\$" + OpName.str() + ".*]").match(CGI->AsmString))
+      return OperandType += " | CS_OP_MEM";
+  }
+
+  DagInit *PatternDag = nullptr;
   if (OperandType == "CS_OP_MEM")
+    // It is only marked as mem, we treat it as immediate.
     OperandType += " | CS_OP_IMM";
+  else if (!CGI->TheDef->getValueAsListInit("Pattern")->empty()) {
+    // Check if operand is part of a pattern with a memory type (iPTR)
+    ListInit *PatternList = CGI->TheDef->getValueAsListInit("Pattern");
+    PatternDag = dyn_cast<DagInit>(PatternList->getValues()[0]);
+  } else if (!InsnPatternMap.empty()) {
+    // Pattern field is not set in the CGI.
+    // But there might be (multiple) patterns in the record keeper
+    // for this CGI
+    std::string CGIName = CGI->TheDef->getName().str();
+    if (InsnPatternMap.find(CGIName) == InsnPatternMap.end())
+      return OperandType;
+
+    bool OpTypeIsPartOfAnyPattern =
+        any_of(InsnPatternMap.at(CGIName), [&](Record *PatternDag) {
+          return opIsPartOfiPTRPattern(
+              OpRec, OpName, PatternDag->getValueAsDag("PatternToMatch"), false,
+              true);
+        });
+    if (OpTypeIsPartOfAnyPattern)
+      OperandType += " | CS_OP_MEM";
+    return OperandType;
+  }
+  if (PatternDag && opIsPartOfiPTRPattern(OpRec, OpName, PatternDag, false))
+    OperandType += " | CS_OP_MEM";
   return OperandType;
 }
 
@@ -2793,18 +2992,24 @@ static std::string getCSAccess(short Access) {
     PrintFatalNote("Invalid access flags set.");
 }
 
+/// @brief Returns the operand data type. If it is a float it updates
+/// OperandType as well.
+/// @param Op The operand.
+/// @param OperandType The operand type.
+/// @return The strig of data types.
 std::string getOperandDataTypes(Record const *Op, std::string &OperandType) {
   MVT::SimpleValueType VT;
   std::vector<Record *> OpDataTypes;
 
   if (!Op->getValue("RegTypes") && Op->getValue("RegClass") &&
-      OperandType == "CS_OP_REG")
+      OperandType.find("CS_OP_REG") != std::string::npos)
     Op = Op->getValueAsDef("RegClass");
 
   if (!(Op->getValue("Type") || Op->getValue("RegTypes")))
     return "{ CS_DATA_TYPE_LAST }";
 
-  if (OperandType == "CS_OP_REG" && Op->getValue("RegTypes")) {
+  if (OperandType.find("CS_OP_REG") != std::string::npos &&
+      Op->getValue("RegTypes")) {
     OpDataTypes = Op->getValueAsListOfDefs("RegTypes");
   } else {
     Record *OpType = Op->getValueAsDef("Type");
@@ -2859,10 +3064,11 @@ uint8_t getOpAccess(CodeGenInstruction const *CGI, std::string OperandType,
   return IsOutOp ? 2 : 1;
 }
 
-void addComplexOperand(CodeGenInstruction const *CGI, Record const *ComplexOp,
-                       StringRef const &ArgName, bool IsOutOp,
-                       std::string const &Encoding,
-                       std::vector<OpData> &InsOps) {
+void addComplexOperand(
+    StringRef const &TargetName, CodeGenInstruction const *CGI, Record const *ComplexOp,
+    StringRef const &ArgName, bool IsOutOp, std::vector<OpData> &InsOps,
+    std::string const &Encoding,
+    std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
   DagInit *SubOps = ComplexOp->getValueAsDag("MIOperandInfo");
 
   std::string const &ComplOperandType = getPrimaryCSOperandType(ComplexOp);
@@ -2871,16 +3077,25 @@ void addComplexOperand(CodeGenInstruction const *CGI, Record const *ComplexOp,
   for (unsigned I = 0; I != E; ++I) {
     Init *ArgInit = SubOps->getArg(I);
     Record *SubOp = argInitOpToRecord(ArgInit);
-
     // Determine Operand type
     std::string OperandType;
-    std::string SubOperandType = getPrimaryCSOperandType(SubOp);
+    std::string SubOperandType =
+        getCSOperandType(TargetName, CGI, SubOp, SubOp->getName().str(), InsnPatternMap);
+    std::string ComplOperandType =
+        getCSOperandType(TargetName, CGI, ComplexOp, ArgName, InsnPatternMap);
     if (ComplOperandType == "CS_OP_MEM")
       OperandType = ComplOperandType + " | " + SubOperandType;
-    else
+    else if (!CGI->TheDef->getValueAsListInit("Pattern")->empty()) {
       OperandType = SubOperandType;
-    unsigned AccessFlag = getOpAccess(CGI, OperandType, IsOutOp);
+      ListInit *PatternList = CGI->TheDef->getValueAsListInit("Pattern");
+      DagInit *PatternDag = dyn_cast<DagInit>(PatternList->getValues()[0]);
+      if (PatternDag && opIsPartOfiPTRPattern(SubOp, SubOps->getArgNameStr(I),
+                                              PatternDag, false))
+        OperandType += " | CS_OP_MEM";
+    } else
+      OperandType = SubOperandType;
 
+    unsigned AccessFlag = getOpAccess(CGI, OperandType, IsOutOp);
     std::string OpDataTypes = getOperandDataTypes(SubOp, SubOperandType);
 
     // Check if Operand was already seen before (as In or Out operand).
@@ -2891,10 +3106,11 @@ void addComplexOperand(CodeGenInstruction const *CGI, Record const *ComplexOp,
   }
 }
 
-void printInsnOpMapEntry(CodeGenTarget const &Target,
-                         std::unique_ptr<MatchableInfo> const &MI, bool UseMI,
-                         CodeGenInstruction const *CGI,
-                         raw_string_ostream &InsnOpMap, unsigned InsnNum) {
+void printInsnOpMapEntry(
+    CodeGenTarget const &Target, std::unique_ptr<MatchableInfo> const &MI,
+    bool UseMI, CodeGenInstruction const *CGI, raw_string_ostream &InsnOpMap,
+    unsigned InsnNum,
+    std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
   StringRef TargetName = Target.getName();
 
   // Instruction without mnemonic.
@@ -2940,13 +3156,15 @@ void printInsnOpMapEntry(CodeGenTarget const &Target,
     // Operands which effectively consists of two or more operands.
     if (Rec->getValue("MIOperandInfo")) {
       if (Rec->getValueAsDag("MIOperandInfo")->getNumArgs() > 0) {
-        addComplexOperand(CGI, Rec, ArgName, IsOutOp, Encoding, InsOps);
+        addComplexOperand(TargetName, CGI, Rec, ArgName, IsOutOp, InsOps,
+              Encoding, InsnPatternMap);
         continue;
       }
     }
 
     // Determine Operand type
-    std::string OperandType = getCSOperandType(Rec);
+    std::string OperandType =
+        getCSOperandType(TargetName, CGI, Rec, ArgName, InsnPatternMap);
     if (OperandType == "")
       continue;
 
@@ -3060,8 +3278,7 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
       "SVELogicalImm_int16_t",
       "SVELogicalImm_int32_t",
       "SVELogicalImm_int64_t",
-      "ZPRasFPR_128"
-    };
+      "ZPRasFPR_128"};
   static const std::set<std::string> PPCExceptions = {
       "S12ImmOperand", // PS S12 immediates. Used as memory disponent.
   };
@@ -3118,10 +3335,10 @@ void printInsnAliasEnum(CodeGenTarget const &Target,
     // Some Alias only differ by operands. Get only the mnemonic part.
     Regex("^[a-zA-Z0-9+-.]+").match(AliasAsm, &Matches);
     StringRef &AliasMnemonic = Matches[0];
-    std::string NormAliasMnem =
-        Target.getName().str() + "_INS_ALIAS_" + normalizedMnemonic(AliasMnemonic);
+    std::string NormAliasMnem = Target.getName().str() + "_INS_ALIAS_" +
+                                normalizedMnemonic(AliasMnemonic);
     if (AliasMnemonicsSeen.find(NormAliasMnem) != AliasMnemonicsSeen.end())
-        continue;
+      continue;
 
     AliasMnemonicsSeen.emplace(NormAliasMnem);
 
@@ -3129,6 +3346,45 @@ void printInsnAliasEnum(CodeGenTarget const &Target,
                      getLLVMInstEnumName(Target.getName(), RealInst) + "\n";
 
     AliasMnemMap << "\t{ " + NormAliasMnem + ", \"" + AliasMnemonic + "\" },\n";
+  }
+}
+
+void addInsnsToPatternMap(Record *Pattern,
+                          std::map<std::string, std::vector<Record *>> &Map,
+                          ArrayRef<Init *> ResInsns) {
+  for (Init *RI : ResInsns) {
+    Record *RIRec =
+        dyn_cast<DefInit>(dyn_cast<DagInit>(RI)->getOperator())->getDef();
+    if (!RIRec->getValue("isPseudo"))
+      continue; // No instruction
+    if (RIRec->getValueAsBit("isPseudo")) {
+      if (!RIRec->getValue("ResultInst"))
+        continue;
+      // Add the resulting instruction of this pseudo instruction as well.
+      addInsnsToPatternMap(
+          Pattern, Map, ArrayRef<Init *>(RIRec->getValueAsDag("ResultInst")));
+    }
+    std::string RIName = dyn_cast<DagInit>(RI)->getOperator()->getAsString();
+    if (Map.find(RIName) == Map.end()) {
+      std::vector<Record *> PatVec;
+      PatVec.emplace_back(Pattern);
+      Map.emplace(RIName, std::move(PatVec));
+    } else {
+      std::vector<Record *> &PatternVec = Map.at(RIName);
+      PatternVec.emplace_back(Pattern);
+    }
+  }
+}
+
+/// Returns a map with instruction name and its pattern.
+/// Only needed by archs which, very annoyingly,
+/// do not set the Pattern field in CGIs (like AArch64).
+void getInsnPatternMap(CodeGenTarget const &Target,
+                       std::map<std::string, std::vector<Record *>> &Map) {
+  for (Record *P :
+       Target.getTargetRecord()->getRecords().getAllDerivedDefinitions("Pat")) {
+    ListInit *ResInsns = P->getValueAsListInit("ResultInstrs");
+    addInsnsToPatternMap(P, Map, ResInsns->getValues());
   }
 }
 
@@ -3185,6 +3441,16 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   Variant.AsmVariantNo = AsmVariant->getValueAsInt("Variant");
   SmallPtrSet<Record *, 16> SingletonRegisters;
 
+  // Map instructino name to DefInit of pattern.
+  // This is noly necessary for AArch64 currently.
+  // Because CGI->pattern is not set in the td files.
+  // So we search all patterns save them under the name
+  // of the instruciton they belong to.
+  std::map<std::string, std::vector<Record *>> InsnPatternMap;
+
+  if (Target.getName().equals(StringRef("AArch64")))
+    getInsnPatternMap(Target, InsnPatternMap);
+
   // The CS mapping tables, for instructions and their operands,
   // need an entry for every CodeGenInstruction.
   unsigned InsnNum = 0;
@@ -3205,7 +3471,8 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
                           FeatureNameArray);
     printOpPrintGroupEnum(Target.getName(), CGI, OpGroups);
 
-    printInsnOpMapEntry(Target, MI, UseMI, CGI, InsnOpMap, InsnNum);
+    printInsnOpMapEntry(Target, MI, UseMI, CGI, InsnOpMap, InsnNum,
+                        InsnPatternMap);
     printInsnMapEntry(Target.getName(), Info, MI, UseMI, CGI, InsnMap, InsnNum,
                       PPCFormatEnum);
 
