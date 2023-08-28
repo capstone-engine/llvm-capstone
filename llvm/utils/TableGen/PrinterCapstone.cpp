@@ -674,8 +674,6 @@ std::string handleDefaultArg(const std::string &TargetName,
     TemplFuncWithDefaults = &AArch64TemplFuncWithDefaults;
   else
     return Code;
-  if (Code.find("printVectorIndex") != std::string::npos)
-    PrintNote(Code);
   for (std::pair Func : *TemplFuncWithDefaults) {
     while (Code.find(Func.first) != std::string::npos) {
       unsigned long const B =
@@ -2742,29 +2740,6 @@ int comparePatternResultToCGIOps(CodeGenInstruction const *CGI,
   }
   // Nothing matched
   return -1;
-}
-
-/// Returns the pattern record which matches the CGI.
-/// Or a nullltr if none matches.
-Record *getMatchingPattern(
-    CodeGenInstruction const *CGI,
-    std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
-  std::vector<Record *> Patterns =
-      InsnPatternMap.at(CGI->TheDef->getName().str());
-  // Search for pattern which matches this instruction.
-  int32_t PatStart = -1;
-  for (Record *Pat : Patterns) {
-    DagInit *PatternResDag = dyn_cast<DagInit>(
-        Pat->getValueAsListInit("ResultInstrs")->getValues()[0]);
-    Pat->dump();
-    // Interate over every In and Out operand and get its Def.
-    // Compare ts type against the pattern.
-    PatStart = comparePatternResultToCGIOps(CGI, PatternResDag);
-    if (PatStart < 0)
-      continue;
-    return Pat;
-  }
-  return nullptr;
 }
 
 std::string getCSOperandType(StringRef const &TargetName,
