@@ -328,6 +328,7 @@ def simm9s16 : Operand<i64> {
   let ParserMatchClass = SImmScaledMemoryIndexed<9, 16>;
   let DecoderMethod = "DecodeSImm<9>";
   let PrintMethod = "printImmScale<16>";
+  let OperandType = "OPERAND_MEMORY";
 }
 
 // uimm6 predicate - True if the immediate is in the range [0, 63].
@@ -348,6 +349,7 @@ def SImm9Operand : SImmOperand<9>;
 def simm9 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -256 && Imm < 256; }]> {
   let ParserMatchClass = SImm9Operand;
   let DecoderMethod = "DecodeSImm<9>";
+  let OperandType = "OPERAND_MEMORY";
 }
 
 // imm0_255 predicate - True if the immediate is in the range [0,255].
@@ -409,16 +411,19 @@ def SImm7s16Operand : SImmScaledMemoryIndexed<7, 16>;
 def simm7s4 : Operand<i32> {
   let ParserMatchClass = SImm7s4Operand;
   let PrintMethod = "printImmScale<4>";
+  let OperandType = "OPERAND_MEMORY";
 }
 
 def simm7s8 : Operand<i32> {
   let ParserMatchClass = SImm7s8Operand;
   let PrintMethod = "printImmScale<8>";
+  let OperandType = "OPERAND_MEMORY";
 }
 
 def simm7s16 : Operand<i32> {
   let ParserMatchClass = SImm7s16Operand;
   let PrintMethod = "printImmScale<16>";
+  let OperandType = "OPERAND_MEMORY";
 }
 
 def am_sve_fi : ComplexPattern<iPTR, 2, "SelectAddrModeFrameIndexSVE", []>;
