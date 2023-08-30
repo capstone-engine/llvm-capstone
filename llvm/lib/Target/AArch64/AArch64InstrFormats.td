@@ -322,6 +322,7 @@ def simm10Scaled : Operand<i64> {
   let ParserMatchClass = SImm10s8Operand;
   let DecoderMethod = "DecodeSImm<10>";
   let PrintMethod = "printImmScale<8>";
+  let OperandType = "OPERAND_MEMORY";
 }
 
 def simm9s16 : Operand<i64> {
