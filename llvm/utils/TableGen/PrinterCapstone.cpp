@@ -2747,7 +2747,7 @@ std::string getCSOperandType(StringRef const &TargetName,
     std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
   std::string OperandType = getPrimaryCSOperandType(OpRec);
 
-  if (TargetName.equals("AArch64")) {
+  if (TargetName.equals("AArch64") && OperandType != "CS_OP_MEM") {
     // The definitions of AArch64 are so broken, when it comes to memory operands,
     // that we just search for the op name enclosed in [].
     if (Regex("\\[.*\\$" + OpName.str() + ".*]").match(CGI->AsmString))
