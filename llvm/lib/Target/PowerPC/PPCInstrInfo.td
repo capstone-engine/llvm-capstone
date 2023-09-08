@@ -3995,13 +3995,13 @@ def : Pat<(int_ppc_frsqrtes f4rc:$frB), (FRSQRTES $frB)>;
 // FIXME: For B=0 or B > 8, the registers following RT are used.
 // WARNING: Do not add patterns for this instruction without fixing this.
 def LSWI  : XForm_base_r3xo_memOp<31, 597, (outs gprc:$RT),
-                                  (ins gprc:$A, u5imm:$B),
+                                  (ins ptr_rc_nor0:$A, u5imm:$B),
                                   "lswi $RT, $A, $B", IIC_LdStLoad, []>;
 
 // FIXME: For B=0 or B > 8, the registers following RT are used.
 // WARNING: Do not add patterns for this instruction without fixing this.
 def STSWI : XForm_base_r3xo_memOp<31, 725, (outs),
-                                  (ins gprc:$RT, gprc:$A, u5imm:$B),
+                                  (ins ptr_rc_nor0:$RT, gprc:$A, u5imm:$B),
                                   "stswi $RT, $A, $B", IIC_LdStLoad, []>;
 
 def ISYNC : XLForm_2_ext<19, 150, 0, 0, 0, (outs), (ins),
@@ -4178,31 +4178,31 @@ def ATTN : XForm_attn<0, 256, (outs), (ins), "attn", IIC_BrB>;
 
 let mayLoad = 1 in {
 def LBZCIX : XForm_base_r3xo_memOp<31, 853, (outs gprc:$RST),
-                                  (ins gprc:$A, gprc:$B),
+                                  (ins ptr_rc_nor0:$A, ptr_rc_idx:$B),
                                   "lbzcix $RST, $A, $B", IIC_LdStLoad, []>;
 def LHZCIX : XForm_base_r3xo_memOp<31, 821, (outs gprc:$RST),
-                                  (ins gprc:$A, gprc:$B),
+                                  (ins ptr_rc_nor0:$A, ptr_rc_idx:$B),
                                   "lhzcix $RST, $A, $B", IIC_LdStLoad, []>;
 def LWZCIX : XForm_base_r3xo_memOp<31, 789, (outs gprc:$RST),
-                                  (ins gprc:$A, gprc:$B),
+                                  (ins ptr_rc_nor0:$A, ptr_rc_idx:$B),
                                   "lwzcix $RST, $A, $B", IIC_LdStLoad, []>;
 def LDCIX :  XForm_base_r3xo_memOp<31, 885, (outs gprc:$RST),
-                                  (ins gprc:$A, gprc:$B),
+                                  (ins ptr_rc_nor0:$A, ptr_rc_idx:$B),
                                   "ldcix $RST, $A, $B", IIC_LdStLoad, []>;
 }
 
 let mayStore = 1 in {
 def STBCIX : XForm_base_r3xo_memOp<31, 981, (outs),
-                                  (ins gprc:$RST, gprc:$A, gprc:$B),
+                                  (ins gprc:$RST, ptr_rc_nor0:$A, ptr_rc_idx:$B),
                                   "stbcix $RST, $A, $B", IIC_LdStLoad, []>;
 def STHCIX : XForm_base_r3xo_memOp<31, 949, (outs),
-                                  (ins gprc:$RST, gprc:$A, gprc:$B),
+                                  (ins gprc:$RST, ptr_rc_nor0:$A, ptr_rc_idx:$B),
                                   "sthcix $RST, $A, $B", IIC_LdStLoad, []>;
 def STWCIX : XForm_base_r3xo_memOp<31, 917, (outs),
-                                  (ins gprc:$RST, gprc:$A, gprc:$B),
+                                  (ins gprc:$RST, ptr_rc_nor0:$A, ptr_rc_idx:$B),
                                   "stwcix $RST, $A, $B", IIC_LdStLoad, []>;
 def STDCIX : XForm_base_r3xo_memOp<31, 1013, (outs),
-                                  (ins gprc:$RST, gprc:$A, gprc:$B),
+                                  (ins gprc:$RST, ptr_rc_nor0:$A, ptr_rc_idx:$B),
                                   "stdcix $RST, $A, $B", IIC_LdStLoad, []>;
 }
 
