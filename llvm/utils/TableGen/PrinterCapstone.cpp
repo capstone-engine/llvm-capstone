@@ -674,8 +674,6 @@ std::string handleDefaultArg(const std::string &TargetName,
     TemplFuncWithDefaults = &AArch64TemplFuncWithDefaults;
   else
     return Code;
-  if (Code.find("printVectorIndex") != std::string::npos)
-    PrintNote(Code);
   for (std::pair Func : *TemplFuncWithDefaults) {
     while (Code.find(Func.first) != std::string::npos) {
       unsigned long const B =
@@ -2744,35 +2742,12 @@ int comparePatternResultToCGIOps(CodeGenInstruction const *CGI,
   return -1;
 }
 
-/// Returns the pattern record which matches the CGI.
-/// Or a nullltr if none matches.
-Record *getMatchingPattern(
-    CodeGenInstruction const *CGI,
-    std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
-  std::vector<Record *> Patterns =
-      InsnPatternMap.at(CGI->TheDef->getName().str());
-  // Search for pattern which matches this instruction.
-  int32_t PatStart = -1;
-  for (Record *Pat : Patterns) {
-    DagInit *PatternResDag = dyn_cast<DagInit>(
-        Pat->getValueAsListInit("ResultInstrs")->getValues()[0]);
-    Pat->dump();
-    // Interate over every In and Out operand and get its Def.
-    // Compare ts type against the pattern.
-    PatStart = comparePatternResultToCGIOps(CGI, PatternResDag);
-    if (PatStart < 0)
-      continue;
-    return Pat;
-  }
-  return nullptr;
-}
-
 std::string getCSOperandType(StringRef const &TargetName,
     CodeGenInstruction const *CGI, Record const *OpRec, StringRef const &OpName,
     std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
   std::string OperandType = getPrimaryCSOperandType(OpRec);
 
-  if (TargetName.equals("AArch64")) {
+  if (TargetName.equals("AArch64") && OperandType != "CS_OP_MEM") {
     // The definitions of AArch64 are so broken, when it comes to memory operands,
     // that we just search for the op name enclosed in [].
     if (Regex("\\[.*\\$" + OpName.str() + ".*]").match(CGI->AsmString))
@@ -3209,7 +3184,7 @@ void printInsnNameMapEnumEntry(StringRef const &TargetName,
   static std::set<std::string> MnemonicsSeen;
   static std::set<std::string> EnumsSeen;
 
-  std::string Mnemonic = MI->Mnemonic.str();
+  std::string Mnemonic = normalizedMnemonic(MI->Mnemonic.str(), false);
   if (MnemonicsSeen.find(Mnemonic) != MnemonicsSeen.end())
     return;
 
@@ -3345,7 +3320,7 @@ void printInsnAliasEnum(CodeGenTarget const &Target,
     AliasEnum << "\t" + NormAliasMnem + ", // Real instr.: " +
                      getLLVMInstEnumName(Target.getName(), RealInst) + "\n";
 
-    AliasMnemMap << "\t{ " + NormAliasMnem + ", \"" + AliasMnemonic + "\" },\n";
+    AliasMnemMap << "\t{ " + NormAliasMnem + ", \"" + normalizedMnemonic(AliasMnemonic, false) + "\" },\n";
   }
 }
 
