@@ -949,7 +949,7 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
      << "      Ptr += Len; \\\n"
      << "      MCInst_clear(MI); \\\n"
      << "      MCInst_setOpcode(MI, Opc); \\\n"
-     << "      bool DecodeComplete; \\\n";
+     << "      bool DecodeComplete = false; \\\n";
   if (IsVarLenInst) {
     OS << "      Len = InstrLenTable[Opc]; \\\n"
        << "      makeUp(insn, Len); \\\n";
