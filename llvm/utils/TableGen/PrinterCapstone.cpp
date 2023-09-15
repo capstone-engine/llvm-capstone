@@ -972,7 +972,7 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
      << "      TmpMI.MRI = MI->MRI; \\\n"
      << "      TmpMI.csh = MI->csh; \\\n"
      << "      MCInst_setOpcode(&TmpMI, Opc); \\\n"
-     << "      bool DecodeComplete; \\\n"
+     << "      bool DecodeComplete = false; \\\n"
      << "      S = decoder(S, DecodeIdx, insn, &TmpMI, Address, "
      << "Decoder, &DecodeComplete); \\\n"
      << "      if (DecodeComplete) { \\\n"
