@@ -2758,7 +2758,10 @@ std::string getCSOperandType(StringRef const &TargetName,
   if (OperandType == "CS_OP_MEM")
     // It is only marked as mem, we treat it as immediate.
     OperandType += " | CS_OP_IMM";
-  else if (!CGI->TheDef->getValueAsListInit("Pattern")->empty()) {
+  else if (OpRec->getValue("Type") && getValueType(OpRec->getValueAsDef("Type")) ==
+                                        MVT::SimpleValueType::iPTR)
+    OperandType += " | CS_OP_MEM";
+  else if (!CGI->TheDef->isValueUnset("Pattern") && !CGI->TheDef->getValueAsListInit("Pattern")->empty()) {
     // Check if operand is part of a pattern with a memory type (iPTR)
     ListInit *PatternList = CGI->TheDef->getValueAsListInit("Pattern");
     PatternDag = dyn_cast<DagInit>(PatternList->getValues()[0]);
@@ -3060,7 +3063,7 @@ void addComplexOperand(
         getCSOperandType(TargetName, CGI, ComplexOp, ArgName, InsnPatternMap);
     if (ComplOperandType == "CS_OP_MEM")
       OperandType = ComplOperandType + " | " + SubOperandType;
-    else if (!CGI->TheDef->getValueAsListInit("Pattern")->empty()) {
+    else if (!CGI->TheDef->isValueUnset("Pattern") && !CGI->TheDef->getValueAsListInit("Pattern")->empty()) {
       OperandType = SubOperandType;
       ListInit *PatternList = CGI->TheDef->getValueAsListInit("Pattern");
       DagInit *PatternDag = dyn_cast<DagInit>(PatternList->getValues()[0]);
