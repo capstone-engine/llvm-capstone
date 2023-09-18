@@ -2748,11 +2748,6 @@ class RFEI<bit wb, string asm>
   let Inst{20} = 1;
   let Inst{19-16} = Rn;
   let Inst{15-0} = 0xa00;
-
-  let OutOperandList = !cond(!eq(wb, 0b1): (outs GPR:$Rn_wb),
-                             true: (outs));
-  let Constraints = !cond(!eq(wb, 0b1): "$Rn_wb = $Rn",
-                          true: "");
 }
 
 def RFEDA : RFEI<0, "rfeda\t$Rn"> {
@@ -2813,12 +2808,13 @@ def ERET : ABI<0b0001, (outs), (ins), NoItinerary, "eret", "", []>,
 
 // Load
 
-let mayLoad = 1 in {
 
 defm LDR  : AI_ldr1<0, "ldr", IIC_iLoad_r, IIC_iLoad_si, load>;
 defm LDRB : AI_ldr1nopc<1, "ldrb", IIC_iLoad_bh_r, IIC_iLoad_bh_si,
                         zextloadi8>;
-}
+defm STR  : AI_str1<0, "str", IIC_iStore_r, IIC_iStore_si, store>;
+defm STRB : AI_str1nopc<1, "strb", IIC_iStore_bh_r, IIC_iStore_bh_si,
+                        truncstorei8>;
 
 // Special LDR for loads from non-pc-relative constpools.
 let canFoldAsLoad = 1, mayLoad = 1, hasSideEffects = 0,
@@ -2834,7 +2830,6 @@ def LDRcp : AI2ldst<0b010, 1, 0, (outs GPR:$Rt), (ins addrmode_imm12:$addr),
   let Inst{11-0}  = addr{11-0};   // imm12
 }
 
-let mayLoad = 1 in {
 // Loads with zero extension
 def LDRH  : AI3ld<0b1011, 1, (outs GPR:$Rt), (ins addrmode3:$addr), LdMiscFrm,
                   IIC_iLoad_bh_r, "ldrh", "\t$Rt, $addr",
@@ -2848,7 +2843,6 @@ def LDRSH : AI3ld<0b1111, 1, (outs GPR:$Rt), (ins addrmode3:$addr), LdMiscFrm,
 def LDRSB : AI3ld<0b1101, 1, (outs GPR:$Rt), (ins addrmode3:$addr), LdMiscFrm,
                    IIC_iLoad_bh_r, "ldrsb", "\t$Rt, $addr",
                    [(set GPR:$Rt, (sextloadi8 addrmode3:$addr))]>;
-} // mayLoad = 1
 
 let mayLoad = 1, hasSideEffects = 0, hasExtraDefRegAllocReq = 1 in {
   // Load doubleword
@@ -2865,7 +2859,6 @@ def LOADDUAL : ARMPseudoInst<(outs GPRPairOp:$Rt), (ins addrmode3:$addr),
 }
 }
 
-let mayLoad = 1 in {
 def LDA : AIldracq<0b00, (outs GPR:$Rt), (ins addr_offset_none:$addr),
                     NoItinerary, "lda", "\t$Rt, $addr", []>;
 def LDAB : AIldracq<0b10, (outs GPR:$Rt), (ins addr_offset_none:$addr),
@@ -3127,15 +3120,8 @@ def LDRConstPool
   : ARMAsmPseudo<"ldr${q} $Rt, $immediate",
                  (ins const_pool_asm_imm:$immediate, pred:$q),
                  (outs GPR:$Rt)>;
-} // mayLoad = 1
 
 // Store
-
-let mayStore = 1 in {
-
-defm STR  : AI_str1<0, "str", IIC_iStore_r, IIC_iStore_si, store>;
-defm STRB : AI_str1nopc<1, "strb", IIC_iStore_bh_r, IIC_iStore_bh_si,
-                        truncstorei8>;
 
 // Stores with truncate
 def STRH : AI3str<0b1011, (outs), (ins GPR:$Rt, addrmode3:$addr), StMiscFrm,
@@ -3230,7 +3216,6 @@ let mayStore = 1, hasSideEffects = 0 in {
 defm STR  : AI2_stridx<0, "str", IIC_iStore_iu, IIC_iStore_ru>;
 defm STRB : AI2_stridx<1, "strb", IIC_iStore_bh_iu, IIC_iStore_bh_ru>;
 }
-} // mayStore = 1
 
 def : ARMPat<(post_store GPR:$Rt, addr_offset_none:$addr,
                          am2offset_reg:$offset),
@@ -3249,7 +3234,6 @@ def : ARMPat<(post_truncsti8 GPR:$Rt, addr_offset_none:$addr,
              (STRB_POST_IMM GPR:$Rt, addr_offset_none:$addr,
                             am2offset_imm:$offset)>;
 
-let mayStore = 1 in {
 // Pseudo-instructions for pattern matching the pre-indexed stores. We can't
 // put the patterns on the instruction definitions directly as ISel wants
 // the address base and offset to be separate operands, not a single
@@ -3466,7 +3450,6 @@ def STLB : AIstrrel<0b10, (outs), (ins GPR:$Rt, addr_offset_none:$addr),
                     NoItinerary, "stlb", "\t$Rt, $addr", []>;
 def STLH : AIstrrel<0b11, (outs), (ins GPR:$Rt, addr_offset_none:$addr),
                     NoItinerary, "stlh", "\t$Rt, $addr", []>;
-} // mayStore = 1
 
 //===----------------------------------------------------------------------===//
 //  Load / store multiple Instructions.
@@ -5437,17 +5420,17 @@ def CDP2 : ABXI<0b1110, (outs), (ins p_imm:$cop, imm0_15:$opc1,
 }
 
 class ACI<dag oops, dag iops, string opc, string asm,
-            list<dag> pattern, string cstrs = "", IndexMode im = IndexModeNone,
+            list<dag> pattern, IndexMode im = IndexModeNone,
             AddrMode am = AddrModeNone>
   : I<oops, iops, am, 4, im, BrFrm, NoItinerary,
-      opc, asm, cstrs, pattern> {
+      opc, asm, "", pattern> {
   let Inst{27-25} = 0b110;
 }
 class ACInoP<dag oops, dag iops, string opc, string asm,
-          list<dag> pattern, string constraints = "", IndexMode im = IndexModeNone,
+          list<dag> pattern, IndexMode im = IndexModeNone,
           AddrMode am = AddrModeNone>
   : InoP<oops, iops, am, 4, im, BrFrm, NoItinerary,
-         opc, asm, constraints, pattern> {
+         opc, asm, "", pattern> {
   let Inst{31-28} = 0b1111;
   let Inst{27-25} = 0b110;
 }
@@ -5455,7 +5438,7 @@ class ACInoP<dag oops, dag iops, string opc, string asm,
 let DecoderNamespace = "CoProc" in {
 multiclass LdStCop<bit load, bit Dbit, string asm, list<dag> pattern> {
   def _OFFSET : ACI<(outs), (ins p_imm:$cop, c_imm:$CRd, addrmode5:$addr),
-                    asm, "\t$cop, $CRd, $addr", pattern, "", IndexModeNone,
+                    asm, "\t$cop, $CRd, $addr", pattern, IndexModeNone,
                     AddrMode5> {
     bits<13> addr;
     bits<4> cop;
@@ -5471,8 +5454,8 @@ multiclass LdStCop<bit load, bit Dbit, string asm, list<dag> pattern> {
     let Inst{7-0} = addr{7-0};
     let DecoderMethod = "DecodeCopMemInstruction";
   }
-  def _PRE : ACI<(outs GPR:$Rn_wb), (ins p_imm:$cop, c_imm:$CRd, addrmode5_pre:$addr),
-                 asm, "\t$cop, $CRd, $addr!", [], "$addr.base = $Rn_wb", IndexModePre> {
+  def _PRE : ACI<(outs), (ins p_imm:$cop, c_imm:$CRd, addrmode5_pre:$addr),
+                 asm, "\t$cop, $CRd, $addr!", [], IndexModePre> {
     bits<13> addr;
     bits<4> cop;
     bits<4> CRd;
@@ -5489,7 +5472,7 @@ multiclass LdStCop<bit load, bit Dbit, string asm, list<dag> pattern> {
   }
   def _POST: ACI<(outs), (ins p_imm:$cop, c_imm:$CRd, addr_offset_none:$addr,
                               postidx_imm8s4:$offset),
-                 asm, "\t$cop, $CRd, $addr, $offset", [], "", IndexModePost> {
+                 asm, "\t$cop, $CRd, $addr, $offset", [], IndexModePost> {
     bits<9> offset;
     bits<4> addr;
     bits<4> cop;
@@ -5527,7 +5510,7 @@ multiclass LdStCop<bit load, bit Dbit, string asm, list<dag> pattern> {
 }
 multiclass LdSt2Cop<bit load, bit Dbit, string asm, list<dag> pattern> {
   def _OFFSET : ACInoP<(outs), (ins p_imm:$cop, c_imm:$CRd, addrmode5:$addr),
-                       asm, "\t$cop, $CRd, $addr", pattern, "", IndexModeNone,
+                       asm, "\t$cop, $CRd, $addr", pattern, IndexModeNone,
                        AddrMode5> {
     bits<13> addr;
     bits<4> cop;
@@ -5543,8 +5526,8 @@ multiclass LdSt2Cop<bit load, bit Dbit, string asm, list<dag> pattern> {
     let Inst{7-0} = addr{7-0};
     let DecoderMethod = "DecodeCopMemInstruction";
   }
-  def _PRE : ACInoP<(outs GPR:$Rn_wb), (ins p_imm:$cop, c_imm:$CRd, addrmode5_pre:$addr),
-                    asm, "\t$cop, $CRd, $addr!", [], "$addr.base = $Rn_wb", IndexModePre> {
+  def _PRE : ACInoP<(outs), (ins p_imm:$cop, c_imm:$CRd, addrmode5_pre:$addr),
+                    asm, "\t$cop, $CRd, $addr!", [], IndexModePre> {
     bits<13> addr;
     bits<4> cop;
     bits<4> CRd;
@@ -5561,7 +5544,7 @@ multiclass LdSt2Cop<bit load, bit Dbit, string asm, list<dag> pattern> {
   }
   def _POST: ACInoP<(outs), (ins p_imm:$cop, c_imm:$CRd, addr_offset_none:$addr,
                                  postidx_imm8s4:$offset),
-                 asm, "\t$cop, $CRd, $addr, $offset", [], "", IndexModePost> {
+                 asm, "\t$cop, $CRd, $addr, $offset", [], IndexModePost> {
     bits<9> offset;
     bits<4> addr;
     bits<4> cop;
@@ -5598,19 +5581,15 @@ multiclass LdSt2Cop<bit load, bit Dbit, string asm, list<dag> pattern> {
   }
 }
 
-let mayLoad = 1 in {
 defm LDC   : LdStCop <1, 0, "ldc", [(int_arm_ldc timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm LDCL  : LdStCop <1, 1, "ldcl", [(int_arm_ldcl timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm LDC2  : LdSt2Cop<1, 0, "ldc2", [(int_arm_ldc2 timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
 defm LDC2L : LdSt2Cop<1, 1, "ldc2l", [(int_arm_ldc2l timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
-}
 
-let mayStore = 1 in {
 defm STC   : LdStCop <0, 0, "stc", [(int_arm_stc timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm STCL  : LdStCop <0, 1, "stcl", [(int_arm_stcl timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm STC2  : LdSt2Cop<0, 0, "stc2", [(int_arm_stc2 timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
 defm STC2L : LdSt2Cop<0, 1, "stc2l", [(int_arm_stc2l timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
-}
 
 } // DecoderNamespace = "CoProc"
 

@@ -745,7 +745,6 @@ def absdirectbrtarget : Operand<OtherVT> {
   let PrintMethod = "printAbsBranchOperand";
   let EncoderMethod = "getAbsDirectBrEncoding";
   let ParserMatchClass = PPCDirectBrAsmOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCCondBrAsmOperand : AsmOperandClass {
   let Name = "CondBr"; let PredicateMethod = "isCondBr";
@@ -762,7 +761,6 @@ def abscondbrtarget : Operand<OtherVT> {
   let PrintMethod = "printAbsBranchOperand";
   let EncoderMethod = "getAbsCondBrEncoding";
   let ParserMatchClass = PPCCondBrAsmOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def calltarget : Operand<iPTR> {
   let PrintMethod = "printBranchOperand";
@@ -775,7 +773,6 @@ def abscalltarget : Operand<iPTR> {
   let PrintMethod = "printAbsBranchOperand";
   let EncoderMethod = "getAbsDirectBrEncoding";
   let ParserMatchClass = PPCDirectBrAsmOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCCRBitMaskOperand : AsmOperandClass {
  let Name = "CRBitMask"; let PredicateMethod = "isCRBitMask";
@@ -785,7 +782,6 @@ def crbitm: Operand<i8> {
   let EncoderMethod = "get_crbitm_encoding";
   let DecoderMethod = "decodeCRBitMOperand";
   let ParserMatchClass = PPCCRBitMaskOperand;
-  let OperandType = "OPERAND_REGISTER";
 }
 // Address operands
 // A version of ptr_rc which excludes R0 (or X0 in 64-bit mode).
@@ -803,14 +799,12 @@ def PPCDispRI34Operand : AsmOperandClass {
 }
 def dispRI34 : Operand<iPTR> {
   let ParserMatchClass = PPCDispRI34Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def memri34 : Operand<iPTR> { // memri, imm is a 34-bit value.
   let PrintMethod = "printMemRegImm34";
   let MIOperandInfo = (ops dispRI34:$imm, ptr_rc_nor0:$reg);
   let EncoderMethod = "getMemRI34Encoding";
   let DecoderMethod = "decodeMemRI34Operands";
-  let OperandType = "OPERAND_MEMORY";
 }
 // memri, imm is a 34-bit value for pc-relative instructions where
 // base register is set to zero.
@@ -819,7 +813,6 @@ def memri34_pcrel : Operand<iPTR> { // memri, imm is a 34-bit value.
   let MIOperandInfo = (ops dispRI34:$imm, immZero:$reg);
   let EncoderMethod = "getMemRI34PCRelEncoding";
   let DecoderMethod = "decodeMemRI34PCRelOperands";
-  let OperandType = "OPERAND_MEMORY";
 }
 
 // A version of ptr_rc usable with the asm parser.
@@ -836,7 +829,6 @@ def PPCDispRIOperand : AsmOperandClass {
 }
 def dispRI : Operand<iPTR> {
   let ParserMatchClass = PPCDispRIOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCDispRIXOperand : AsmOperandClass {
  let Name = "DispRIX"; let PredicateMethod = "isS16ImmX4";
@@ -844,7 +836,6 @@ def PPCDispRIXOperand : AsmOperandClass {
 }
 def dispRIX : Operand<iPTR> {
   let ParserMatchClass = PPCDispRIXOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCDispRIHashOperand : AsmOperandClass {
   let Name = "DispRIHash"; let PredicateMethod = "isHashImmX8";
@@ -852,7 +843,6 @@ def PPCDispRIHashOperand : AsmOperandClass {
 }
 def dispRIHash : Operand<iPTR> {
   let ParserMatchClass = PPCDispRIHashOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCDispRIX16Operand : AsmOperandClass {
  let Name = "DispRIX16"; let PredicateMethod = "isS16ImmX16";
@@ -860,7 +850,6 @@ def PPCDispRIX16Operand : AsmOperandClass {
 }
 def dispRIX16 : Operand<iPTR> {
   let ParserMatchClass = PPCDispRIX16Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCDispSPE8Operand : AsmOperandClass {
  let Name = "DispSPE8"; let PredicateMethod = "isU8ImmX8";
@@ -868,7 +857,6 @@ def PPCDispSPE8Operand : AsmOperandClass {
 }
 def dispSPE8 : Operand<iPTR> {
   let ParserMatchClass = PPCDispSPE8Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCDispSPE4Operand : AsmOperandClass {
  let Name = "DispSPE4"; let PredicateMethod = "isU7ImmX4";
@@ -876,7 +864,6 @@ def PPCDispSPE4Operand : AsmOperandClass {
 }
 def dispSPE4 : Operand<iPTR> {
   let ParserMatchClass = PPCDispSPE4Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCDispSPE2Operand : AsmOperandClass {
  let Name = "DispSPE2"; let PredicateMethod = "isU6ImmX2";
@@ -884,7 +871,6 @@ def PPCDispSPE2Operand : AsmOperandClass {
 }
 def dispSPE2 : Operand<iPTR> {
   let ParserMatchClass = PPCDispSPE2Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def memri : Operand<iPTR> {
@@ -1074,6 +1060,3 @@ def PPCRegDMRpRCAsmOperand : AsmOperandClass {
 def dmrp : RegisterOperand<DMRpRC> {
   let ParserMatchClass = PPCRegDMRpRCAsmOperand;
 }
-
-#define CAPSTONE_DEPR_REGS
-include "PPCDeprecated.td"

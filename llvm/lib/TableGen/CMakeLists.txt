@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMTableGen
   Parser.cpp
   Record.cpp
   SetTheory.cpp
+  StringMatcher.cpp
   TableGenBackend.cpp
   TableGenBackendSkeleton.cpp
   TGLexer.cpp
