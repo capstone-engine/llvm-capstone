@@ -65,20 +65,20 @@ jobs:
       run: |
         if git ls-remote --exit-code --heads origin "${{ env.branch_version }}" &> /dev/null; then
           branch_exists=true
-          echo "branch_exists=$branch_exists" >> $GITHUB_ENV
+          echo "branch_exists=true" >> $GITHUB_ENV
           git checkout ${{ env.branch_version }}
         else
           branch_exists=false
           git checkout -b ${{ env.branch_version }}
-          rm -r ./*
         fi
 
-        if [ "$branch_exists" = true ]; then
+        if [ ${{ env.branch_exists }} = true ]; then
+          git fetch
           git pull origin ${{ env.branch_version }}
           git push -u origin ${{ env.branch_version }}
-          rm -rf !\(.git\|.github\)
         fi
-
+        
+        rm -rf !\(.git\|.github\)
         cp -r ../llvm-project/* .
         ls -la
         git add .
