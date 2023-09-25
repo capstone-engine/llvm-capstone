@@ -26,7 +26,7 @@ jobs:
           tag_name=$github.event.inputs.tag_name
         fi
 
-        echo "Using version: $tag_name"       
+        echo "Using version: $tag_name"
         echo "tag_name=${tag_name}" >> $GITHUB_ENV
         version=$(echo $tag_name | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+')
         echo "version=${version}" >> $GITHUB_ENV
@@ -44,7 +44,7 @@ jobs:
           exit 0
         fi
 
-    - name: Checkout LLVM-project
+    - name: Checkout LLVM-capstone
       uses: actions/checkout@v3
       with:
         fetch-depth: 1
@@ -63,14 +63,22 @@ jobs:
 
     - name: Add files to branch ${{ env.branch_version }}
       run: |
-        branch_exists=$(git ls-remote --exit-code --heads origin ${{env.branch_version}})
-        echo "branch_exists=${branch_exists}" >> $GITHUB_ENV
-        git checkout ${{ env.branch_version }} 2>/dev/null || git checkout -b ${{ env.branch_version }}
-        if [[ "${{ env.branch_exists }}" = true ]]; then
+        if git ls-remote --exit-code --heads origin "${{ env.branch_version }}" &> /dev/null; then
+          branch_exists=true
+          echo "branch_exists=${branch_exists}" >> $GITHUB_ENV
+          git fetch origin ${{ env.branch_version }}
+          git checkout ${{ env.branch_version }}
+        else
+          git checkout -b ${{ env.branch_version }}
+          rm -rf ./*
+        fi
+
+        if [ -n "${{ env.branch_exists }}" ]; then
           git pull origin ${{ env.branch_version }}
           git push -u origin ${{ env.branch_version }}
-          rm -rf !\(.git\|.github\)
         fi
+
+        rm -rf !\(.git\|.github\)
         cp -r ../llvm-project/* .
         ls -la
         git add .
