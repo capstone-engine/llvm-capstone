@@ -19,12 +19,12 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -71,7 +71,7 @@ namespace {
       // is in the MCOperand format in which 1 means 'else' and 0 'then'.
       void setITState(char Firstcond, char Mask) {
         // (3 - the number of trailing zeros) is the number of then / else.
-        unsigned NumTZ = countTrailingZeros<uint8_t>(Mask);
+        unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
         unsigned char CCBits = static_cast<unsigned char>(Firstcond & 0xf);
         assert(NumTZ <= 3 && "Invalid IT mask!");
         // push condition codes onto the stack the correct order for the pops
@@ -110,7 +110,7 @@ namespace {
 
       void setVPTState(char Mask) {
         // (3 - the number of trailing zeros) is the number of then / else.
-        unsigned NumTZ = countTrailingZeros<uint8_t>(Mask);
+        unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
         assert(NumTZ <= 3 && "Invalid VPT mask!");
         // push predicates onto the stack the correct order for the pops
         for (unsigned Pos = NumTZ+1; Pos <= 3; ++Pos) {
@@ -135,7 +135,7 @@ public:
   ARMDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
                   const MCInstrInfo *MCII)
       : MCDisassembler(STI, Ctx), MCII(MCII) {
-    InstructionEndianness = STI.getFeatureBits()[ARM::ModeBigEndianInstructions]
+    InstructionEndianness = STI.hasFeature(ARM::ModeBigEndianInstructions)
                                 ? llvm::support::big
                                 : llvm::support::little;
   }
@@ -746,7 +746,7 @@ uint64_t ARMDisassembler::suggestBytesToSkip(ArrayRef<uint8_t> Bytes,
   // In Arm state, instructions are always 4 bytes wide, so there's no
   // point in skipping any smaller number of bytes if an instruction
   // can't be decoded.
-  if (!STI.getFeatureBits()[ARM::ModeThumb])
+  if (!STI.hasFeature(ARM::ModeThumb))
     return 4;
 
   // In a Thumb instruction stream, a halfword is a standalone 2-byte
@@ -773,7 +773,7 @@ DecodeStatus ARMDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                              ArrayRef<uint8_t> Bytes,
                                              uint64_t Address,
                                              raw_ostream &CS) const {
-  if (STI.getFeatureBits()[ARM::ModeThumb])
+  if (STI.hasFeature(ARM::ModeThumb))
     return getThumbInstruction(MI, Size, Bytes, Address, CS);
   return getARMInstruction(MI, Size, Bytes, Address, CS);
 }
@@ -784,7 +784,7 @@ DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
                                                 raw_ostream &CS) const {
   CommentStream = &CS;
 
-  assert(!STI.getFeatureBits()[ARM::ModeThumb] &&
+  assert(!STI.hasFeature(ARM::ModeThumb) &&
          "Asked to disassemble an ARM instruction but Subtarget is in Thumb "
          "mode!");
 
@@ -1070,7 +1070,7 @@ DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
                                                   raw_ostream &CS) const {
   CommentStream = &CS;
 
-  assert(STI.getFeatureBits()[ARM::ModeThumb] &&
+  assert(STI.hasFeature(ARM::ModeThumb) &&
          "Asked to disassemble in Thumb mode but Subtarget is in ARM mode!");
 
   // We want to read exactly 2 bytes of data.
@@ -1862,17 +1862,12 @@ static DecodeStatus DecodeCopMemInstruction(MCInst &Inst, unsigned Insn,
                                             const MCDisassembler *Decoder) {
   DecodeStatus S = MCDisassembler::Success;
 
-  unsigned P = fieldFromInstruction_4(Insn, 24, 1);
-  unsigned W = fieldFromInstruction_4(Insn, 21, 1);
   unsigned pred = fieldFromInstruction(Insn, 28, 4);
   unsigned CRd = fieldFromInstruction(Insn, 12, 4);
   unsigned coproc = fieldFromInstruction(Insn, 8, 4);
   unsigned imm = fieldFromInstruction(Insn, 0, 8);
   unsigned Rn = fieldFromInstruction(Insn, 16, 4);
   unsigned U = fieldFromInstruction(Insn, 23, 1);
-  // Pre-Indexed implies writeback to Rn
-  bool IsPreIndexed = (P == 1) && (W == 1);
-
   const FeatureBitset &featureBits =
     ((const MCDisassembler*)Decoder)->getSubtargetInfo().getFeatureBits();
 
@@ -1947,10 +1942,6 @@ static DecodeStatus DecodeCopMemInstruction(MCInst &Inst, unsigned Insn,
 
   if (featureBits[ARM::HasV8Ops] && (coproc != 14))
     return MCDisassembler::Fail;
-
-  if (IsPreIndexed)
-    // Dummy operand for Rn_wb.
-    MCOperand_CreateImm0(Inst, (0));
 
   Inst.addOperand(MCOperand::createImm(coproc));
   Inst.addOperand(MCOperand::createImm(CRd));
@@ -4919,7 +4910,7 @@ static DecodeStatus DecodeT2SOImm(MCInst &Inst, unsigned Val, uint64_t Address,
   } else {
     unsigned unrot = fieldFromInstruction(Val, 0, 7) | 0x80;
     unsigned rot = fieldFromInstruction(Val, 7, 5);
-    unsigned imm = (unrot >> rot) | (unrot << ((32-rot)&31));
+    unsigned imm = llvm::rotr<uint32_t>(unrot, rot);
     Inst.addOperand(MCOperand::createImm(imm));
   }
 

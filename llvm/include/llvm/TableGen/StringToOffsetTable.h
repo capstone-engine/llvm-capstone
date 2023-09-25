@@ -9,12 +9,10 @@
 #ifndef LLVM_TABLEGEN_STRINGTOOFFSETTABLE_H
 #define LLVM_TABLEGEN_STRINGTOOFFSETTABLE_H
 
-#include "PrinterTypes.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TableGen/Error.h"
 #include <cctype>
 
 namespace llvm {
@@ -24,14 +22,10 @@ namespace llvm {
 /// It can then output this string blob and use indexes into the string to
 /// reference each piece.
 class StringToOffsetTable {
-  PrinterLanguage PL;
   StringMap<unsigned> StringOffset;
   std::string AggregateString;
 
 public:
-  StringToOffsetTable() : PL(PRINTER_LANG_CPP) {};
-  StringToOffsetTable(PrinterLanguage PL) : PL(PL) {};
-
   bool Empty() const { return StringOffset.empty(); }
 
   unsigned GetOrAddStringOffset(StringRef Str, bool appendZero = true) {
@@ -48,16 +42,6 @@ public:
   }
 
   void EmitString(raw_ostream &O) {
-    switch(PL) {
-    default:
-      PrintFatalNote("No StringToOffsetTable method defined to emit the selected language.\n");
-    case PRINTER_LANG_CPP:
-      EmitStringCPP(O);
-      break;
-    }
-  }
-
-  void EmitStringCPP(raw_ostream &O) {
     // Escape the string.
     SmallString<256> Str;
     raw_svector_ostream(Str).write_escaped(AggregateString);

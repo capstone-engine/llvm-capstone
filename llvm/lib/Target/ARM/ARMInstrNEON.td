@@ -998,7 +998,6 @@ def VLD4q32oddPseudo_UPD : VLDQQQQWBPseudo<IIC_VLD4u>, Sched<[WriteVLD4]>;
 
 } // mayLoad = 1, hasSideEffects = 0, hasExtraDefRegAllocReq = 1
 
-let mayLoad = 1 in {
 // Classes for VLD*LN pseudo-instructions with multi-register operands.
 // These are expanded to real instructions after register allocation.
 class VLDQLNPseudo<InstrItinClass itin>
@@ -1073,7 +1072,6 @@ def VLD1LNd32 : VLD1LN32<0b1000, {?,0,?,?}, "32", v2i32, load> {
 def VLD1LNq8Pseudo  : VLD1QLNPseudo<v16i8, extloadi8>;
 def VLD1LNq16Pseudo : VLD1QLNPseudo<v8i16, extloadi16>;
 def VLD1LNq32Pseudo : VLD1QLNPseudo<v4i32, load>;
-} // mayLoad = 1
 
 let Predicates = [HasNEON] in {
 def : Pat<(vector_insert (v4f16 DPR:$src),
@@ -1368,7 +1366,6 @@ def VLD4LNq32Pseudo_UPD : VLDQQQQLNWBPseudo<IIC_VLD4lnu>, Sched<[WriteVLD2]>;
 
 } // mayLoad = 1, hasSideEffects = 0, hasExtraDefRegAllocReq = 1
 
-let mayLoad = 1 in {
 //   VLD1DUP  : Vector Load (single element to all lanes)
 class VLD1DUP<bits<4> op7_4, string Dt, ValueType Ty, PatFrag LoadOp,
               Operand AddrMode>
@@ -1388,14 +1385,12 @@ def VLD1DUPd16 : VLD1DUP<{0,1,0,?}, "16", v4i16, extloadi16,
                          addrmode6dupalign16>;
 def VLD1DUPd32 : VLD1DUP<{1,0,0,?}, "32", v2i32, load,
                          addrmode6dupalign32>;
-} // mayLoad = 1
 
 let Predicates = [HasNEON] in {
 def : Pat<(v2f32 (ARMvdup (f32 (load addrmode6dup:$addr)))),
           (VLD1DUPd32 addrmode6:$addr)>;
 }
 
-let mayLoad = 1 in {
 class VLD1QDUP<bits<4> op7_4, string Dt, ValueType Ty, PatFrag LoadOp,
                Operand AddrMode>
   : NLdSt<1, 0b10, 0b1100, op7_4, (outs VecListDPairAllLanes:$Vd),
@@ -1414,7 +1409,6 @@ def VLD1DUPq16 : VLD1QDUP<{0,1,1,?}, "16", v8i16, extloadi16,
                           addrmode6dupalign16>;
 def VLD1DUPq32 : VLD1QDUP<{1,0,1,?}, "32", v4i32, load,
                           addrmode6dupalign32>;
-} // mayLoad = 1
 
 let Predicates = [HasNEON] in {
 def : Pat<(v4f32 (ARMvdup (f32 (load addrmode6dup:$addr)))),
@@ -2128,7 +2122,6 @@ def VST4q32oddPseudo_UPD : VSTQQQQWBPseudo<IIC_VST4u>, Sched<[WriteVST4]>;
 
 } // mayStore = 1, hasSideEffects = 0, hasExtraSrcRegAllocReq = 1
 
-let mayStore = 1 in {
 // Classes for VST*LN pseudo-instructions with multi-register operands.
 // These are expanded to real instructions after register allocation.
 class VSTQLNPseudo<InstrItinClass itin>
@@ -2189,7 +2182,6 @@ def VST1LNd32 : VST1LN<0b1000, {?,0,?,?}, "32", v2i32, store, extractelt,
 def VST1LNq8Pseudo  : VST1QLNPseudo<v16i8, truncstorei8, ARMvgetlaneu>;
 def VST1LNq16Pseudo : VST1QLNPseudo<v8i16, truncstorei16, ARMvgetlaneu>;
 def VST1LNq32Pseudo : VST1QLNPseudo<v4i32, store, extractelt>;
-} // mayStore = 1
 
 let Predicates = [HasNEON] in {
 def : Pat<(store (extractelt (v2f32 DPR:$src), imm:$lane), addrmode6:$addr),
@@ -2203,7 +2195,6 @@ def : Pat<(store (extractelt (v8f16 QPR:$src), imm:$lane), addrmode6:$addr),
           (VST1LNq16Pseudo addrmode6:$addr, QPR:$src, imm:$lane)>;
 }
 
-let mayStore = 1 in {
 // ...with address register writeback:
 class VST1LNWB<bits<4> op11_8, bits<4> op7_4, string Dt, ValueType Ty,
                PatFrag StoreOp, SDNode ExtractOp, Operand AdrMode>
@@ -2241,7 +2232,6 @@ def VST1LNd32_UPD : VST1LNWB<0b1000, {?,0,?,?}, "32", v2i32, post_store,
 def VST1LNq8Pseudo_UPD  : VST1QLNWBPseudo<v16i8, post_truncsti8, ARMvgetlaneu>;
 def VST1LNq16Pseudo_UPD : VST1QLNWBPseudo<v8i16, post_truncsti16,ARMvgetlaneu>;
 def VST1LNq32Pseudo_UPD : VST1QLNWBPseudo<v4i32, post_store, extractelt>;
-} // mayStore = 1
 
 let mayStore = 1, hasSideEffects = 0, hasExtraSrcRegAllocReq = 1 in {
 
@@ -8002,28 +7992,25 @@ multiclass Lengthen_HalfDouble_Big_Endian<string DestLanes, string DestTy, strin
                    (!cast<PatFrag>("extloadv" # SrcTy) addrmode6:$addr)),
          (EXTRACT_SUBREG (!cast<Instruction>("VMOVLuv" # Insn2Lanes # Insn2Ty)
            (EXTRACT_SUBREG (!cast<Instruction>("VMOVLuv" # Insn1Lanes # Insn1Ty)
-            (!cast<Instruction>("VREV16d8")
-             (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0)))),
+             (VREV16d8 (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0)))),
              dsub_0)),
-          dsub_0)>,
+           dsub_0)>,
              Requires<[HasNEON]>;
   def _Z   : Pat<(!cast<ValueType>("v" # DestLanes # DestTy)
                    (!cast<PatFrag>("zextloadv" # SrcTy) addrmode6:$addr)),
          (EXTRACT_SUBREG (!cast<Instruction>("VMOVLuv" # Insn2Lanes # Insn2Ty)
            (EXTRACT_SUBREG (!cast<Instruction>("VMOVLuv" # Insn1Lanes # Insn1Ty)
-            (!cast<Instruction>("VREV16d8")
-             (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0)))),
+             (VREV16d8 (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0)))),
              dsub_0)),
-          dsub_0)>,
+           dsub_0)>,
              Requires<[HasNEON]>;
   def _S   : Pat<(!cast<ValueType>("v" # DestLanes # DestTy)
                    (!cast<PatFrag>("sextloadv" # SrcTy) addrmode6:$addr)),
          (EXTRACT_SUBREG (!cast<Instruction>("VMOVLsv" # Insn2Lanes # Insn2Ty)
            (EXTRACT_SUBREG (!cast<Instruction>("VMOVLsv" # Insn1Lanes # Insn1Ty)
-            (!cast<Instruction>("VREV16d8")
-             (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0)))),
+             (VREV16d8 (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0)))),
              dsub_0)),
-          dsub_0)>,
+           dsub_0)>,
              Requires<[HasNEON]>;
 }
 
@@ -8076,17 +8063,17 @@ let Predicates = [HasNEON,IsLE] in {
 let Predicates = [HasNEON,IsBE] in {
   def : Pat<(v2i64 (extloadvi8 addrmode6:$addr)),
         (VMOVLuv2i64 (EXTRACT_SUBREG (VMOVLuv4i32 (EXTRACT_SUBREG (VMOVLuv8i16
-           (!cast<Instruction>("VREV16d8")
+           (VREV16d8
              (VLD1LNd16 addrmode6:$addr,
                         (f64 (IMPLICIT_DEF)), (i32 0)))), dsub_0)), dsub_0))>;
   def : Pat<(v2i64 (zextloadvi8 addrmode6:$addr)),
         (VMOVLuv2i64 (EXTRACT_SUBREG (VMOVLuv4i32 (EXTRACT_SUBREG (VMOVLuv8i16
-           (!cast<Instruction>("VREV16d8")
+           (VREV16d8
              (VLD1LNd16 addrmode6:$addr,
                         (f64 (IMPLICIT_DEF)), (i32 0)))), dsub_0)), dsub_0))>;
   def : Pat<(v2i64 (sextloadvi8 addrmode6:$addr)),
         (VMOVLsv2i64 (EXTRACT_SUBREG (VMOVLsv4i32 (EXTRACT_SUBREG (VMOVLsv8i16
-           (!cast<Instruction>("VREV16d8")
+           (VREV16d8
              (VLD1LNd16 addrmode6:$addr,
                         (f64 (IMPLICIT_DEF)), (i32 0)))), dsub_0)), dsub_0))>;
 }
@@ -8158,7 +8145,6 @@ def : NEONInstAlias<"vand${p}.i32 $Vd, $imm",
                     (VBICiv4i32 QPR:$Vd, nImmSplatNotI32:$imm, pred:$p)>;
 
 
-let mayLoad = 1 in {
 // VLD1 single-lane pseudo-instructions. These need special handling for
 // the lane index that an InstAlias can't handle, so we use these instead.
 def VLD1LNdAsm_8 : NEONDataTypeAsmPseudoInst<"vld1${p}", ".8", "$list, $addr",
@@ -8195,9 +8181,8 @@ def VLD1LNdWB_register_Asm_32 :
         NEONDataTypeAsmPseudoInst<"vld1${p}", ".32", "$list, $addr, $Rm",
                   (ins VecListOneDWordIndexed:$list, addrmode6align32:$addr,
                        rGPR:$Rm, pred:$p)>;
-} // mayLoad = 1
 
-let mayStore = 1 in {
+
 // VST1 single-lane pseudo-instructions. These need special handling for
 // the lane index that an InstAlias can't handle, so we use these instead.
 def VST1LNdAsm_8 : NEONDataTypeAsmPseudoInst<"vst1${p}", ".8", "$list, $addr",
@@ -8234,9 +8219,7 @@ def VST1LNdWB_register_Asm_32 :
         NEONDataTypeAsmPseudoInst<"vst1${p}", ".32", "$list, $addr, $Rm",
                   (ins VecListOneDWordIndexed:$list, addrmode6align32:$addr,
                        rGPR:$Rm, pred:$p)>;
-} // mayStore = 1
 
-let mayLoad = 1 in {
 // VLD2 single-lane pseudo-instructions. These need special handling for
 // the lane index that an InstAlias can't handle, so we use these instead.
 def VLD2LNdAsm_8 : NEONDataTypeAsmPseudoInst<"vld2${p}", ".8", "$list, $addr",
@@ -8294,9 +8277,8 @@ def VLD2LNqWB_register_Asm_32 :
         NEONDataTypeAsmPseudoInst<"vld2${p}", ".32", "$list, $addr, $Rm",
                   (ins VecListTwoQWordIndexed:$list, addrmode6align64:$addr,
                        rGPR:$Rm, pred:$p)>;
-} // mayLoad = 1
 
-let mayStore = 1 in {
+
 // VST2 single-lane pseudo-instructions. These need special handling for
 // the lane index that an InstAlias can't handle, so we use these instead.
 def VST2LNdAsm_8 : NEONDataTypeAsmPseudoInst<"vst2${p}", ".8", "$list, $addr",
@@ -8355,9 +8337,7 @@ def VST2LNqWB_register_Asm_32 :
         NEONDataTypeAsmPseudoInst<"vst2${p}", ".32", "$list, $addr, $Rm",
                   (ins VecListTwoQWordIndexed:$list, addrmode6align64:$addr,
                        rGPR:$Rm, pred:$p)>;
-} // mayStore = 1
 
-let mayLoad = 1 in {
 // VLD3 all-lanes pseudo-instructions. These need special handling for
 // the lane index that an InstAlias can't handle, so we use these instead.
 def VLD3DUPdAsm_8 : NEONDataTypeAsmPseudoInst<"vld3${p}", ".8", "$list, $addr",
@@ -8546,9 +8526,7 @@ def VLD3qWB_register_Asm_32 :
         NEONDataTypeAsmPseudoInst<"vld3${p}", ".32", "$list, $addr, $Rm",
                   (ins VecListThreeQ:$list, addrmode6align64:$addr,
                        rGPR:$Rm, pred:$p)>;
-} // mayLoad = 1
 
-let mayStore = 1 in {
 // VST3 single-lane pseudo-instructions. These need special handling for
 // the lane index that an InstAlias can't handle, so we use these instead.
 def VST3LNdAsm_8 : NEONDataTypeAsmPseudoInst<"vst3${p}", ".8", "$list, $addr",
@@ -8667,9 +8645,7 @@ def VST3qWB_register_Asm_32 :
         NEONDataTypeAsmPseudoInst<"vst3${p}", ".32", "$list, $addr, $Rm",
                   (ins VecListThreeQ:$list, addrmode6align64:$addr,
                        rGPR:$Rm, pred:$p)>;
-} // mayStore = 1
 
-let mayLoad = 1 in {
 // VLD4 all-lanes pseudo-instructions. These need special handling for
 // the lane index that an InstAlias can't handle, so we use these instead.
 def VLD4DUPdAsm_8 : NEONDataTypeAsmPseudoInst<"vld4${p}", ".8", "$list, $addr",
@@ -8872,9 +8848,7 @@ def VLD4qWB_register_Asm_32 :
         NEONDataTypeAsmPseudoInst<"vld4${p}", ".32", "$list, $addr, $Rm",
                   (ins VecListFourQ:$list, addrmode6align64or128or256:$addr,
                        rGPR:$Rm, pred:$p)>;
-} // mayLoad = 1
 
-let mayStore = 1 in {
 // VST4 single-lane pseudo-instructions. These need special handling for
 // the lane index that an InstAlias can't handle, so we use these instead.
 def VST4LNdAsm_8 : NEONDataTypeAsmPseudoInst<"vst4${p}", ".8", "$list, $addr",
@@ -9005,7 +8979,6 @@ def VST4qWB_register_Asm_32 :
         NEONDataTypeAsmPseudoInst<"vst4${p}", ".32", "$list, $addr, $Rm",
                   (ins VecListFourQ:$list, addrmode6align64or128or256:$addr,
                        rGPR:$Rm, pred:$p)>;
-} // mayStore = 1
 
 // VMOV/VMVN takes an optional datatype suffix
 defm : NEONDTAnyInstAlias<"vmov${p}", "$Vd, $Vm",

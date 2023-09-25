@@ -12,12 +12,9 @@
 
 #include "AsmWriterInst.h"
 #include "CodeGenInstruction.h"
-#include "CodeGenTarget.h"
-#include "Printer.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include <regex>
 
 using namespace llvm;
 
@@ -25,40 +22,15 @@ static bool isIdentChar(char C) { return isAlnum(C) || C == '_'; }
 
 std::string AsmWriterOperand::getCode(bool PassSubtarget) const {
   if (OperandType == isLiteralTextOperand) {
-    std::string Res;
-    if (Str.size() == 1) {
-      Res = "SStream_concat1(O, '" + Str + "');";
-      return Res;
-    }
-
-    Res = "SStream_concat0(O, \"" + Str + "\");";
-    return Res;
+    if (Str.size() == 1)
+      return "O << '" + Str + "';";
+    return "O << \"" + Str + "\";";
   }
 
   if (OperandType == isLiteralStatementOperand)
     return Str;
 
-  bool LangCS = PrinterLLVM::getLanguage() == PRINTER_LANG_CAPSTONE_C;
-  PassSubtarget = LangCS ? false : PassSubtarget;
-
-  std::string Result;
-  if (LangCS && PCRel) {
-    // Those two functions have two different signatures which is not supported
-    // in C. For the PCRel version (gets the Address as parameter), we add an
-    // "Addr" to the name.
-    if (Str.find("printOperand") == 0)
-      Result = Str + "Addr";
-    else if (Str.find("printAdrLabelOperand") == 0) {
-      unsigned TemplArgsIdx = Str.find("<");
-      Result = Str.substr(0, TemplArgsIdx) + "Addr" + Str.substr(TemplArgsIdx);
-    } else {
-      Result = Str;
-    }
-  } else
-    Result = Str;
-
-  Result = Result + "(MI";
-
+  std::string Result = Str + "(MI";
   if (PCRel)
     Result += ", Address";
   if (MIOpNo != ~0U)

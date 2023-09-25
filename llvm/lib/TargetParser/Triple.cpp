@@ -27,7 +27,6 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case aarch64:        return "aarch64";
   case aarch64_32:     return "aarch64_32";
   case aarch64_be:     return "aarch64_be";
-  case alpha:          return "alpha";
   case amdgcn:         return "amdgcn";
   case amdil64:        return "amdil64";
   case amdil:          return "amdil";
@@ -98,8 +97,6 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   case aarch64:
   case aarch64_be:
   case aarch64_32:  return "aarch64";
-
-  case alpha:       return "alpha";
 
   case arc:         return "arc";
 
@@ -241,11 +238,13 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   case RTEMS: return "rtems";
   case Solaris: return "solaris";
   case TvOS: return "tvos";
+  case UEFI: return "uefi";
   case WASI: return "wasi";
   case WatchOS: return "watchos";
   case Win32: return "windows";
   case ZOS: return "zos";
   case ShaderModel: return "shadermodel";
+  case LiteOS: return "liteos";
   }
 
   llvm_unreachable("Invalid OSType");
@@ -293,9 +292,25 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case Callable: return "callable";
   case Mesh: return "mesh";
   case Amplification: return "amplification";
+  case OpenHOS: return "ohos";
   }
 
   llvm_unreachable("Invalid EnvironmentType!");
+}
+
+StringRef Triple::getObjectFormatTypeName(ObjectFormatType Kind) {
+  switch (Kind) {
+  case UnknownObjectFormat: return "";
+  case COFF: return "coff";
+  case ELF: return "elf";
+  case GOFF: return "goff";
+  case MachO: return "macho";
+  case Wasm: return "wasm";
+  case XCOFF: return "xcoff";
+  case DXContainer: return "dxcontainer";
+  case SPIRV: return "spirv";
+  }
+  llvm_unreachable("unknown object format type");
 }
 
 static Triple::ArchType parseBPFArch(StringRef ArchName) {
@@ -319,7 +334,6 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
     .Case("aarch64", aarch64)
     .Case("aarch64_be", aarch64_be)
     .Case("aarch64_32", aarch64_32)
-    .Case("alpha", alpha)
     .Case("arc", arc)
     .Case("arm64", aarch64) // "arm64" is an alias for "aarch64"
     .Case("arm64_32", aarch64_32)
@@ -465,7 +479,6 @@ static Triple::ArchType parseArch(StringRef ArchName) {
     .Case("aarch64", Triple::aarch64)
     .Case("aarch64_be", Triple::aarch64_be)
     .Case("aarch64_32", Triple::aarch64_32)
-    .Case("alpha", Triple::alpha)
     .Case("arc", Triple::arc)
     .Case("arm64", Triple::aarch64)
     .Case("arm64_32", Triple::aarch64_32)
@@ -576,6 +589,7 @@ static Triple::OSType parseOS(StringRef OSName) {
     .StartsWith("netbsd", Triple::NetBSD)
     .StartsWith("openbsd", Triple::OpenBSD)
     .StartsWith("solaris", Triple::Solaris)
+    .StartsWith("uefi", Triple::UEFI)
     .StartsWith("win32", Triple::Win32)
     .StartsWith("windows", Triple::Win32)
     .StartsWith("zos", Triple::ZOS)
@@ -601,6 +615,7 @@ static Triple::OSType parseOS(StringRef OSName) {
     .StartsWith("wasi", Triple::WASI)
     .StartsWith("emscripten", Triple::Emscripten)
     .StartsWith("shadermodel", Triple::ShaderModel)
+    .StartsWith("liteos", Triple::LiteOS)
     .Default(Triple::UnknownOS);
 }
 
@@ -645,6 +660,7 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
       .StartsWith("callable", Triple::Callable)
       .StartsWith("mesh", Triple::Mesh)
       .StartsWith("amplification", Triple::Amplification)
+      .StartsWith("ohos", Triple::OpenHOS)
       .Default(Triple::UnknownEnvironment);
 }
 
@@ -773,30 +789,6 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
   default:
     return Triple::NoSubArch;
   }
-}
-
-static StringRef getObjectFormatTypeName(Triple::ObjectFormatType Kind) {
-  switch (Kind) {
-  case Triple::UnknownObjectFormat:
-    return "";
-  case Triple::COFF:
-    return "coff";
-  case Triple::ELF:
-    return "elf";
-  case Triple::GOFF:
-    return "goff";
-  case Triple::MachO:
-    return "macho";
-  case Triple::Wasm:
-    return "wasm";
-  case Triple::XCOFF:
-    return "xcoff";
-  case Triple::DXContainer:
-    return "dxcontainer";
-  case Triple::SPIRV:
-    return "spirv";
-  }
-  llvm_unreachable("unknown object format type");
 }
 
 static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {

@@ -669,7 +669,6 @@ class AIldr_ex_or_acq<bits<2> opcod, bits<2> opcod2, dag oops, dag iops, InstrIt
   let Inst{11-10} = 0b11;
   let Inst{9-8}   = opcod2;
   let Inst{7-0}   = 0b10011111;
-  let mayLoad = 1;
 }
 class AIstr_ex_or_rel<bits<2> opcod, bits<2> opcod2, dag oops, dag iops, InstrItinClass itin,
               string opc, string asm, list<dag> pattern>
@@ -685,7 +684,6 @@ class AIstr_ex_or_rel<bits<2> opcod, bits<2> opcod2, dag oops, dag iops, InstrIt
   let Inst{9-8}   = opcod2;
   let Inst{7-4}   = 0b1001;
   let Inst{3-0}   = Rt;
-  let mayStore = 1;
 }
 // Atomic load/store instructions
 class AIldrex<bits<2> opcod, dag oops, dag iops, InstrItinClass itin,
@@ -697,7 +695,6 @@ class AIstrex<bits<2> opcod, dag oops, dag iops, InstrItinClass itin,
   : AIstr_ex_or_rel<opcod, 0b11, oops, iops, itin, opc, asm, pattern> {
   bits<4> Rd;
   let Inst{15-12} = Rd;
-  let mayLoad = 1;
 }
 
 // Exclusive load/store instructions
@@ -795,8 +792,6 @@ class AI2ldstidx<bit isLd, bit isByte, bit isPre, dag oops, dag iops,
   let Inst{21}    = isPre; // W bit
   let Inst{20}    = isLd; // L bit
   let Inst{15-12} = Rt;
-  let mayLoad     = isLd;
-  let mayStore    = !eq(isLd, 0);
 }
 class AI2stridx_reg<bit isByte, bit isPre, dag oops, dag iops,
                 IndexMode im, Format f, InstrItinClass itin, string opc,
@@ -814,7 +809,6 @@ class AI2stridx_reg<bit isByte, bit isPre, dag oops, dag iops,
   let Inst{11-5} = offset{11-5};
   let Inst{4} = 0;
   let Inst{3-0} = offset{3-0};
-  let mayStore = 1;
 }
 
 class AI2stridx_imm<bit isByte, bit isPre, dag oops, dag iops,
@@ -831,7 +825,6 @@ class AI2stridx_imm<bit isByte, bit isPre, dag oops, dag iops,
   let Inst{23} = offset{12};
   let Inst{19-16} = Rn;
   let Inst{11-0} = offset{11-0};
-  let mayStore = 1;
 }
 
 
@@ -852,7 +845,6 @@ class AI2stridxT<bit isByte, bit isPre, dag oops, dag iops,
   let Inst{23} = addr{12};
   let Inst{19-16} = addr{17-14};
   let Inst{11-0} = addr{11-0};
-  let mayStore = 1;
 }
 
 // addrmode3 instructions
@@ -873,8 +865,6 @@ class AI3ld<bits<4> op, bit op20, dag oops, dag iops, Format f,
   let Inst{11-8}  = addr{7-4};    // imm7_4/zero
   let Inst{7-4}   = op;
   let Inst{3-0}   = addr{3-0};    // imm3_0/Rm
-  let mayLoad     = op20;
-  let mayStore    = 0;
 
   let DecoderMethod = "DecodeAddrMode3Instruction";
 }
@@ -891,8 +881,6 @@ class AI3ldstidx<bits<4> op, bit op20, bit isPre, dag oops, dag iops,
   let Inst{20}    = op20;         // L bit
   let Inst{15-12} = Rt;           // Rt
   let Inst{7-4}   = op;
-  let mayLoad     = op20;
-  let mayStore    = !if(op20, 0, 1);
 }
 
 // FIXME: Merge with the above class when addrmode2 gets used for LDR, LDRB
@@ -915,8 +903,6 @@ class AI3ldstidxT<bits<4> op, bit isLoad, dag oops, dag iops,
   let Inst{19-16} = addr;         // Rn
   let Inst{15-12} = Rt;           // Rt
   let Inst{7-4}   = op;
-  let mayLoad     = isLoad;
-  let mayStore    = !if(isLoad, 0, 1);
 }
 
 // stores
@@ -938,7 +924,6 @@ class AI3str<bits<4> op, dag oops, dag iops, Format f, InstrItinClass itin,
   let Inst{7-4}   = op;
   let Inst{3-0}   = addr{3-0};    // imm3_0/Rm
   let DecoderMethod = "DecodeAddrMode3Instruction";
-  let mayStore    = 1;
 }
 
 // addrmode4 instructions
@@ -1405,8 +1390,8 @@ class ThumbXI<dag oops, dag iops, AddrMode am, int sz,
 }
 
 class T2I<dag oops, dag iops, InstrItinClass itin,
-          string opc, string asm, list<dag> pattern, AddrMode am = AddrModeNone, string constraints = "">
-  : Thumb2I<oops, iops, am, 4, itin, opc, asm, constraints, pattern>;
+          string opc, string asm, list<dag> pattern, AddrMode am = AddrModeNone>
+  : Thumb2I<oops, iops, am, 4, itin, opc, asm, "", pattern>;
 class T2Ii12<dag oops, dag iops, InstrItinClass itin,
              string opc, string asm, list<dag> pattern>
   : Thumb2I<oops, iops, AddrModeT2_i12, 4, itin, opc, asm, "",pattern>;

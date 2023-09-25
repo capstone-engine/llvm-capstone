@@ -612,7 +612,7 @@ static bool IsARMArchitecture(std::vector<StringRef> Args) {
     ++I;
     if (I == Args.size())
       break;
-    if (Args[I].startswith_insensitive("arm"))
+    if (Args[I].starts_with_insensitive("arm"))
       return true;
   }
 
@@ -809,8 +809,7 @@ Error CC::MakeSharedObject(const std::string &InputFile, FileType fileType,
   } else
     CCArgs.push_back("-shared"); // `-shared' for Linux/X86, maybe others
 
-  if ((TargetTriple.getArch() == Triple::alpha) ||
-      (TargetTriple.getArch() == Triple::x86_64))
+  if (TargetTriple.getArch() == Triple::x86_64)
     CCArgs.push_back("-fPIC"); // Requires shared objs to contain PIC
 
   if (TargetTriple.getArch() == Triple::sparc)

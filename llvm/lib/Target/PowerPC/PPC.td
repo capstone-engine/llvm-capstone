@@ -327,11 +327,6 @@ def FeaturePredictableSelectIsExpensive :
 def FeatureFastMFLR : SubtargetFeature<"fast-MFLR", "HasFastMFLR", "true",
                                        "MFLR is a fast instruction">;
 
-#define CAPSTONE_DEPR_FEATURE
-include "PPCDeprecated.td"
-#define CAPSTONE_PS_FEATURE
-include "PPCInstrPairedSingle.td"
-
 // Since new processors generally contain a superset of features of those that
 // came before them, the idea is to make implementations of new processors
 // less error prone and easier to read.
@@ -667,9 +662,6 @@ def : ProcessorModel<"ppc64", G5Model,
                    FeatureMFTB]>;
 def : ProcessorModel<"ppc64le", P8Model, ProcessorFeatures.P8Features>;
 
-#define CAPSTONE_PS_PROCESSOR
-include "PPCInstrPairedSingle.td"
-
 //===----------------------------------------------------------------------===//
 // Calling Conventions
 //===----------------------------------------------------------------------===//
@@ -678,12 +670,6 @@ include "PPCCallingConv.td"
 
 def PPCInstrInfo : InstrInfo {
   let isLittleEndianEncoding = 1;
-
-  // FIXME: Unset this when no longer needed!
-  let decodePositionallyEncodedOperands = 1;
-
-  let noNamedPositionallyEncodedOperands = 1;
-  let useDeprecatedPositionallyEncodedOperands = 1;
 }
 
 def PPCAsmWriter : AsmWriter {

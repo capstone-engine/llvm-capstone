@@ -501,11 +501,11 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
 
 let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
   def tBX_RET : tPseudoExpand<(outs), (ins pred:$p), 2, IIC_Br,
-                   [(ARMretflag)], (tBX LR, pred:$p)>, Sched<[WriteBr]>;
+                   [(ARMretglue)], (tBX LR, pred:$p)>, Sched<[WriteBr]>;
 
   // alternative return for CMSE entry functions
   def tBXNS_RET : tPseudoInst<(outs), (ins), 2, IIC_Br,
-                  [(ARMseretflag)]>, Sched<[WriteBr]>;
+                  [(ARMseretglue)]>, Sched<[WriteBr]>;
 
   // Alternative return instruction used by vararg functions.
   def tBX_RET_vararg : tPseudoExpand<(outs), (ins tGPR:$Rm, pred:$p),
@@ -688,7 +688,6 @@ def tTRAP : TI<(outs), (ins), IIC_Br,
 // PC-relative loads need to be matched first as constant pool accesses need to
 // always be PC-relative. We do this using AddedComplexity, as the pattern is
 // simpler than the patterns of the other load instructions.
-let mayLoad = 1 in {
 let canFoldAsLoad = 1, isReMaterializable = 1, AddedComplexity = 10 in
 def tLDRpci : T1pIs<(outs tGPR:$Rt), (ins t_addrmode_pc:$addr), IIC_iLoad_i,
                   "ldr", "\t$Rt, $addr",
@@ -699,7 +698,6 @@ def tLDRpci : T1pIs<(outs tGPR:$Rt), (ins t_addrmode_pc:$addr), IIC_iLoad_i,
   bits<8> addr;
   let Inst{10-8} = Rt;
   let Inst{7-0}  = addr;
-  let mayLoad = 1;
 }
 
 // SP-relative loads should be matched before standard immediate-offset loads as
@@ -713,7 +711,6 @@ def tLDRspi : T1pIs<(outs tGPR:$Rt), (ins t_addrmode_sp:$addr), IIC_iLoad_i,
   bits<8> addr;
   let Inst{10-8} = Rt;
   let Inst{7-0} = addr;
-  let mayLoad = 1;
 }
 
 // Loads: reg/reg and reg/imm5
@@ -787,10 +784,8 @@ def tLDRSH :                    // A8.6.84
                  AddrModeT1_2, IIC_iLoad_bh_r,
                  "ldrsh", "\t$Rt, $addr",
                  [(set tGPR:$Rt, (sextloadi16 t_addrmode_rr_sext:$addr))]>, Sched<[WriteLd]>;
-} // mayLoad = 1
 
 
-let mayStore = 1 in {
 def tSTRspi : T1pIs<(outs), (ins tGPR:$Rt, t_addrmode_sp:$addr), IIC_iStore_i,
                     "str", "\t$Rt, $addr",
                     [(store tGPR:$Rt, t_addrmode_sp:$addr)]>,
@@ -799,7 +794,6 @@ def tSTRspi : T1pIs<(outs), (ins tGPR:$Rt, t_addrmode_sp:$addr), IIC_iStore_i,
   bits<8> addr;
   let Inst{10-8} = Rt;
   let Inst{7-0} = addr;
-  let mayStore = 1;
 }
 
 // A8.6.194 & A8.6.192
@@ -819,7 +813,6 @@ defm tSTRH : thumb_st_rr_ri_enc<0b001, 0b1000, t_addrmode_rr,
                                t_addrmode_is2, AddrModeT1_2,
                                IIC_iStore_bh_r, IIC_iStore_bh_i, "strh",
                                truncstorei16>, Sched<[WriteST]>;
-} // mayStore = 1
 
 
 //===----------------------------------------------------------------------===//
@@ -991,9 +984,9 @@ let isAdd = 1 in {
 
   def tADDi8 :                    // A8.6.4 T2
     T1sItGenEncodeImm<{1,1,0,?,?}, (outs tGPR:$Rdn),
-                      (ins tGPR:$Rn, imm0_255:$imm8), IIC_iALUi,
+                      (ins tGPR:$Rn, imm0_255_expr:$imm8), IIC_iALUi,
                       "add", "\t$Rdn, $imm8",
-                      [(set tGPR:$Rdn, (add tGPR:$Rn, imm8_255:$imm8))]>,
+                      [(set tGPR:$Rdn, (add tGPR:$Rn, imm0_255_expr:$imm8))]>,
                       Sched<[WriteALU]>;
 
   // Add register
@@ -1002,7 +995,8 @@ let isAdd = 1 in {
     T1sIGenEncode<0b01100, (outs tGPR:$Rd), (ins tGPR:$Rn, tGPR:$Rm),
                   IIC_iALUr,
                   "add", "\t$Rd, $Rn, $Rm",
-                  [(set tGPR:$Rd, (add tGPR:$Rn, tGPR:$Rm))]>, Sched<[WriteALU]>;
+                  [(set tGPR:$Rd, (add tGPR:$Rn, tGPR:$Rm))]>,
+                  Sched<[WriteALU]>;
 
   /// Similar to the above except these set the 's' bit so the
   /// instruction modifies the CPSR register.
@@ -1025,10 +1019,10 @@ let isAdd = 1 in {
                   Requires<[IsThumb1Only]>,
                   Sched<[WriteALU]>;
 
-    def tADDSi8 : tPseudoInst<(outs tGPR:$Rdn), (ins tGPR:$Rn, imm0_255:$imm8),
+    def tADDSi8 : tPseudoInst<(outs tGPR:$Rdn), (ins tGPR:$Rn, imm0_255_expr:$imm8),
                               2, IIC_iALUi,
                               [(set tGPR:$Rdn, CPSR, (ARMaddc tGPR:$Rn,
-                                                      imm8_255:$imm8))]>,
+                                                      imm0_255_expr:$imm8))]>,
                   Requires<[IsThumb1Only]>,
                   Sched<[WriteALU]>;
 
@@ -1203,9 +1197,9 @@ def tLSRrr :                    // A8.6.91
 
 // Move register
 let isMoveImm = 1 in
-def tMOVi8 : T1sI<(outs tGPR:$Rd), (ins imm0_255:$imm8), IIC_iMOVi,
+def tMOVi8 : T1sI<(outs tGPR:$Rd), (ins imm0_255_expr:$imm8), IIC_iMOVi,
                   "mov", "\t$Rd, $imm8",
-                  [(set tGPR:$Rd, imm0_255:$imm8)]>,
+                  [(set tGPR:$Rd, imm0_255_expr:$imm8)]>,
              T1General<{1,0,0,?,?}>, Sched<[WriteALU]> {
   // A8.6.96
   bits<3> Rd;
@@ -1215,8 +1209,8 @@ def tMOVi8 : T1sI<(outs tGPR:$Rd), (ins imm0_255:$imm8), IIC_iMOVi,
 }
 // Because we have an explicit tMOVSr below, we need an alias to handle
 // the immediate "movs" form here. Blech.
-def : tInstAlias <"movs $Rdn, $imm",
-                 (tMOVi8 tGPR:$Rdn, CPSR, imm0_255:$imm, 14, 0)>;
+def : tInstAlias <"movs $Rdn, $imm8",
+                 (tMOVi8 tGPR:$Rdn, CPSR, imm0_255_expr:$imm8, 14, 0)>;
 
 // A7-73: MOV(2) - mov setting flag.
 
@@ -1506,7 +1500,7 @@ def tLEApcrelJT : tPseudoInst<(outs tGPR:$Rd),
 
 // Thumb-1 doesn't have the TBB or TBH instructions, but we can synthesize them
 // and make use of the same compressed jump table format as Thumb-2.
-let mayLoad = 1, Size = 2, isBranch = 1, isTerminator = 1, isBarrier = 1,
+let Size = 2, isBranch = 1, isTerminator = 1, isBarrier = 1,
     isIndirectBranch = 1, isNotDuplicable = 1 in {
 def tTBB_JT : tPseudoInst<(outs),
         (ins tGPRwithpc:$base, tGPR:$index, i32imm:$jt, i32imm:$pclbl), 0,
@@ -1609,7 +1603,22 @@ def tLDRLIT_ga_abs : PseudoInst<(outs tGPR:$dst), (ins i32imm:$src),
                                 IIC_iLoad_i,
                                 [(set tGPR:$dst,
                                       (ARMWrapper tglobaladdr:$src))]>,
-                     Requires<[IsThumb, DontUseMovt]>;
+                     Requires<[IsThumb, DontUseMovt, DontGenExecuteOnly]>;
+
+// 32-bit immediate using mov/add with the 4 :lower0_7: to :upper8_15:
+// relocations.
+// This is a single pseudo instruction to make it re-materializable.
+// FIXME: Remove this when we can do generalized remat.
+let Defs = [CPSR], isReMaterializable = 1, isMoveImm = 1, Size = 16, hasNoSchedulingInfo = 1 in
+def tMOVi32imm : PseudoInst<(outs rGPR:$dst), (ins i32imm:$src), NoItinerary,
+                            [(set rGPR:$dst, (i32 imm:$src))]>,
+                            Requires<[IsThumb1Only, GenExecuteOnly, DontUseMovt]>;
+
+def : ARMPat<(ARMWrapper  tglobaladdr :$dst), (tMOVi32imm tglobaladdr :$dst)>,
+            Requires<[GenT1ExecuteOnly]>;
+def : ARMPat<(ARMWrapper texternalsym :$dst), (tMOVi32imm texternalsym :$dst)>,
+            Requires<[GenT1ExecuteOnly]>;
+
 
 // TLS globals
 def : Pat<(ARMWrapperPIC tglobaltlsaddr:$addr),

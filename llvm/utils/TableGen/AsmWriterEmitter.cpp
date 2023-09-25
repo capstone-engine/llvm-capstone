@@ -12,10 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "AsmWriterInst.h"
+#include "CodeGenInstAlias.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
-#include "Printer.h"
 #include "SequenceToOffsetTable.h"
 #include "Types.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -57,27 +57,24 @@ namespace {
 class AsmWriterEmitter {
   RecordKeeper &Records;
   CodeGenTarget Target;
-  PrinterLLVM &PI;
   ArrayRef<const CodeGenInstruction *> NumberedInstructions;
   std::vector<AsmWriterInst> Instructions;
 
 public:
-  AsmWriterEmitter(RecordKeeper &R, PrinterLLVM &PI);
+  AsmWriterEmitter(RecordKeeper &R);
 
-  void run();
+  void run(raw_ostream &o);
 private:
   void EmitGetMnemonic(
+      raw_ostream &o,
       std::vector<std::vector<std::string>> &TableDrivenOperandPrinters,
       unsigned &BitsLeft, unsigned &AsmStrBits);
   void EmitPrintInstruction(
+      raw_ostream &o,
       std::vector<std::vector<std::string>> &TableDrivenOperandPrinters,
       unsigned &BitsLeft, unsigned &AsmStrBits);
-  void EmitInstructions(std::vector<AsmWriterInst> &Insts,
-                        bool PassSubtarget);
-  void EmitGetRegisterName();
-  void EmitRegisterNameString(StringRef AltName,
-                              const std::deque<CodeGenRegister> &Registers);
-  void EmitPrintAliasInstruction();
+  void EmitGetRegisterName(raw_ostream &o);
+  void EmitPrintAliasInstruction(raw_ostream &O);
 
   void FindUniqueOperandCommands(std::vector<std::string> &UOC,
                                  std::vector<std::vector<unsigned>> &InstIdxs,
@@ -87,10 +84,30 @@ private:
 
 } // end anonymous namespace
 
+static void PrintCases(std::vector<std::pair<std::string,
+                       AsmWriterOperand>> &OpsToPrint, raw_ostream &O,
+                       bool PassSubtarget) {
+  O << "    case " << OpsToPrint.back().first << ":";
+  AsmWriterOperand TheOp = OpsToPrint.back().second;
+  OpsToPrint.pop_back();
+
+  // Check to see if any other operands are identical in this list, and if so,
+  // emit a case label for them.
+  for (unsigned i = OpsToPrint.size(); i != 0; --i)
+    if (OpsToPrint[i-1].second == TheOp) {
+      O << "\n    case " << OpsToPrint[i-1].first << ":";
+      OpsToPrint.erase(OpsToPrint.begin()+i-1);
+    }
+
+  // Finally, emit the code.
+  O << "\n      " << TheOp.getCode(PassSubtarget);
+  O << "\n      break;\n";
+}
+
 /// EmitInstructions - Emit the last instruction in the vector and any other
 /// instructions that are suitably similar to it.
-void AsmWriterEmitter::EmitInstructions(std::vector<AsmWriterInst> &Insts,
-                             bool PassSubtarget) {
+static void EmitInstructions(std::vector<AsmWriterInst> &Insts,
+                             raw_ostream &O, bool PassSubtarget) {
   AsmWriterInst FirstInst = Insts.back();
   Insts.pop_back();
 
@@ -110,11 +127,39 @@ void AsmWriterEmitter::EmitInstructions(std::vector<AsmWriterInst> &Insts,
       }
     }
   }
-  PI.asmWriterEmitInstruction(FirstInst,
-                              SimilarInsts,
-                              DifferingOperand,
-                              PassSubtarget);
 
+  O << "  case " << FirstInst.CGI->Namespace << "::"
+    << FirstInst.CGI->TheDef->getName() << ":\n";
+  for (const AsmWriterInst &AWI : SimilarInsts)
+    O << "  case " << AWI.CGI->Namespace << "::"
+      << AWI.CGI->TheDef->getName() << ":\n";
+  for (unsigned i = 0, e = FirstInst.Operands.size(); i != e; ++i) {
+    if (i != DifferingOperand) {
+      // If the operand is the same for all instructions, just print it.
+      O << "    " << FirstInst.Operands[i].getCode(PassSubtarget);
+    } else {
+      // If this is the operand that varies between all of the instructions,
+      // emit a switch for just this operand now.
+      O << "    switch (MI->getOpcode()) {\n";
+      O << "    default: llvm_unreachable(\"Unexpected opcode.\");\n";
+      std::vector<std::pair<std::string, AsmWriterOperand>> OpsToPrint;
+      OpsToPrint.push_back(std::make_pair(FirstInst.CGI->Namespace.str() + "::" +
+                                          FirstInst.CGI->TheDef->getName().str(),
+                                          FirstInst.Operands[i]));
+
+      for (const AsmWriterInst &AWI : SimilarInsts) {
+        OpsToPrint.push_back(std::make_pair(AWI.CGI->Namespace.str()+"::" +
+                                            AWI.CGI->TheDef->getName().str(),
+                                            AWI.Operands[i]));
+      }
+      std::reverse(OpsToPrint.begin(), OpsToPrint.end());
+      while (!OpsToPrint.empty())
+        PrintCases(OpsToPrint, O, PassSubtarget);
+      O << "    }";
+    }
+    O << "\n";
+  }
+  O << "    break;\n";
 }
 
 void AsmWriterEmitter::
@@ -249,16 +294,21 @@ static void UnescapeAliasString(std::string &Str) {
 }
 
 void AsmWriterEmitter::EmitGetMnemonic(
+    raw_ostream &O,
     std::vector<std::vector<std::string>> &TableDrivenOperandPrinters,
     unsigned &BitsLeft, unsigned &AsmStrBits) {
   Record *AsmWriter = Target.getAsmWriter();
   StringRef ClassName = AsmWriter->getValueAsString("AsmWriterClassName");
   bool PassSubtarget = AsmWriter->getValueAsInt("PassSubtarget");
 
-  PI.asmWriterEmitGetMnemonic(Target.getName().str(), ClassName);
+  O << "/// getMnemonic - This method is automatically generated by "
+       "tablegen\n"
+       "/// from the instruction set description.\n"
+       "std::pair<const char *, uint64_t> "
+    << Target.getName() << ClassName << "::getMnemonic(const MCInst *MI) {\n";
 
   // Build an aggregate string, and build a table of offsets into it.
-  SequenceToOffsetTable<std::string> StringTable(PrinterLLVM::getLanguage(), true);
+  SequenceToOffsetTable<std::string> StringTable;
 
   /// OpcodeInfo - This encodes the index of the string to use for the first
   /// chunk of the output as well as indices used for operand printing.
@@ -351,28 +401,129 @@ void AsmWriterEmitter::EmitGetMnemonic(
   }
 
   // Emit the string table itself.
-  PI.asmWriterEmitAsmStrs(StringTable);
-  PI.asmWriterEmitMnemonicDecodeTable(OpcodeInfoBits,
-                                      BitsLeft,
-                                      AsmStrBits,
-                                      NumberedInstructions,
-                                      OpcodeInfo);
+  StringTable.emitStringLiteralDef(O, "  static const char AsmStrs[]");
+
+  // Emit the lookup tables in pieces to minimize wasted bytes.
+  unsigned BytesNeeded = ((OpcodeInfoBits - BitsLeft) + 7) / 8;
+  unsigned Table = 0, Shift = 0;
+  SmallString<128> BitsString;
+  raw_svector_ostream BitsOS(BitsString);
+  // If the total bits is more than 32-bits we need to use a 64-bit type.
+  BitsOS << "  uint" << ((BitsLeft < (OpcodeInfoBits - 32)) ? 64 : 32)
+         << "_t Bits = 0;\n";
+  while (BytesNeeded != 0) {
+    // Figure out how big this table section needs to be, but no bigger than 4.
+    unsigned TableSize = std::min(llvm::bit_floor(BytesNeeded), 4u);
+    BytesNeeded -= TableSize;
+    TableSize *= 8; // Convert to bits;
+    uint64_t Mask = (1ULL << TableSize) - 1;
+    O << "  static const uint" << TableSize << "_t OpInfo" << Table
+      << "[] = {\n";
+    for (unsigned i = 0, e = NumberedInstructions.size(); i != e; ++i) {
+      O << "    " << ((OpcodeInfo[i] >> Shift) & Mask) << "U,\t// "
+        << NumberedInstructions[i]->TheDef->getName() << "\n";
+    }
+    O << "  };\n\n";
+    // Emit string to combine the individual table lookups.
+    BitsOS << "  Bits |= ";
+    // If the total bits is more than 32-bits we need to use a 64-bit type.
+    if (BitsLeft < (OpcodeInfoBits - 32))
+      BitsOS << "(uint64_t)";
+    BitsOS << "OpInfo" << Table << "[MI->getOpcode()] << " << Shift << ";\n";
+    // Prepare the shift for the next iteration and increment the table count.
+    Shift += TableSize;
+    ++Table;
+  }
+
+  O << "  // Emit the opcode for the instruction.\n";
+  O << BitsString;
+
+  // Return mnemonic string and bits.
+  O << "  return {AsmStrs+(Bits & " << (1 << AsmStrBits) - 1
+    << ")-1, Bits};\n\n";
+
+  O << "}\n";
 }
 
 /// EmitPrintInstruction - Generate the code for the "printInstruction" method
 /// implementation. Destroys all instances of AsmWriterInst information, by
 /// clearing the Instructions vector.
 void AsmWriterEmitter::EmitPrintInstruction(
+    raw_ostream &O,
     std::vector<std::vector<std::string>> &TableDrivenOperandPrinters,
     unsigned &BitsLeft, unsigned &AsmStrBits) {
+  const unsigned OpcodeInfoBits = 64;
   Record *AsmWriter = Target.getAsmWriter();
   StringRef ClassName = AsmWriter->getValueAsString("AsmWriterClassName");
   bool PassSubtarget = AsmWriter->getValueAsInt("PassSubtarget");
 
-  PI.asmWriterEmitPrintInstruction(Target.getName().str(),
-                                   TableDrivenOperandPrinters,
-                                   BitsLeft, AsmStrBits,
-                                   ClassName, PassSubtarget);
+  // This function has some huge switch statements that causing excessive
+  // compile time in LLVM profile instrumenation build. This print function
+  // usually is not frequently called in compilation. Here we disable the
+  // profile instrumenation for this function.
+  O << "/// printInstruction - This method is automatically generated by "
+       "tablegen\n"
+       "/// from the instruction set description.\n"
+       "LLVM_NO_PROFILE_INSTRUMENT_FUNCTION\n"
+       "void "
+    << Target.getName() << ClassName
+    << "::printInstruction(const MCInst *MI, uint64_t Address, "
+    << (PassSubtarget ? "const MCSubtargetInfo &STI, " : "")
+    << "raw_ostream &O) {\n";
+
+  // Emit the initial tab character.
+  O << "  O << \"\\t\";\n\n";
+
+  // Emit the starting string.
+  O << "  auto MnemonicInfo = getMnemonic(MI);\n\n";
+  O << "  O << MnemonicInfo.first;\n\n";
+
+  O << "  uint" << ((BitsLeft < (OpcodeInfoBits - 32)) ? 64 : 32)
+    << "_t Bits = MnemonicInfo.second;\n"
+    << "  assert(Bits != 0 && \"Cannot print this instruction.\");\n";
+
+  // Output the table driven operand information.
+  BitsLeft = OpcodeInfoBits-AsmStrBits;
+  for (unsigned i = 0, e = TableDrivenOperandPrinters.size(); i != e; ++i) {
+    std::vector<std::string> &Commands = TableDrivenOperandPrinters[i];
+
+    // Compute the number of bits we need to represent these cases, this is
+    // ceil(log2(numentries)).
+    unsigned NumBits = Log2_32_Ceil(Commands.size());
+    assert(NumBits <= BitsLeft && "consistency error");
+
+    // Emit code to extract this field from Bits.
+    O << "\n  // Fragment " << i << " encoded into " << NumBits
+      << " bits for " << Commands.size() << " unique commands.\n";
+
+    if (Commands.size() == 2) {
+      // Emit two possibilitys with if/else.
+      O << "  if ((Bits >> "
+        << (OpcodeInfoBits-BitsLeft) << ") & "
+        << ((1 << NumBits)-1) << ") {\n"
+        << Commands[1]
+        << "  } else {\n"
+        << Commands[0]
+        << "  }\n\n";
+    } else if (Commands.size() == 1) {
+      // Emit a single possibility.
+      O << Commands[0] << "\n\n";
+    } else {
+      O << "  switch ((Bits >> "
+        << (OpcodeInfoBits-BitsLeft) << ") & "
+        << ((1 << NumBits)-1) << ") {\n"
+        << "  default: llvm_unreachable(\"Invalid command number.\");\n";
+
+      // Print out all the cases.
+      for (unsigned j = 0, e = Commands.size(); j != e; ++j) {
+        O << "  case " << j << ":\n";
+        O << Commands[j];
+        O << "    break;\n";
+      }
+      O << "  }\n\n";
+    }
+    BitsLeft -= NumBits;
+  }
 
   // Okay, delete instructions with no operand info left.
   llvm::erase_if(Instructions,
@@ -389,20 +540,21 @@ void AsmWriterEmitter::EmitPrintInstruction(
   // instructions.
   if (!Instructions.empty()) {
     // Find the opcode # of inline asm.
-    PI.asmWriterEmitInstrSwitch();
+    O << "  switch (MI->getOpcode()) {\n";
+    O << "  default: llvm_unreachable(\"Unexpected opcode.\");\n";
     while (!Instructions.empty())
-      EmitInstructions(Instructions, PassSubtarget);
+      EmitInstructions(Instructions, O, PassSubtarget);
 
-    PI.asmWriterEmitCompoundClosure(2, true, false);
+    O << "  }\n";
   }
 
-  PI.asmWriterEmitCompoundClosure(0, true, false);
+  O << "}\n";
 }
 
-void AsmWriterEmitter::EmitRegisterNameString(
-    StringRef AltName,
-    const std::deque<CodeGenRegister> &Registers) {
-  SequenceToOffsetTable<std::string> StringTable(PrinterLLVM::getLanguage());
+static void
+emitRegisterNameString(raw_ostream &O, StringRef AltName,
+                       const std::deque<CodeGenRegister> &Registers) {
+  SequenceToOffsetTable<std::string> StringTable;
   SmallVector<std::string, 4> AsmNames(Registers.size());
   unsigned i = 0;
   for (const auto &Reg : Registers) {
@@ -439,11 +591,21 @@ void AsmWriterEmitter::EmitRegisterNameString(
   }
 
   StringTable.layout();
-  PI.asmWriterEmitStringLiteralDef(StringTable, AltName);
-  PI.asmWriterEmitRegAsmOffsets(Registers.size(), AsmNames, StringTable, AltName);
+  StringTable.emitStringLiteralDef(O, Twine("  static const char AsmStrs") +
+                                          AltName + "[]");
+
+  O << "  static const " << getMinimalTypeForRange(StringTable.size() - 1, 32)
+    << " RegAsmOffset" << AltName << "[] = {";
+  for (unsigned i = 0, e = Registers.size(); i != e; ++i) {
+    if ((i % 14) == 0)
+      O << "\n    ";
+    O << StringTable.get(AsmNames[i]) << ", ";
+  }
+  O << "\n  };\n"
+    << "\n";
 }
 
-void AsmWriterEmitter::EmitGetRegisterName() {
+void AsmWriterEmitter::EmitGetRegisterName(raw_ostream &O) {
   Record *AsmWriter = Target.getAsmWriter();
   StringRef ClassName = AsmWriter->getValueAsString("AsmWriterClassName");
   const auto &Registers = Target.getRegBank().getRegisters();
@@ -451,18 +613,57 @@ void AsmWriterEmitter::EmitGetRegisterName() {
   bool hasAltNames = AltNameIndices.size() > 1;
   StringRef Namespace = Registers.front().TheDef->getValueAsString("Namespace");
 
-  PI.asmWriterEmitGetRegNameAssert(Target.getName().str(),
-                                   ClassName,
-                                   hasAltNames,
-                                   Registers.size());
+  O <<
+  "\n\n/// getRegisterName - This method is automatically generated by tblgen\n"
+  "/// from the register set description.  This returns the assembler name\n"
+  "/// for the specified register.\n"
+  "const char *" << Target.getName() << ClassName << "::";
+  if (hasAltNames)
+    O << "\ngetRegisterName(MCRegister Reg, unsigned AltIdx) {\n";
+  else
+    O << "getRegisterName(MCRegister Reg) {\n";
+  O << "  unsigned RegNo = Reg.id();\n"
+    << "  assert(RegNo && RegNo < " << (Registers.size() + 1)
+    << " && \"Invalid register number!\");\n"
+    << "\n";
 
   if (hasAltNames) {
     for (const Record *R : AltNameIndices)
-      EmitRegisterNameString(R->getName(), Registers);
+      emitRegisterNameString(O, R->getName(), Registers);
   } else
-    EmitRegisterNameString("", Registers);
+    emitRegisterNameString(O, "", Registers);
 
-  PI.asmWriterEmitAltIdxSwitch(hasAltNames, AltNameIndices, Namespace);
+  if (hasAltNames) {
+    O << "  switch(AltIdx) {\n"
+      << "  default: llvm_unreachable(\"Invalid register alt name index!\");\n";
+    for (const Record *R : AltNameIndices) {
+      StringRef AltName = R->getName();
+      O << "  case ";
+      if (!Namespace.empty())
+        O << Namespace << "::";
+      O << AltName << ":\n";
+      if (R->isValueUnset("FallbackRegAltNameIndex"))
+        O << "    assert(*(AsmStrs" << AltName << "+RegAsmOffset" << AltName
+          << "[RegNo-1]) &&\n"
+          << "           \"Invalid alt name index for register!\");\n";
+      else {
+        O << "    if (!*(AsmStrs" << AltName << "+RegAsmOffset" << AltName
+          << "[RegNo-1]))\n"
+          << "      return getRegisterName(RegNo, ";
+        if (!Namespace.empty())
+          O << Namespace << "::";
+        O << R->getValueAsDef("FallbackRegAltNameIndex")->getName() << ");\n";
+      }
+      O << "    return AsmStrs" << AltName << "+RegAsmOffset" << AltName
+        << "[RegNo-1];\n";
+    }
+    O << "  }\n";
+  } else {
+    O << "  assert (*(AsmStrs+RegAsmOffset[RegNo-1]) &&\n"
+      << "          \"Invalid alt name index for register!\");\n"
+      << "  return AsmStrs+RegAsmOffset[RegNo-1];\n";
+  }
+  O << "}\n";
 }
 
 namespace {
@@ -599,10 +800,11 @@ struct AliasPriorityComparator {
 
 } // end anonymous namespace
 
-void AsmWriterEmitter::EmitPrintAliasInstruction() {
+void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
   Record *AsmWriter = Target.getAsmWriter();
 
-  PI.emitIncludeToggle("PRINT_ALIAS_INSTR", true);
+  O << "\n#ifdef PRINT_ALIAS_INSTR\n";
+  O << "#undef PRINT_ALIAS_INSTR\n\n";
 
   //////////////////////////////
   // Gather information about aliases we need to print
@@ -689,7 +891,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction() {
 
         // Ignore unchecked result operands.
         while (IAP.getCondCount() < MIOpNum)
-          IAP.addCond(PI.asmWriterGetPatCondKIgnore());
+          IAP.addCond("AliasPatternCond::K_Ignore, 0");
 
         const CodeGenInstAlias::ResultOperand &RO = CGA.ResultOperands[i];
 
@@ -727,11 +929,11 @@ void AsmWriterEmitter::EmitPrintAliasInstruction() {
               if (R->isSubClassOf("RegisterOperand"))
                 R = R->getValueAsDef("RegClass");
               IAP.addCond(std::string(
-                  formatv(PI.asmWriterGetPatCondKRegClass(),
+                  formatv("AliasPatternCond::K_RegClass, {0}::{1}RegClassID",
                           Namespace, R->getName())));
             } else {
               IAP.addCond(std::string(formatv(
-                  PI.asmWriterGetPatCondKTiedReg(), IAP.getOpIndex(ROName))));
+                  "AliasPatternCond::K_TiedReg, {0}", IAP.getOpIndex(ROName))));
             }
           } else {
             // Assume all printable operands are desired for now. This can be
@@ -749,7 +951,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction() {
                 break; // No conditions on this operand at all
             }
             IAP.addCond(
-                std::string(formatv(PI.asmWriterGetPatCondKCustom(), Entry)));
+                std::string(formatv("AliasPatternCond::K_Custom, {0}", Entry)));
           }
           break;
         }
@@ -762,19 +964,19 @@ void AsmWriterEmitter::EmitPrintAliasInstruction() {
             PrintFatalError("Matching an alias with an immediate out of the "
                             "range of int32_t is not supported");
           IAP.addCond(std::string(
-              formatv(PI.asmWriterGetPatCondKImm(), Imm32)));
+              formatv("AliasPatternCond::K_Imm, uint32_t({0})", Imm32)));
           break;
         }
         case CodeGenInstAlias::ResultOperand::K_Reg:
           if (!CGA.ResultOperands[i].getRegister()) {
             IAP.addCond(std::string(formatv(
-                PI.asmWriterGetPatCondKNoReg(), Namespace)));
+                "AliasPatternCond::K_Reg, {0}::NoRegister", Namespace)));
             break;
           }
 
           StringRef Reg = CGA.ResultOperands[i].getRegister()->getName();
           IAP.addCond(std::string(
-              formatv(PI.asmWriterGetPatCondKReg(), Namespace, Reg)));
+              formatv("AliasPatternCond::K_Reg, {0}::{1}", Namespace, Reg)));
           break;
         }
 
@@ -793,7 +995,10 @@ void AsmWriterEmitter::EmitPrintAliasInstruction() {
 
       for (Record *const R : ReqFeatures) {
         const DagInit *D = R->getValueAsDag("AssemblerCondDag");
-        std::string CombineType = D->getOperator()->getAsString();
+        auto *Op = dyn_cast<DefInit>(D->getOperator());
+        if (!Op)
+          PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
+        StringRef CombineType = Op->getDef()->getName();
         if (CombineType != "any_of" && CombineType != "all_of")
           PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
         if (D->getNumArgs() == 0)
@@ -801,7 +1006,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction() {
         bool IsOr = CombineType == "any_of";
         // Change (any_of FeatureAll, (any_of ...)) to (any_of FeatureAll, ...).
         if (IsOr && D->getNumArgs() == 2 && isa<DagInit>(D->getArg(1))) {
-          DagInit *RHS = dyn_cast<DagInit>(D->getArg(1));
+          DagInit *RHS = cast<DagInit>(D->getArg(1));
           SmallVector<Init *> Args{D->getArg(0)};
           SmallVector<StringInit *> ArgNames{D->getArgName(0)};
           for (unsigned i = 0, e = RHS->getNumArgs(); i != e; ++i) {
@@ -825,13 +1030,13 @@ void AsmWriterEmitter::EmitPrintAliasInstruction() {
             PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
 
           IAP.addCond(std::string(formatv(
-              PI.asmWriterGetPatCondKFeature(), IsOr ? "Or" : "",
+              "AliasPatternCond::K_{0}{1}Feature, {2}::{3}", IsOr ? "Or" : "",
               IsNeg ? "Neg" : "", Namespace, Arg->getAsString())));
         }
         // If an AssemblerPredicate with ors is used, note end of list should
         // these be combined.
         if (IsOr)
-          IAP.addCond(PI.asmWriterGetPatCondKEndOrFeature());
+          IAP.addCond("AliasPatternCond::K_EndOrFeatures, 0");
       }
 
       IAPrinterMap[Aliases.first].push_back(std::move(IAP));
@@ -841,6 +1046,15 @@ void AsmWriterEmitter::EmitPrintAliasInstruction() {
   //////////////////////////////
   // Write out the printAliasInstr function
   //////////////////////////////
+
+  std::string Header;
+  raw_string_ostream HeaderO(Header);
+
+  HeaderO << "bool " << Target.getName() << ClassName
+          << "::printAliasInstr(const MCInst"
+          << " *MI, uint64_t Address, "
+          << (PassSubtarget ? "const MCSubtargetInfo &STI, " : "")
+          << "raw_ostream &OS) {\n";
 
   std::string PatternsForOpcode;
   raw_string_ostream OpcodeO(PatternsForOpcode);
@@ -886,15 +1100,15 @@ void AsmWriterEmitter::EmitPrintAliasInstruction() {
     unsigned PatternStart = PatternCount;
 
     // Insert the pattern start and opcode in the pattern list for debugging.
-    PatternO << formatv(PI.asmWriterGetPatOpcStart(), It->first, PatternStart);
+    PatternO << formatv("    // {0} - {1}\n", It->first, PatternStart);
 
     for (IAPrinter *IAP : UniqueIAPs) {
       // Start each condition list with a comment of the resulting pattern that
       // we're trying to match.
       unsigned CondStart = CondCount;
-      CondO << formatv(PI.asmWriterGetCondPatStart(), IAP->getResult(), CondStart);
+      CondO << formatv("    // {0} - {1}\n", IAP->getResult(), CondStart);
       for (const auto &Cond : IAP->getConds())
-        CondO << PI.asmWriterGetCond(Cond);
+        CondO << "    {" << Cond << "},\n";
       CondCount += IAP->getCondCount();
 
       // After operands have been examined, re-encode the alias string with
@@ -910,52 +1124,167 @@ void AsmWriterEmitter::EmitPrintAliasInstruction() {
       }
       unsigned AsmStrOffset = Insertion.first->second;
 
-      PatternO << formatv(PI.asmWriterGetPatternFormat(), AsmStrOffset,
+      PatternO << formatv("    {{{0}, {1}, {2}, {3} },\n", AsmStrOffset,
                           CondStart, IAP->getNumMIOps(), IAP->getCondCount());
       ++PatternCount;
     }
 
-    OpcodeO << formatv(PI.asmWriterGetOpcodeFormat(), It->first, PatternStart,
+    OpcodeO << formatv("    {{{0}, {1}, {2} },\n", It->first, PatternStart,
                        PatternCount - PatternStart);
   }
 
   if (OpcodeO.str().empty()) {
-    PI.asmWriterEmitPrintAliasInstrHeader(Target.getName().str(), ClassName, PassSubtarget);
-    PI.asmWriterEmitPrintAliasInstrBodyRetFalse();
-    PI.emitIncludeToggle("PRINT_ALIAS_INSTR", false, false);
+    O << HeaderO.str();
+    O << "  return false;\n";
+    O << "}\n\n";
+    O << "#endif // PRINT_ALIAS_INSTR\n";
     return;
   }
 
   // Forward declare the validation method if needed.
   if (!MCOpPredicates.empty())
-    PI.asmWriterEmitDeclValid(Target.getName().str(), ClassName);
+    O << "static bool " << Target.getName() << ClassName
+      << "ValidateMCOperand(const MCOperand &MCOp,\n"
+      << "                  const MCSubtargetInfo &STI,\n"
+      << "                  unsigned PredicateIndex);\n";
 
-  PI.asmWriterEmitPrintAliasInstrHeader(Target.getName().str(),
-                                        ClassName,
-                                        PassSubtarget);
-  PI.asmWriterEmitPrintAliasInstrBody(OpcodeO,
-                                      PatternO,
-                                      CondO,
-                                      AsmStrings,
-                                      MCOpPredicates,
-                                      Target.getName().str(),
-                                      ClassName,
-                                      PassSubtarget);
+  O << HeaderO.str();
+  O.indent(2) << "static const PatternsForOpcode OpToPatterns[] = {\n";
+  O << OpcodeO.str();
+  O.indent(2) << "};\n\n";
+  O.indent(2) << "static const AliasPattern Patterns[] = {\n";
+  O << PatternO.str();
+  O.indent(2) << "};\n\n";
+  O.indent(2) << "static const AliasPatternCond Conds[] = {\n";
+  O << CondO.str();
+  O.indent(2) << "};\n\n";
+  O.indent(2) << "static const char AsmStrings[] =\n";
+  for (const auto &P : AsmStrings) {
+    O.indent(4) << "/* " << P.first << " */ \"" << P.second << "\\0\"\n";
+  }
+
+  O.indent(2) << ";\n\n";
+
+  // Assert that the opcode table is sorted. Use a static local constructor to
+  // ensure that the check only happens once on first run.
+  O << "#ifndef NDEBUG\n";
+  O.indent(2) << "static struct SortCheck {\n";
+  O.indent(2) << "  SortCheck(ArrayRef<PatternsForOpcode> OpToPatterns) {\n";
+  O.indent(2) << "    assert(std::is_sorted(\n";
+  O.indent(2) << "               OpToPatterns.begin(), OpToPatterns.end(),\n";
+  O.indent(2) << "               [](const PatternsForOpcode &L, const "
+                 "PatternsForOpcode &R) {\n";
+  O.indent(2) << "                 return L.Opcode < R.Opcode;\n";
+  O.indent(2) << "               }) &&\n";
+  O.indent(2) << "           \"tablegen failed to sort opcode patterns\");\n";
+  O.indent(2) << "  }\n";
+  O.indent(2) << "} sortCheckVar(OpToPatterns);\n";
+  O << "#endif\n\n";
+
+  O.indent(2) << "AliasMatchingData M {\n";
+  O.indent(2) << "  ArrayRef(OpToPatterns),\n";
+  O.indent(2) << "  ArrayRef(Patterns),\n";
+  O.indent(2) << "  ArrayRef(Conds),\n";
+  O.indent(2) << "  StringRef(AsmStrings, std::size(AsmStrings)),\n";
+  if (MCOpPredicates.empty())
+    O.indent(2) << "  nullptr,\n";
+  else
+    O.indent(2) << "  &" << Target.getName() << ClassName << "ValidateMCOperand,\n";
+  O.indent(2) << "};\n";
+
+  O.indent(2) << "const char *AsmString = matchAliasPatterns(MI, "
+              << (PassSubtarget ? "&STI" : "nullptr") << ", M);\n";
+  O.indent(2) << "if (!AsmString) return false;\n\n";
+
+  // Code that prints the alias, replacing the operands with the ones from the
+  // MCInst.
+  O << "  unsigned I = 0;\n";
+  O << "  while (AsmString[I] != ' ' && AsmString[I] != '\\t' &&\n";
+  O << "         AsmString[I] != '$' && AsmString[I] != '\\0')\n";
+  O << "    ++I;\n";
+  O << "  OS << '\\t' << StringRef(AsmString, I);\n";
+
+  O << "  if (AsmString[I] != '\\0') {\n";
+  O << "    if (AsmString[I] == ' ' || AsmString[I] == '\\t') {\n";
+  O << "      OS << '\\t';\n";
+  O << "      ++I;\n";
+  O << "    }\n";
+  O << "    do {\n";
+  O << "      if (AsmString[I] == '$') {\n";
+  O << "        ++I;\n";
+  O << "        if (AsmString[I] == (char)0xff) {\n";
+  O << "          ++I;\n";
+  O << "          int OpIdx = AsmString[I++] - 1;\n";
+  O << "          int PrintMethodIdx = AsmString[I++] - 1;\n";
+  O << "          printCustomAliasOperand(MI, Address, OpIdx, PrintMethodIdx, ";
+  O << (PassSubtarget ? "STI, " : "");
+  O << "OS);\n";
+  O << "        } else\n";
+  O << "          printOperand(MI, unsigned(AsmString[I++]) - 1, ";
+  O << (PassSubtarget ? "STI, " : "");
+  O << "OS);\n";
+  O << "      } else {\n";
+  O << "        OS << AsmString[I++];\n";
+  O << "      }\n";
+  O << "    } while (AsmString[I] != '\\0');\n";
+  O << "  }\n\n";
+
+  O << "  return true;\n";
+  O << "}\n\n";
 
   //////////////////////////////
   // Write out the printCustomAliasOperand function
   //////////////////////////////
 
-  PI.asmWriterEmitPrintAliasOp(Target.getName().str(),
-                               ClassName,
-                               PrintMethods,
-                               PassSubtarget);
+  O << "void " << Target.getName() << ClassName << "::"
+    << "printCustomAliasOperand(\n"
+    << "         const MCInst *MI, uint64_t Address, unsigned OpIdx,\n"
+    << "         unsigned PrintMethodIdx,\n"
+    << (PassSubtarget ? "         const MCSubtargetInfo &STI,\n" : "")
+    << "         raw_ostream &OS) {\n";
+  if (PrintMethods.empty())
+    O << "  llvm_unreachable(\"Unknown PrintMethod kind\");\n";
+  else {
+    O << "  switch (PrintMethodIdx) {\n"
+      << "  default:\n"
+      << "    llvm_unreachable(\"Unknown PrintMethod kind\");\n"
+      << "    break;\n";
 
-  PI.asmWriterEmitPrintMC(Target.getName().str(), ClassName, MCOpPredicates);
-  PI.emitIncludeToggle("PRINT_ALIAS_INSTR", false, false);
+    for (unsigned i = 0; i < PrintMethods.size(); ++i) {
+      O << "  case " << i << ":\n"
+        << "    " << PrintMethods[i].first << "(MI, "
+        << (PrintMethods[i].second ? "Address, " : "") << "OpIdx, "
+        << (PassSubtarget ? "STI, " : "") << "OS);\n"
+        << "    break;\n";
+    }
+    O << "  }\n";
+  }    
+  O << "}\n\n";
+
+  if (!MCOpPredicates.empty()) {
+    O << "static bool " << Target.getName() << ClassName
+      << "ValidateMCOperand(const MCOperand &MCOp,\n"
+      << "                  const MCSubtargetInfo &STI,\n"
+      << "                  unsigned PredicateIndex) {\n"      
+      << "  switch (PredicateIndex) {\n"
+      << "  default:\n"
+      << "    llvm_unreachable(\"Unknown MCOperandPredicate kind\");\n"
+      << "    break;\n";
+
+    for (unsigned i = 0; i < MCOpPredicates.size(); ++i) {
+      StringRef MCOpPred = MCOpPredicates[i]->getValueAsString("MCOperandPredicate");
+      O << "  case " << i + 1 << ": {\n"
+        << MCOpPred.data() << "\n"
+        << "    }\n";
+    }
+    O << "  }\n"
+      << "}\n\n";
+  }
+
+  O << "#endif // PRINT_ALIAS_INSTR\n";
 }
 
-AsmWriterEmitter::AsmWriterEmitter(RecordKeeper &R, PrinterLLVM &PI) : Records(R), Target(R), PI(PI) {
+AsmWriterEmitter::AsmWriterEmitter(RecordKeeper &R) : Records(R), Target(R) {
   Record *AsmWriter = Target.getAsmWriter();
   unsigned Variant = AsmWriter->getValueAsInt("Variant");
 
@@ -969,35 +1298,16 @@ AsmWriterEmitter::AsmWriterEmitter(RecordKeeper &R, PrinterLLVM &PI) : Records(R
   }
 }
 
-void AsmWriterEmitter::run() {
+void AsmWriterEmitter::run(raw_ostream &O) {
   std::vector<std::vector<std::string>> TableDrivenOperandPrinters;
   unsigned BitsLeft = 0;
   unsigned AsmStrBits = 0;
-
-  PI.asmWriterEmitSourceFileHeader();
-  EmitGetMnemonic(TableDrivenOperandPrinters, BitsLeft, AsmStrBits);
-  EmitPrintInstruction(TableDrivenOperandPrinters, BitsLeft, AsmStrBits);
-  EmitGetRegisterName();
-  EmitPrintAliasInstruction();
+  emitSourceFileHeader("Assembly Writer Source Fragment", O);
+  EmitGetMnemonic(O, TableDrivenOperandPrinters, BitsLeft, AsmStrBits);
+  EmitPrintInstruction(O, TableDrivenOperandPrinters, BitsLeft, AsmStrBits);
+  EmitGetRegisterName(O);
+  EmitPrintAliasInstruction(O);
 }
 
-namespace llvm {
-
-void EmitAsmWriter(RecordKeeper &RK, raw_ostream &OS) {
-  CodeGenTarget CGTarget(RK);
-  PrinterLanguage const PL = PrinterLLVM::getLanguage();
-  PrinterLLVM *PI;
-
-  formatted_raw_ostream FOS(OS);
-  if (PL == PRINTER_LANG_CPP) {
-    PI = new PrinterLLVM(FOS, CGTarget.getName().str());
-  } else if (PL == PRINTER_LANG_CAPSTONE_C) {
-    PI = new PrinterCapstone(FOS, CGTarget.getName().str());
-  } else {
-    llvm_unreachable("AsmWriterEmitter does not support the given output language.");
-  }
-  AsmWriterEmitter(RK, *PI).run();
-  delete PI;
-}
-
-} // end namespace llvm
+static TableGen::Emitter::OptClass<AsmWriterEmitter>
+    X("gen-asm-writer", "Generate assembly writer");

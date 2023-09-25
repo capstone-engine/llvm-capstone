@@ -25,18 +25,12 @@ def P10vMU_Read : SchedRead;
 
 def P10Model : SchedMachineModel {
   let IssueWidth = 8;
-
-  // TODO - Need to be updated according to P10 UM.
   let MicroOpBufferSize = 44;
-
-  // TODO - tune this on real HW once it arrives. For now, we will use the same
-  // value as we do on P9.
   let LoopMicroOpBufferSize = 60;
-
   let CompleteModel = 1;
 
   // Do not support SPE (Signal Procesing Engine) on Power 10.
-  let UnsupportedFeatures = [HasSPE, IsE500, IsBookE, IsISAFuture, HasQPX, HasPS];
+  let UnsupportedFeatures = [HasSPE, IsE500, IsBookE, IsISAFuture];
 }
 
 let SchedModel = P10Model in {

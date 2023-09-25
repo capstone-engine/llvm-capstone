@@ -149,7 +149,7 @@ def fbits16 : Operand<i32> {
 //  Load / store Instructions.
 //
 
-let mayLoad = 1, canFoldAsLoad = 1, isReMaterializable = 1 in {
+let canFoldAsLoad = 1, isReMaterializable = 1 in {
 
 def VLDRD : ADI5<0b1101, 0b01, (outs DPR:$Dd), (ins addrmode5:$addr),
                  IIC_fpLoad64, "vldr", "\t$Dd, $addr",
@@ -171,7 +171,7 @@ def VLDRH : AHI5<0b1101, 0b01, (outs HPR:$Sd), (ins addrmode5fp16:$addr),
                  [(set HPR:$Sd, (f16 (alignedload16 addrmode5fp16:$addr)))]>,
             Requires<[HasFPRegs16]>;
 
-} // End of 'mayLoad = 1, let canFoldAsLoad = 1, isReMaterializable = 1 in'
+} // End of 'let canFoldAsLoad = 1, isReMaterializable = 1 in'
 
 def : Pat<(bf16 (alignedload16 addrmode5fp16:$addr)),
           (VLDRH addrmode5fp16:$addr)> {
@@ -186,7 +186,6 @@ def : Pat<(bf16 (alignedload16 t2addrmode_imm12:$addr)),
   let Predicates = [HasNoFPRegs16, IsThumb];
 }
 
-let mayStore = 1 in {
 def VSTRD : ADI5<0b1101, 0b00, (outs), (ins DPR:$Dd, addrmode5:$addr),
                  IIC_fpStore64, "vstr", "\t$Dd, $addr",
                  [(alignedstore32 (f64 DPR:$Dd), addrmode5:$addr)]>,
@@ -206,7 +205,6 @@ def VSTRH : AHI5<0b1101, 0b00, (outs), (ins HPR:$Sd, addrmode5fp16:$addr),
                  IIC_fpStore16, "vstr", ".16\t$Sd, $addr",
                  [(alignedstore16 (f16 HPR:$Sd), addrmode5fp16:$addr)]>,
             Requires<[HasFPRegs16]>;
-} // mayStore = 1
 
 def : Pat<(alignedstore16 (bf16 HPR:$Sd), addrmode5fp16:$addr),
           (VSTRH (bf16 HPR:$Sd), addrmode5fp16:$addr)> {
@@ -236,8 +234,6 @@ multiclass vfp_ldst_mult<string asm, bit L_bit,
     let Inst{24-23} = 0b01;       // Increment After
     let Inst{21}    = 0;          // No writeback
     let Inst{20}    = L_bit;
-    let mayLoad     = L_bit;
-    let mayStore    = !if(L_bit, 0b0, 0b1);
   }
   def DIA_UPD :
     AXDI4<(outs GPR:$wb), (ins GPR:$Rn, pred:$p, dpr_reglist:$regs,
@@ -247,8 +243,6 @@ multiclass vfp_ldst_mult<string asm, bit L_bit,
     let Inst{24-23} = 0b01;       // Increment After
     let Inst{21}    = 1;          // Writeback
     let Inst{20}    = L_bit;
-    let mayLoad     = L_bit;
-    let mayStore    = !if(L_bit, 0b0, 0b1);
   }
   def DDB_UPD :
     AXDI4<(outs GPR:$wb), (ins GPR:$Rn, pred:$p, dpr_reglist:$regs,
@@ -258,8 +252,6 @@ multiclass vfp_ldst_mult<string asm, bit L_bit,
     let Inst{24-23} = 0b10;       // Decrement Before
     let Inst{21}    = 1;          // Writeback
     let Inst{20}    = L_bit;
-    let mayLoad     = L_bit;
-    let mayStore    = !if(L_bit, 0b0, 0b1);
   }
 
   // Single Precision
@@ -270,8 +262,6 @@ multiclass vfp_ldst_mult<string asm, bit L_bit,
     let Inst{24-23} = 0b01;       // Increment After
     let Inst{21}    = 0;          // No writeback
     let Inst{20}    = L_bit;
-    let mayLoad     = L_bit;
-    let mayStore    = !if(L_bit, 0b0, 0b1);
 
     // Some single precision VFP instructions may be executed on both NEON and
     // VFP pipelines.
@@ -285,8 +275,6 @@ multiclass vfp_ldst_mult<string asm, bit L_bit,
     let Inst{24-23} = 0b01;       // Increment After
     let Inst{21}    = 1;          // Writeback
     let Inst{20}    = L_bit;
-    let mayLoad     = L_bit;
-    let mayStore    = !if(L_bit, 0b0, 0b1);
 
     // Some single precision VFP instructions may be executed on both NEON and
     // VFP pipelines.
@@ -300,8 +288,6 @@ multiclass vfp_ldst_mult<string asm, bit L_bit,
     let Inst{24-23} = 0b10;       // Decrement Before
     let Inst{21}    = 1;          // Writeback
     let Inst{20}    = L_bit;
-    let mayLoad     = L_bit;
-    let mayStore    = !if(L_bit, 0b0, 0b1);
 
     // Some single precision VFP instructions may be executed on both NEON and
     // VFP pipelines.
@@ -1215,7 +1201,7 @@ def VMOVSR : AVConv4I<0b11100000, 0b1010,
   let D = VFPNeonDomain;
 }
 } // isMoveReg
-def : Pat<(arm_vmovsr GPR:$Rt), (VMOVSR GPR:$Rt)>, Requires<[HasVFP2, UseVMOVSR]>;
+def : Pat<(arm_vmovsr GPR:$Rt), (VMOVSR GPR:$Rt)>, Requires<[HasFPRegs, UseVMOVSR]>;
 
 let hasSideEffects = 0 in {
 def VMOVRRD  : AVConv3I<0b11000101, 0b1011,

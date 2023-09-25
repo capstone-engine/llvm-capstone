@@ -15,7 +15,6 @@
 #ifndef LLVM_UTILS_TABLEGEN_SEQUENCETOOFFSETTABLE_H
 #define LLVM_UTILS_TABLEGEN_SEQUENCETOOFFSETTABLE_H
 
-#include "PrinterTypes.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -69,19 +68,13 @@ class SequenceToOffsetTable {
   // Entries in the final table, or 0 before layout was called.
   unsigned Entries;
 
-  // The output language of the table.
-  PrinterLanguage PL;
-  // If set it will wrap the table content into a #ifndef CAPSTONE_DIET guard;
-  bool CSDietGuard;
-
   // isSuffix - Returns true if A is a suffix of B.
   static bool isSuffix(const SeqT &A, const SeqT &B) {
     return A.size() <= B.size() && std::equal(A.rbegin(), A.rend(), B.rbegin());
   }
 
 public:
-  SequenceToOffsetTable() : Entries(0), PL(PRINTER_LANG_CPP), CSDietGuard(false) {}
-  SequenceToOffsetTable(PrinterLanguage PL, bool CSDiet = false) : Entries(0), PL(PL), CSDietGuard(CSDiet) {}
+  SequenceToOffsetTable() : Entries(0) {}
 
   /// add - Add a sequence to the table.
   /// This must be called before layout().
@@ -129,39 +122,11 @@ public:
     return I->second + (I->first.size() - Seq.size());
   }
 
-  void emitStringLiteralDef(raw_ostream &OS, const llvm::Twine &Decl) const {
-    switch (PL) {
-    default:
-      llvm_unreachable("Language not specified to print table in.");
-    case PRINTER_LANG_CPP:
-      emitStringLiteralDefCPP(OS, Decl);
-      break;
-    case PRINTER_LANG_CAPSTONE_C:
-      emitStringLiteralDefCCS(OS, Decl);
-      break;
-    }
-  }
-
-  void emit(raw_ostream &OS,
-            void (*Print)(raw_ostream&, ElemT),
-            const char *Term = "0") const {
-    switch (PL) {
-    default:
-      llvm_unreachable("Language not specified to print table in.");
-    case PRINTER_LANG_CPP:
-      emitCPP(OS, Print, Term);
-      break;
-    case PRINTER_LANG_CAPSTONE_C:
-      emitCCS(OS, Print, Term);
-      break;
-    }
-  }
-
   /// `emitStringLiteralDef` - Print out the table as the body of an array
   /// initializer, where each element is a C string literal terminated by
   /// `\0`. Falls back to emitting a comma-separated integer list if
   /// `EmitLongStrLiterals` is false
-  void emitStringLiteralDefCPP(raw_ostream &OS, const llvm::Twine &Decl) const {
+  void emitStringLiteralDef(raw_ostream &OS, const llvm::Twine &Decl) const {
     assert(Entries && "Call layout() before emitStringLiteralDef()");
     if (!EmitLongStrLiterals) {
       OS << Decl << " = {\n";
@@ -186,54 +151,11 @@ public:
        << "#endif\n\n";
   }
 
-  void emitStringLiteralDefCCS(raw_ostream &OS, const llvm::Twine &Decl) const {
-    assert(Entries && "Call layout() before emitStringLiteralDef()");
-    if (!EmitLongStrLiterals) {
-      if (CSDietGuard)
-        OS << "#ifndef CAPSTONE_DIET\n";
-      OS << Decl << " = {\n";
-      emit(OS, printChar, "0");
-      OS << "  0\n};\n";
-      if (CSDietGuard)
-        OS << "#endif // CAPSTONE_DIET\n\n";
-      OS << "\n";
-      return;
-    }
-
-    if (CSDietGuard)
-      OS << "#ifndef CAPSTONE_DIET\n";
-    OS << Decl << " = {\n";
-    for (auto I : Seqs) {
-      OS << "  /* " << I.second << " */ \"";
-      OS.write_escaped(I.first);
-      OS << "\\0\"\n";
-    }
-    OS << "};\n";
-    if (CSDietGuard)
-      OS << "#endif // CAPSTONE_DIET\n\n";
-  }
-
   /// emit - Print out the table as the body of an array initializer.
   /// Use the Print function to print elements.
-  void emitCPP(raw_ostream &OS,
+  void emit(raw_ostream &OS,
             void (*Print)(raw_ostream&, ElemT),
-            const char *Term) const {
-    assert((empty() || Entries) && "Call layout() before emit()");
-    for (typename SeqMap::const_iterator I = Seqs.begin(), E = Seqs.end();
-         I != E; ++I) {
-      OS << "  /* " << I->second << " */ ";
-      for (typename SeqT::const_iterator SI = I->first.begin(),
-             SE = I->first.end(); SI != SE; ++SI) {
-        Print(OS, *SI);
-        OS << ", ";
-      }
-      OS << Term << ",\n";
-    }
-  }
-
-  void emitCCS(raw_ostream &OS,
-            void (*Print)(raw_ostream&, ElemT),
-            const char *Term) const {
+            const char *Term = "0") const {
     assert((empty() || Entries) && "Call layout() before emit()");
     for (typename SeqMap::const_iterator I = Seqs.begin(), E = Seqs.end();
          I != E; ++I) {

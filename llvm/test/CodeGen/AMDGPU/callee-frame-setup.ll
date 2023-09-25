@@ -379,8 +379,8 @@ define void @no_new_vgpr_for_fp_csr() #1 {
 ; GCN-NEXT:     v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
 ; MUBUF-NEXT:   v_mov_b32_e32 [[OFFSET:v[0-9]+]], 0x2000{{$}}
 ; MUBUF-NEXT:   buffer_store_dword [[ZERO]], [[OFFSET]], s[0:3], s33 offen{{$}}
-; FLATSCR-NEXT: s_add_i32 vcc_hi, s33, 0x2000
-; FLATSCR-NEXT: scratch_store_dword off, [[ZERO]], vcc_hi
+; FLATSCR-NEXT: s_add_i32 s1, s33, 0x2000
+; FLATSCR-NEXT: scratch_store_dword off, [[ZERO]], s1
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:   s_add_i32 s32, s32, 0xffe80000
 ; FLATSCR-NEXT: s_addk_i32 s32, 0xa000
@@ -591,8 +591,7 @@ define void @callee_need_to_spill_fp_to_memory() #3 {
 ; VGPR.
 ; GCN-LABEL: {{^}}callee_need_to_spill_fp_to_memory_full_reserved_vgpr:
 ; MUBUF:   s_mov_b32 [[FP_SCRATCH_COPY:s[0-9]+]], s33
-; FLATSCR: s_mov_b32 s33, s0
-; MUBUF:   s_mov_b32 s33, s32
+; GCN:     s_mov_b32 s33, s32
 ; MUBUF:   s_xor_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; MUBUF:   s_mov_b64 exec, [[COPY_EXEC1]]
 ; MUBUF:   v_mov_b32_e32 [[TMP_VGPR1:v[0-9]+]], [[FP_SCRATCH_COPY]]
@@ -632,14 +631,14 @@ define void @callee_need_to_spill_fp_to_memory_full_reserved_vgpr() #3 {
 ; Make sure that the FP save happens after restoring exec from the same
 ; register.
 ; GCN-LABEL: {{^}}callee_need_to_spill_fp_to_reg:
-; FLATSCR: s_mov_b32 s0, s33
+; FLATSCR: s_mov_b32 s2, s33
 ; FLATSCR: s_mov_b32 s33, s32
 ; GCN-NOT: v_writelane_b32 v40, s33
-; FLATSCR: s_or_saveexec_b64 s[2:3], -1
-; FLATSCR: s_mov_b64 exec, s[2:3]
-; FLATSCR: s_or_saveexec_b64 s[2:3], -1
+; FLATSCR: s_or_saveexec_b64 s[4:5], -1
+; FLATSCR: s_mov_b64 exec, s[4:5]
+; FLATSCR: s_or_saveexec_b64 s[4:5], -1
 ; GCN-NOT: v_readlane_b32 s33, v40
-; FLATSCR: s_mov_b32 s33, s0
+; FLATSCR: s_mov_b32 s33, s2
 ; GCN:     s_setpc_b64
 define void @callee_need_to_spill_fp_to_reg() #1 {
   call void asm sideeffect "; clobber nonpreserved SGPRs and 64 CSRs",
