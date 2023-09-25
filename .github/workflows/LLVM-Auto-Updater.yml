@@ -67,14 +67,22 @@ jobs:
 
     - name: Add files to branch ${{ env.branch_version }}
       run: |
-        if git ls-remote --exit-code --heads origin "${branch_version}" &> /dev/null; then branch_exists=true; else branch_exists=false; fi
-        echo "branch_exists=$branch_exists" >> $GITHUB_ENV
-        git checkout ${{ env.branch_version }} 2>/dev/null || git checkout -b ${{ env.branch_version }}
+        if git ls-remote --exit-code --heads origin "${branch_version}" &> /dev/null; then
+          branch_exists=true
+          echo "branch_exists=$branch_exists" >> $GITHUB_ENV
+          git checkout ${{ env.branch_version }}
+        else
+          branch_exists=false
+          git checkout -b ${{ env.branch_version }}
+          rm -r ./*
+        fi
+
         if [ "$branch_exists" = true ]; then
           git pull origin ${{ env.branch_version }}
           git push -u origin ${{ env.branch_version }}
           rm -rf !\(.git\|.github\)
         fi
+
         cp -r ../llvm-project/* .
         ls -la
         git add .
