@@ -61,13 +61,9 @@ jobs:
         ls -la
         cd -
 
-    # - uses: actions/checkout@v3
-    # - name: Setup tmate session
-    #   uses: mxschmitt/action-tmate@v3
-
     - name: Add files to branch ${{ env.branch_version }}
       run: |
-        if git ls-remote --exit-code --heads origin "${branch_version}" &> /dev/null; then
+        if git ls-remote --exit-code --heads origin "${{ env.branch_version }}" &> /dev/null; then
           branch_exists=true
           echo "branch_exists=$branch_exists" >> $GITHUB_ENV
           git checkout ${{ env.branch_version }}
