@@ -44,7 +44,7 @@ jobs:
           exit 0
         fi
 
-    - name: Checkout LLVM-project
+    - name: Checkout LLVM-capstone
       uses: actions/checkout@v3
       with:
         fetch-depth: 1
@@ -69,11 +69,10 @@ jobs:
           git fetch origin ${{ env.branch_version }}
           git checkout ${{ env.branch_version }}
         else
-          branch_exists=false
           git checkout -b ${{ env.branch_version }}
         fi
 
-        if [[ ${{ env.branch_exists }} = true ]]; then
+        if [ -n "${{ env.branch_exists }}" ]; then
           git pull origin ${{ env.branch_version }}
           git push -u origin ${{ env.branch_version }}
         fi
