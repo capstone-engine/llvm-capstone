@@ -2469,15 +2469,18 @@ std::string getReqFeatures(StringRef const &TargetName, AsmMatcherInfo &AMI,
   std::string Flags = "{ ";
   std::string Mn = getNormalMnemonic(MI);
   // The debug if
-  if (CGI->isBranch && !CGI->isCall) {
+  if ((CGI->isBranch || CGI->isReturn) && !CGI->isCall) {
     Flags += TargetName.str() + "_GRP_JUMP, ";
+  }
+  if (CGI->isReturn) {
+    Flags += TargetName.str() + "_GRP_RET, ";
   }
   if (CGI->isCall) {
     Flags += TargetName.str() + "_GRP_CALL, ";
   }
   for (const auto &OpInfo : CGI->Operands.OperandList) {
     if (OpInfo.OperandType == "MCOI::OPERAND_PCREL" &&
-        (CGI->isBranch || CGI->isIndirectBranch || CGI->isCall)) {
+        (CGI->isBranch || CGI->isReturn || CGI->isIndirectBranch || CGI->isCall)) {
       Flags += TargetName.str() + "_GRP_BRANCH_RELATIVE, ";
     }
   }
@@ -2747,7 +2750,7 @@ void printInsnMapEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
     InsnMap.indent(4) << getImplicitUses(TargetName, CGI) << ", ";
     InsnMap << getImplicitDefs(TargetName, CGI) << ", ";
     InsnMap << getReqFeatures(TargetName, AMI, MI, UseMI, CGI) << ", ";
-    InsnMap << (CGI->isBranch ? "1" : "0") << ", ";
+    InsnMap << ((CGI->isBranch || CGI->isReturn) ? "1" : "0") << ", ";
     InsnMap << (CGI->isIndirectBranch ? "1" : "0") << ", ";
     InsnMap << getArchSupplInfo(TargetName, CGI, PPCFormatEnum) << ",\n";
     InsnMap.indent(4) << getCSOpcodeEncoding(CGI);
