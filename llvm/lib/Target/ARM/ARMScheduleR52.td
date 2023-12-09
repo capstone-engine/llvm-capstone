@@ -482,7 +482,7 @@ def : InstRW<[R52WriteILDM, R52Read_ISS],
 def : InstRW<[R52WriteILDM, R52WriteAdr, R52Read_ISS],
       (instregex "LDM(IA|DA|DB|IB)_UPD", "(t2|sys|t)LDM(IA|DA|DB|IB)_UPD")>;
 def : InstRW<[R52WriteILDM, R52WriteAdr, R52Read_ISS],
-        (instregex "LDMIA_RET", "(t|t2)LDMIA_RET", "tPOP")>;
+        (instregex "LDMIA_RET", "(t|t2)LDMIA_RET")>;
 
 // Integer Store, Single Element
 def : InstRW<[R52WriteLd, R52Read_ISS, R52Read_EX2],
@@ -505,8 +505,7 @@ def : InstRW<[R52WriteLd, R52WriteAdr, R52Read_ISS, R52Read_EX2],
 def : InstRW<[R52WriteISTM, R52Read_ISS, R52Read_EX2],
     (instregex "STM(IB|IA|DB|DA)$", "(t2|sys|t)STM(IB|IA|DB|DA)$")>;
 def : InstRW<[R52WriteISTM, R52WriteAdr, R52Read_ISS, R52Read_EX2],
-    (instregex "STM(IB|IA|DB|DA)_UPD", "(t2|sys|t)STM(IB|IA|DB|DA)_UPD",
-    "tPUSH")>;
+    (instregex "STM(IB|IA|DB|DA)_UPD", "(t2|sys|t)STM(IB|IA|DB|DA)_UPD")>;
 
 // LDRLIT pseudo instructions, they expand to LDR + PICADD
 def : InstRW<[R52WriteLd],

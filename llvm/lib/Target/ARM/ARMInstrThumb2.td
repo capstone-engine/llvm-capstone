@@ -5104,6 +5104,14 @@ def : t2InstAlias<"push${p} $regs", (t2STMDB_UPD SP, pred:$p, reglist:$regs)>;
 def : t2InstAlias<"pop${p}.w $regs", (t2LDMIA_UPD SP, pred:$p, reglist:$regs)>;
 def : t2InstAlias<"pop${p} $regs", (t2LDMIA_UPD SP, pred:$p, reglist:$regs)>;
 
+// Pseudo-instruction for merged POP and return.
+// FIXME: remove when we have a way to marking a MI with these properties.
+let isReturn = 1, isTerminator = 1, isBarrier = 1, mayLoad = 1,
+    hasExtraDefRegAllocReq = 1 in
+def tPOP_RET : tPseudoExpand<(outs), (ins pred:$p, reglist:$regs, variable_ops),
+                           2, IIC_iPop_Br, [],
+                           (t2LDMIA_UPD SP SP, pred:$p, reglist:$regs)>, Sched<[WriteBrL]>;
+
 // STMIA/STMIA_UPD aliases w/o the optional .w suffix
 def : t2InstAlias<"stm${p} $Rn, $regs",
                   (t2STMIA GPR:$Rn, pred:$p, reglist:$regs)>;

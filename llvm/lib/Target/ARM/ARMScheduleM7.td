@@ -244,9 +244,9 @@ def : InstRW<[WriteLd, M7SingleIssue, M7Read_ISS],
 def : InstRW<[WriteST, M7SingleIssue, M7Read_ISS],
       (instregex "(t|t2)STM(DB|IA)$")>;
 def : InstRW<[M7BaseUpdate, WriteLd, M7SingleIssue, M7Read_ISS],
-      (instregex "(t|t2)LDM(DB|IA)_UPD$", "tPOP")>;
+      (instregex "(t|t2)LDM(DB|IA)_UPD$")>;
 def : InstRW<[M7BaseUpdate, WriteST, M7SingleIssue, M7Read_ISS],
-      (instregex "(t|t2)STM(DB|IA)_UPD$", "tPUSH")>;
+      (instregex "(t|t2)STM(DB|IA)_UPD$")>;
 
 // Load/store doubles cannot be dual-issued.
 

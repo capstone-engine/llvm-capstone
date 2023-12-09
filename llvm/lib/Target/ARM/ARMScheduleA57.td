@@ -590,7 +590,7 @@ def : InstRW<[A57WriteLDM], (instregex "(t|t2|sys)?LDM(IA|DA|DB|IB)$")>;
 
 // TODO: no writeback latency defined in documentation (implemented as 1 cyc)
 def : InstRW<[A57WriteLDM_Upd],
-  (instregex "(t|t2|sys)?LDM(IA_UPD|DA_UPD|DB_UPD|IB_UPD|IA_RET)", "tPOP")>;
+  (instregex "(t|t2|sys)?LDM(IA_UPD|DA_UPD|DB_UPD|IB_UPD|IA_RET)")>;
 
 def : InstRW<[A57Write_5cyc_1L], (instregex "VLLDM")>;
 
@@ -710,7 +710,7 @@ def A57WriteSTM_Upd : SchedWriteVariant<[
 
 def : InstRW<[A57WriteSTM], (instregex "(t2|sys|t)?STM(IA|DA|DB|IB)$")>;
 def : InstRW<[A57WrBackOne, A57WriteSTM_Upd],
-  (instregex "(t2|sys|t)?STM(IA_UPD|DA_UPD|DB_UPD|IB_UPD)", "tPUSH")>;
+  (instregex "(t2|sys|t)?STM(IA_UPD|DA_UPD|DB_UPD|IB_UPD)")>;
 
 def : InstRW<[A57Write_5cyc_1S], (instregex "VLSTM")>;
 

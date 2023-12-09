@@ -874,27 +874,6 @@ def : InstAlias<"ldm${p} $Rn!, $regs",
                 (tLDMIA tGPR:$Rn, pred:$p, reglist:$regs), 0>,
         Requires<[IsThumb, IsThumb1Only]>;
 
-let mayLoad = 1, Uses = [SP], Defs = [SP], hasExtraDefRegAllocReq = 1,
-    variadicOpsAreDefs = 1 in
-def tPOP : T1I<(outs), (ins pred:$p, reglist:$regs, variable_ops),
-               IIC_iPop,
-               "pop${p}\t$regs", []>,
-           T1Misc<{1,1,0,?,?,?,?}>, Sched<[WriteLd]> {
-  bits<16> regs;
-  let Inst{8}   = regs{15};
-  let Inst{7-0} = regs{7-0};
-}
-
-let mayStore = 1, Uses = [SP], Defs = [SP], hasExtraSrcRegAllocReq = 1 in
-def tPUSH : T1I<(outs), (ins pred:$p, reglist:$regs, variable_ops),
-                IIC_iStore_m,
-                "push${p}\t$regs", []>,
-            T1Misc<{0,1,0,?,?,?,?}>, Sched<[WriteST]> {
-  bits<16> regs;
-  let Inst{8}   = regs{14};
-  let Inst{7-0} = regs{7-0};
-}
-
 //===----------------------------------------------------------------------===//
 //  Arithmetic Instructions.
 //
@@ -1740,14 +1719,6 @@ def tLDRpci_pic : PseudoInst<(outs tGPR:$dst), (ins i32imm:$addr, pclabel:$cp),
                [(set tGPR:$dst, (ARMpic_add (load (ARMWrapper tconstpool:$addr)),
                                            imm:$cp))]>,
                Requires<[IsThumb, IsThumb1Only]>;
-
-// Pseudo-instruction for merged POP and return.
-// FIXME: remove when we have a way to marking a MI with these properties.
-let isReturn = 1, isTerminator = 1, isBarrier = 1, mayLoad = 1,
-    hasExtraDefRegAllocReq = 1 in
-def tPOP_RET : tPseudoExpand<(outs), (ins pred:$p, reglist:$regs, variable_ops),
-                           2, IIC_iPop_Br, [],
-                           (tPOP pred:$p, reglist:$regs)>, Sched<[WriteBrL]>;
 
 // Indirect branch using "mov pc, $Rm"
 let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {

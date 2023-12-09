@@ -485,7 +485,7 @@ let SchedModel = SwiftModel in {
         (instregex /*"t2LDMIA_RET", "tLDMIA_RET", "LDMIA_RET",*/
         "LDM(IA|DA|DB|IB)_UPD", "(t2|sys|t)LDM(IA|DA|DB|IB)_UPD")>;
   def : InstRW<[SwiftWriteLDMAddrWB, SwiftWriteLM, SwiftWriteP1TwoCycle],
-        (instregex "LDMIA_RET", "(t|t2)LDMIA_RET", "tPOP")>;
+        (instregex "LDMIA_RET", "(t|t2)LDMIA_RET")>;
   // 4.2.23 Integer Store, Single Element
   def : InstRW<[SwiftWriteP2],
         (instregex "PICSTR", "STR(i12|rs)", "STRB(i12|rs)", "STRH$", "STREX",
@@ -534,8 +534,7 @@ let SchedModel = SwiftModel in {
   def : InstRW<[SwiftWriteSTM],
         (instregex "STM(IB|IA|DB|DA)$", "(t2|sys|t)STM(IB|IA|DB|DA)$")>;
   def : InstRW<[SwiftWriteP01OneCycle, SwiftWriteSTM],
-        (instregex "STM(IB|IA|DB|DA)_UPD", "(t2|sys|t)STM(IB|IA|DB|DA)_UPD",
-        "tPUSH")>;
+        (instregex "STM(IB|IA|DB|DA)_UPD", "(t2|sys|t)STM(IB|IA|DB|DA)_UPD")>;
 
   // LDRLIT pseudo instructions, they expand to LDR + PICADD
   def : InstRW<[SwiftWriteP2ThreeCycle, WriteALU],
