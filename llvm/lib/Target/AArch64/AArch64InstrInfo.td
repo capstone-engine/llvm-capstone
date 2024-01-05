@@ -2551,7 +2551,7 @@ def ERET : SpecialReturn<0b0100, "eret">;
 // Default to the LR register.
 def : InstAlias<"ret", (RET LR)>;
 
-let isCall = 1, Defs = [LR], Uses = [SP] in {
+let isCall = 1, Defs = [LR], isBranch = 1, isIndirectBranch = 1 in {
   def BLR : BranchReg<0b0001, "blr", []>;
   def BLRNoIP : Pseudo<(outs), (ins GPR64noip:$Rn), []>,
                 Sched<[WriteBrReg]>,
@@ -2648,7 +2648,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
 def B  : BranchImm<0, "b", [(br bb:$addr)]>;
 } // isBranch, isTerminator, isBarrier
 
-let isCall = 1, Defs = [LR], Uses = [SP] in {
+let isCall = 1, Defs = [LR], isBranch = 1 in {
 def BL : CallImm<1, "bl", [(AArch64call tglobaladdr:$addr)]>;
 } // isCall
 def : Pat<(AArch64call texternalsym:$func), (BL texternalsym:$func)>;
