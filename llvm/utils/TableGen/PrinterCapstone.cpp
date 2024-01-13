@@ -3058,8 +3058,6 @@ void addComplexOperand(
     std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
   DagInit *SubOps = ComplexOp->getValueAsDag("MIOperandInfo");
 
-  std::string const &ComplOperandType = getPrimaryCSOperandType(ComplexOp);
-
   unsigned E = SubOps->getNumArgs();
   for (unsigned I = 0; I != E; ++I) {
     Init *ArgInit = SubOps->getArg(I);
