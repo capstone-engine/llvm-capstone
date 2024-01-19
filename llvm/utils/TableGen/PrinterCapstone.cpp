@@ -1420,8 +1420,8 @@ void PrinterCapstone::asmWriterEmitPrintInstruction(
       // Emit a single possibility.
       OS << translateToC(TargetName, Commands[0]) << "\n\n";
     } else {
-      OS << "  switch ((Bits >> " << (OpcodeInfoBits - BitsLeft) << ") & "
-         << ((1 << NumBits) - 1) << ") {\n"
+      OS << "  switch (((uint32_t)(Bits >> " << (OpcodeInfoBits - BitsLeft) << ") & "
+         << ((1 << NumBits) - 1) << ")) {\n"
          << "  default: assert(0 && \"Invalid command number.\");\n";
 
       // Print out all the cases.
