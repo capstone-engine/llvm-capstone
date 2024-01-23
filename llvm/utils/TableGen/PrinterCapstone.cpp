@@ -1025,7 +1025,7 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
      << "}\n\n";
 
   std::set<std::string> HasTwoByteInsns = {"ARM"};
-  std::set<std::string> HasFourByteInsns = {"ARM", "PPC", "AArch64"};
+  std::set<std::string> HasFourByteInsns = {"ARM", "PPC", "AArch64", "LoongArch"};
 
   if (HasTwoByteInsns.find(TargetName) != HasTwoByteInsns.end())
     OS << "FieldFromInstruction(fieldFromInstruction_2, uint16_t)\n"
