@@ -1780,11 +1780,11 @@ void PrinterCapstone::asmWriterEmitPrintAliasOp(
     std::string const &TargetName, StringRef const &ClassName,
     std::vector<std::pair<std::string, bool>> const &PrintMethods,
     bool PassSubtarget) const {
+  OS << "#ifndef CAPSTONE_DIET\n";
   OS << "static void printCustomAliasOperand(\n"
      << "         MCInst *MI, uint64_t Address, unsigned OpIdx,\n"
      << "         unsigned PrintMethodIdx,\n"
-     << "         SStream *OS) {\n"
-     << "#ifndef CAPSTONE_DIET\n";
+     << "         SStream *OS) {\n";
   if (PrintMethods.empty())
     OS << "  llvm_unreachable(\"Unknown PrintMethod kind\");\n";
   else {
@@ -1804,14 +1804,15 @@ void PrinterCapstone::asmWriterEmitPrintAliasOp(
     }
     OS << "  }\n";
   }
-  OS << "#endif // CAPSTONE_DIET\n";
-  OS << "}\n\n";
+  OS << "}\n";
+  OS << "#endif // CAPSTONE_DIET\n\n";
 }
 
 void PrinterCapstone::asmWriterEmitPrintMC(
     std::string const &TargetName, StringRef const &ClassName,
     std::vector<const Record *> const &MCOpPredicates) const {
   if (!MCOpPredicates.empty()) {
+    OS << "#ifndef CAPSTONE_DIET\n";
     OS << "static bool " << TargetName << ClassName
        << "ValidateMCOperand(const MCOperand *MCOp,\n"
        << "                  unsigned PredicateIndex) {\n"
@@ -1830,7 +1831,8 @@ void PrinterCapstone::asmWriterEmitPrintMC(
          << "    }\n";
     }
     OS << "  }\n"
-       << "}\n\n";
+       << "}\n";
+    OS << "#endif // CAPSTONE_DIET\n\n";
   }
 }
 
