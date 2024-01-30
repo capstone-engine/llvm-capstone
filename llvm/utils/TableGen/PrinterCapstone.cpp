@@ -662,8 +662,7 @@ std::string edgeCaseTemplArg(std::string &Code) {
   PrintFatalNote("Edge case for C++ code not handled: " + Code);
 }
 
-std::string handleDefaultArg(const std::string &TargetName,
-                                    std::string &Code) {
+std::string handleDefaultArg(const std::string &TargetName, std::string &Code) {
   static SmallVector<std::pair<std::string, std::string>>
       AArch64TemplFuncWithDefaults = {// Default is 1
                                       {"printVectorIndex", "1"},
@@ -690,8 +689,7 @@ std::string handleDefaultArg(const std::string &TargetName,
   return Code;
 }
 
-void patchTemplateArgs(const std::string &TargetName,
-                              std::string &Code) {
+void patchTemplateArgs(const std::string &TargetName, std::string &Code) {
   Code = handleDefaultArg(TargetName, Code);
 
   size_t B = Code.find_first_of("<");
@@ -707,9 +705,9 @@ void patchTemplateArgs(const std::string &TargetName,
       continue;
     }
     while ((Args.find("true") != std::string::npos) ||
-          (Args.find("false") != std::string::npos) ||
-          (Args.find(",") != std::string::npos) ||
-          (Args.find("'") != std::string::npos)) {
+           (Args.find("false") != std::string::npos) ||
+           (Args.find(",") != std::string::npos) ||
+           (Args.find("'") != std::string::npos)) {
       Args = Regex("true").sub("1", Args);
       Args = Regex("false").sub("0", Args);
       Args = Regex(" *, *").sub("_", Args);
@@ -1420,8 +1418,8 @@ void PrinterCapstone::asmWriterEmitPrintInstruction(
       // Emit a single possibility.
       OS << translateToC(TargetName, Commands[0]) << "\n\n";
     } else {
-      OS << "  switch (((uint32_t)(Bits >> " << (OpcodeInfoBits - BitsLeft) << ") & "
-         << ((1 << NumBits) - 1) << ")) {\n"
+      OS << "  switch (((uint32_t)(Bits >> " << (OpcodeInfoBits - BitsLeft)
+         << ") & " << ((1 << NumBits) - 1) << ")) {\n"
          << "  default: assert(0 && \"Invalid command number.\");\n";
 
       // Print out all the cases.
@@ -2503,7 +2501,8 @@ std::string getReqFeatures(StringRef const &TargetName, AsmMatcherInfo &AMI,
   }
   for (const auto &OpInfo : CGI->Operands.OperandList) {
     if (OpInfo.OperandType == "MCOI::OPERAND_PCREL" &&
-        (CGI->isBranch || CGI->isReturn || CGI->isIndirectBranch || CGI->isCall)) {
+        (CGI->isBranch || CGI->isReturn || CGI->isIndirectBranch ||
+         CGI->isCall)) {
       Flags += TargetName.str() + "_GRP_BRANCH_RELATIVE, ";
     }
   }
@@ -2652,8 +2651,8 @@ bool compareTypeSuperClasses(ArrayRef<std::pair<Record *, SMRange>> OpTypeSC,
 /// @param MatchByTypeSuperClasses If true, a valid match is also if any type
 /// super classes are the same.
 /// @return True, if the pattern contains a node with the same name (and
-/// optionally the same type name or same super class type) as the given  operand.
-/// False otherwise.
+/// optionally the same type name or same super class type) as the given
+/// operand. False otherwise.
 bool opIsPartOfiPTRPattern(Record const *OpRec, StringRef const &OpName,
                            DagInit *PatternDag, bool PartOfPTRPattern,
                            bool MatchByTypeName = false,
@@ -2747,14 +2746,15 @@ int comparePatternResultToCGIOps(CodeGenInstruction const *CGI,
   return -1;
 }
 
-std::string getCSOperandType(StringRef const &TargetName,
-    CodeGenInstruction const *CGI, Record const *OpRec, StringRef const &OpName,
+std::string getCSOperandType(
+    StringRef const &TargetName, CodeGenInstruction const *CGI,
+    Record const *OpRec, StringRef const &OpName,
     std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
   std::string OperandType = getPrimaryCSOperandType(OpRec);
 
   if (TargetName.equals("AArch64") && OperandType != "CS_OP_MEM") {
-    // The definitions of AArch64 are so broken, when it comes to memory operands,
-    // that we just search for the op name enclosed in [].
+    // The definitions of AArch64 are so broken, when it comes to memory
+    // operands, that we just search for the op name enclosed in [].
     if (Regex("\\[.*\\$" + OpName.str() + ".*]").match(CGI->AsmString))
       return OperandType += " | CS_OP_MEM";
   }
@@ -2763,10 +2763,12 @@ std::string getCSOperandType(StringRef const &TargetName,
   if (OperandType == "CS_OP_MEM")
     // It is only marked as mem, we treat it as immediate.
     OperandType += " | CS_OP_IMM";
-  else if (OpRec->getValue("Type") && getValueType(OpRec->getValueAsDef("Type")) ==
-                                        MVT::SimpleValueType::iPTR)
+  else if (OpRec->getValue("Type") &&
+           getValueType(OpRec->getValueAsDef("Type")) ==
+               MVT::SimpleValueType::iPTR)
     OperandType += " | CS_OP_MEM";
-  else if (!CGI->TheDef->isValueUnset("Pattern") && !CGI->TheDef->getValueAsListInit("Pattern")->empty()) {
+  else if (!CGI->TheDef->isValueUnset("Pattern") &&
+           !CGI->TheDef->getValueAsListInit("Pattern")->empty()) {
     // Check if operand is part of a pattern with a memory type (iPTR)
     ListInit *PatternList = CGI->TheDef->getValueAsListInit("Pattern");
     PatternDag = dyn_cast<DagInit>(PatternList->getValues()[0]);
@@ -2794,8 +2796,7 @@ std::string getCSOperandType(StringRef const &TargetName,
 }
 
 std::string getCSOperandEncoding(CodeGenInstruction const *CGI,
-                                 Init const *ArgInit,
-                                 const StringRef &OpName) {
+                                 Init const *ArgInit, const StringRef &OpName) {
   BitsInit const *const InstrBits =
       !CGI->TheDef->getValueAsBit("isPseudo")
           ? CGI->TheDef->getValueAsBitsInit("Inst")
@@ -3054,9 +3055,9 @@ uint8_t getOpAccess(CodeGenInstruction const *CGI, std::string OperandType,
 }
 
 void addComplexOperand(
-    StringRef const &TargetName, CodeGenInstruction const *CGI, Record const *ComplexOp,
-    StringRef const &ArgName, bool IsOutOp, std::vector<OpData> &InsOps,
-    std::string const &Encoding,
+    StringRef const &TargetName, CodeGenInstruction const *CGI,
+    Record const *ComplexOp, StringRef const &ArgName, bool IsOutOp,
+    std::vector<OpData> &InsOps, std::string const &Encoding,
     std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
   DagInit *SubOps = ComplexOp->getValueAsDag("MIOperandInfo");
 
@@ -3066,13 +3067,14 @@ void addComplexOperand(
     Record *SubOp = argInitOpToRecord(ArgInit);
     // Determine Operand type
     std::string OperandType;
-    std::string SubOperandType =
-        getCSOperandType(TargetName, CGI, SubOp, SubOp->getName().str(), InsnPatternMap);
+    std::string SubOperandType = getCSOperandType(
+        TargetName, CGI, SubOp, SubOp->getName().str(), InsnPatternMap);
     std::string ComplOperandType =
         getCSOperandType(TargetName, CGI, ComplexOp, ArgName, InsnPatternMap);
     if (ComplOperandType.find("CS_OP_MEM") != std::string::npos)
       OperandType = "CS_OP_MEM | " + SubOperandType;
-    else if (!CGI->TheDef->isValueUnset("Pattern") && !CGI->TheDef->getValueAsListInit("Pattern")->empty()) {
+    else if (!CGI->TheDef->isValueUnset("Pattern") &&
+             !CGI->TheDef->getValueAsListInit("Pattern")->empty()) {
       OperandType = SubOperandType;
       ListInit *PatternList = CGI->TheDef->getValueAsListInit("Pattern");
       DagInit *PatternDag = dyn_cast<DagInit>(PatternList->getValues()[0]);
@@ -3144,7 +3146,7 @@ void printInsnOpMapEntry(
     if (Rec->getValue("MIOperandInfo")) {
       if (Rec->getValueAsDag("MIOperandInfo")->getNumArgs() > 0) {
         addComplexOperand(TargetName, CGI, Rec, ArgName, IsOutOp, InsOps,
-              Encoding, InsnPatternMap);
+                          Encoding, InsnPatternMap);
         continue;
       }
     }
@@ -3332,7 +3334,8 @@ void printInsnAliasEnum(CodeGenTarget const &Target,
     AliasEnum << "\t" + NormAliasMnem + ", // Real instr.: " +
                      getLLVMInstEnumName(Target.getName(), RealInst) + "\n";
 
-    AliasMnemMap << "\t{ " + NormAliasMnem + ", \"" + normalizedMnemonic(AliasMnemonic, false) + "\" },\n";
+    AliasMnemMap << "\t{ " + NormAliasMnem + ", \"" +
+                        normalizedMnemonic(AliasMnemonic, false) + "\" },\n";
   }
 }
 
