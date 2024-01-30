@@ -3070,8 +3070,8 @@ void addComplexOperand(
         getCSOperandType(TargetName, CGI, SubOp, SubOp->getName().str(), InsnPatternMap);
     std::string ComplOperandType =
         getCSOperandType(TargetName, CGI, ComplexOp, ArgName, InsnPatternMap);
-    if (ComplOperandType == "CS_OP_MEM")
-      OperandType = ComplOperandType + " | " + SubOperandType;
+    if (ComplOperandType.find("CS_OP_MEM") != std::string::npos)
+      OperandType = "CS_OP_MEM | " + SubOperandType;
     else if (!CGI->TheDef->isValueUnset("Pattern") && !CGI->TheDef->getValueAsListInit("Pattern")->empty()) {
       OperandType = SubOperandType;
       ListInit *PatternList = CGI->TheDef->getValueAsListInit("Pattern");
