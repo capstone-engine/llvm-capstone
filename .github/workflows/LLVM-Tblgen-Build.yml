@@ -34,5 +34,9 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug ../llvm
-          cmake --build . --target llvm-tblgen --config Debug
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../llvm
+          cmake --build . --target llvm-tblgen --config Release
+          cd ..
+      - name: Test generated tables
+        run: |
+          ./compare_tblgen_output.sh
