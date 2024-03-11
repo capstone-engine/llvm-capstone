@@ -7,8 +7,8 @@ define internal i1 @f.trunc(i32 %x) {
 ; CHECK-NEXT:    [[T_1:%.*]] = trunc i32 [[X:%.*]] to i16
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i16 [[T_1]], 299
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i16 [[T_1]], 101
-; CHECK-NEXT:    [[RES_1:%.*]] = add i1 false, [[C_2]]
-; CHECK-NEXT:    [[RES_2:%.*]] = add i1 [[RES_1]], false
+; CHECK-NEXT:    [[RES_1:%.*]] = add nuw nsw i1 false, [[C_2]]
+; CHECK-NEXT:    [[RES_2:%.*]] = add nuw nsw i1 [[RES_1]], false
 ; CHECK-NEXT:    [[RES_3:%.*]] = add i1 [[RES_2]], [[C_4]]
 ; CHECK-NEXT:    [[T_2:%.*]] = trunc i32 [[X]] to i8
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp sgt i8 [[T_2]], 44
@@ -59,11 +59,11 @@ define i1 @caller1() {
 ; x = [100, 301)
 define internal i1 @f.zext(i32 %x, i32 %y) {
 ; CHECK-LABEL: @f.zext(
-; CHECK-NEXT:    [[T_1:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[T_1:%.*]] = zext nneg i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i64 [[T_1]], 299
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i64 [[T_1]], 101
-; CHECK-NEXT:    [[RES_1:%.*]] = add i1 false, [[C_2]]
-; CHECK-NEXT:    [[RES_2:%.*]] = add i1 [[RES_1]], false
+; CHECK-NEXT:    [[RES_1:%.*]] = add nuw nsw i1 false, [[C_2]]
+; CHECK-NEXT:    [[RES_2:%.*]] = add nuw nsw i1 [[RES_1]], false
 ; CHECK-NEXT:    [[RES_3:%.*]] = add i1 [[RES_2]], [[C_4]]
 ; CHECK-NEXT:    [[T_2:%.*]] = zext i32 [[Y:%.*]] to i64
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp sgt i64 [[T_2]], 300
@@ -71,7 +71,7 @@ define internal i1 @f.zext(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i64 [[T_2]], 1
 ; CHECK-NEXT:    [[RES_4:%.*]] = add i1 [[RES_3]], [[C_5]]
 ; CHECK-NEXT:    [[RES_5:%.*]] = add i1 [[RES_4]], [[C_6]]
-; CHECK-NEXT:    [[RES_6:%.*]] = add i1 [[RES_5]], false
+; CHECK-NEXT:    [[RES_6:%.*]] = add nuw nsw i1 [[RES_5]], false
 ; CHECK-NEXT:    [[RES_7:%.*]] = add i1 [[RES_6]], [[C_8]]
 ; CHECK-NEXT:    ret i1 [[RES_7]]
 ;
@@ -112,18 +112,18 @@ define i1 @caller.zext() {
 ; x = [100, 301)
 define internal i1 @f.sext(i32 %x, i32 %y) {
 ; CHECK-LABEL: @f.sext(
-; CHECK-NEXT:    [[T_1:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[T_1:%.*]] = zext nneg i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i64 [[T_1]], 299
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i64 [[T_1]], 101
-; CHECK-NEXT:    [[RES_1:%.*]] = add i1 false, [[C_2]]
-; CHECK-NEXT:    [[RES_2:%.*]] = add i1 [[RES_1]], false
+; CHECK-NEXT:    [[RES_1:%.*]] = add nuw nsw i1 false, [[C_2]]
+; CHECK-NEXT:    [[RES_2:%.*]] = add nuw nsw i1 [[RES_1]], false
 ; CHECK-NEXT:    [[RES_3:%.*]] = add i1 [[RES_2]], [[C_4]]
 ; CHECK-NEXT:    [[T_2:%.*]] = sext i32 [[Y:%.*]] to i64
 ; CHECK-NEXT:    [[C_6:%.*]] = icmp sgt i64 [[T_2]], 899
 ; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i64 [[T_2]], -119
-; CHECK-NEXT:    [[RES_4:%.*]] = add i1 [[RES_3]], false
+; CHECK-NEXT:    [[RES_4:%.*]] = add nuw nsw i1 [[RES_3]], false
 ; CHECK-NEXT:    [[RES_5:%.*]] = add i1 [[RES_4]], [[C_6]]
-; CHECK-NEXT:    [[RES_6:%.*]] = add i1 [[RES_5]], false
+; CHECK-NEXT:    [[RES_6:%.*]] = add nuw nsw i1 [[RES_5]], false
 ; CHECK-NEXT:    [[RES_7:%.*]] = add i1 [[RES_6]], [[C_8]]
 ; CHECK-NEXT:    ret i1 [[RES_7]]
 ;
@@ -318,7 +318,7 @@ entry:
 
 define internal i64 @f.sext_to_zext(i32 %t) {
 ; CHECK-LABEL: @f.sext_to_zext(
-; CHECK-NEXT:    [[A:%.*]] = zext i32 [[T:%.*]] to i64
+; CHECK-NEXT:    [[A:%.*]] = zext nneg i32 [[T:%.*]] to i64
 ; CHECK-NEXT:    ret i64 [[A]]
 ;
   %a = sext i32 %t to i64

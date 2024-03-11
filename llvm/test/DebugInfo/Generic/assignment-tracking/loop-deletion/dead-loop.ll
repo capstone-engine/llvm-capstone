@@ -1,5 +1,7 @@
 ; RUN: opt %s -passes=loop-deletion -S -o - \
 ; RUN: | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -passes=loop-deletion -S -o - \
+; RUN: | FileCheck %s
 
 ;; $ cat test.cpp:
 ;; void esc(int*);
@@ -18,7 +20,7 @@
 ;; mistake.
 
 ; CHECK: for.end:
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 poison,{{.+}}, metadata !DIExpression({{.+}}), metadata ![[ID:[0-9]+]], metadata ptr %Counter, metadata !DIExpression())
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 undef,{{.+}}, metadata !DIExpression({{.+}}), metadata ![[ID:[0-9]+]], metadata ptr %Counter, metadata !DIExpression())
 ; CHECK-NEXT: store i32 2, ptr %Counter, align 4,{{.*}}!DIAssignID ![[ID]]
 
 define dso_local void @_Z3funv() local_unnamed_addr #0 !dbg !7 {

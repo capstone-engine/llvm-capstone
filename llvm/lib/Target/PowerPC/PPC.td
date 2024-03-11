@@ -318,6 +318,17 @@ def FeaturePrivileged :
   SubtargetFeature<"privileged", "HasPrivileged", "true",
                    "Add privileged instructions">;
 
+// Specifies that local-exec TLS accesses in any function with this target
+// attribute should use the optimized TOC-free sequence (where the offset is an
+// immediate off of R13 for which the linker might add fix-up code if the
+// immediate is too large).
+// Clearly, this isn't really a feature of the subtarget, but is used as a
+// convenient way to affect code generation for individual functions.
+def FeatureAIXLocalExecTLS :
+  SubtargetFeature<"aix-small-local-exec-tls", "HasAIXSmallLocalExecTLS", "true",
+                   "Produce a TOC-free local-exec TLS sequence for this function "
+                   "for 64-bit AIX">;
+
 def FeaturePredictableSelectIsExpensive :
   SubtargetFeature<"predictable-select-expensive",
                    "PredictableSelectIsExpensive",
@@ -326,11 +337,6 @@ def FeaturePredictableSelectIsExpensive :
 
 def FeatureFastMFLR : SubtargetFeature<"fast-MFLR", "HasFastMFLR", "true",
                                        "MFLR is a fast instruction">;
-
-#define CAPSTONE_DEPR_FEATURE
-include "PPCDeprecated.td"
-#define CAPSTONE_PS_FEATURE
-include "PPCInstrPairedSingle.td"
 
 // Since new processors generally contain a superset of features of those that
 // came before them, the idea is to make implementations of new processors
@@ -667,9 +673,6 @@ def : ProcessorModel<"ppc64", G5Model,
                    FeatureMFTB]>;
 def : ProcessorModel<"ppc64le", P8Model, ProcessorFeatures.P8Features>;
 
-#define CAPSTONE_PS_PROCESSOR
-include "PPCInstrPairedSingle.td"
-
 //===----------------------------------------------------------------------===//
 // Calling Conventions
 //===----------------------------------------------------------------------===//
@@ -678,12 +681,6 @@ include "PPCCallingConv.td"
 
 def PPCInstrInfo : InstrInfo {
   let isLittleEndianEncoding = 1;
-
-  // FIXME: Unset this when no longer needed!
-  let decodePositionallyEncodedOperands = 1;
-
-  let noNamedPositionallyEncodedOperands = 1;
-  let useDeprecatedPositionallyEncodedOperands = 1;
 }
 
 def PPCAsmWriter : AsmWriter {

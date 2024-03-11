@@ -11,6 +11,24 @@ define bfloat @test_load(ptr %p) nounwind {
   ret bfloat %tmp1
 }
 
+define bfloat @test_load_offset1(ptr %p) nounwind {
+; CHECK-LABEL: test_load_offset1:
+; CHECK-NEXT: ldur h0, [x0, #1]
+; CHECK-NEXT: ret
+  %g = getelementptr inbounds i8, ptr %p, i64 1
+  %tmp1 = load bfloat, ptr %g, align 2
+  ret bfloat %tmp1
+}
+
+define bfloat @test_load_offset2(ptr %p) nounwind {
+; CHECK-LABEL: test_load_offset2:
+; CHECK-NEXT: ldr h0, [x0, #2]
+; CHECK-NEXT: ret
+  %g = getelementptr inbounds i8, ptr %p, i64 2
+  %tmp1 = load bfloat, ptr %g, align 2
+  ret bfloat %tmp1
+}
+
 define <4 x bfloat> @test_vec_load(ptr %p) nounwind {
 ; CHECK-LABEL: test_vec_load:
 ; CHECK-NEXT: ldr d0, [x0]
@@ -24,6 +42,16 @@ define void @test_store(ptr %a, bfloat %b) nounwind {
 ; CHECK-NEXT: str h0, [x0]
 ; CHECK-NEXT: ret
   store bfloat %b, ptr %a, align 16
+  ret void
+}
+
+define void @test_store_negative_offset(ptr %a, bfloat %b) nounwind {
+; CHECK-LABEL: test_store_negative_offset:
+; CHECK-NEXT: stur    h0, [x0, #-4]
+; CHECK-NEXT: ret
+entry:
+  %0 = getelementptr inbounds bfloat, ptr %a, i64 -2
+  store bfloat %b, ptr %0, align 2
   ret void
 }
 

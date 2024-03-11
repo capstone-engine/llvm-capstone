@@ -57,7 +57,7 @@ define i32 @t4(i64 %a) {
 define i64 @t5(i32 %a) {
 ; CHECK-LABEL: @t5(
 ; CHECK-NEXT:    [[NARROW:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 5)
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   %1 = icmp slt i32 %a, 5
@@ -1361,10 +1361,9 @@ define i8 @PR14613_smax(i8 %x) {
 
 define i8 @PR46271(<2 x i8> %x) {
 ; CHECK-LABEL: @PR46271(
-; CHECK-NEXT:    [[A:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[B:%.*]] = select <2 x i1> [[A]], <2 x i8> [[X]], <2 x i8> <i8 poison, i8 -1>
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i8> [[B]], i64 1
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.smax.v2i8(<2 x i8> [[X:%.*]], <2 x i8> <i8 -1, i8 -1>)
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i8> [[TMP1]], i64 1
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP2]], -1
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = icmp sgt <2 x i8> %x, <i8 -1, i8 -1>

@@ -19,10 +19,11 @@
 // FIXME: Is it easiest to fix this layering violation by moving the .inc
 // #includes from AArch64MCTargetDesc.h to here?
 #include "MCTargetDesc/AArch64MCTargetDesc.h" // For AArch64::X0 and friends.
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 
 namespace llvm {
 
@@ -247,6 +248,34 @@ static inline bool atomicBarrierDroppedOnZero(unsigned Opcode) {
   return false;
 }
 
+static inline std::optional<std::string>
+getArm64ECMangledFunctionName(std::string Name) {
+  bool IsCppFn = Name[0] == '?';
+  if (IsCppFn && Name.find("$$h") != std::string::npos)
+    return std::nullopt;
+  if (!IsCppFn && Name[0] == '#')
+    return std::nullopt;
+
+  StringRef Prefix = "$$h";
+  size_t InsertIdx = 0;
+  if (IsCppFn) {
+    InsertIdx = Name.find("@@");
+    size_t ThreeAtSignsIdx = Name.find("@@@");
+    if (InsertIdx != std::string::npos && InsertIdx != ThreeAtSignsIdx) {
+      InsertIdx += 2;
+    } else {
+      InsertIdx = Name.find("@");
+      if (InsertIdx != std::string::npos)
+        InsertIdx++;
+    }
+  } else {
+    Prefix = "#";
+  }
+
+  Name.insert(Name.begin() + InsertIdx, Prefix.begin(), Prefix.end());
+  return std::optional<std::string>(Name);
+}
+
 namespace AArch64CC {
 
 // The CondCodes constants map directly to the 4-bit encoding of the condition
@@ -329,40 +358,6 @@ inline static unsigned getNZCVToSatisfyCondCode(CondCode Code) {
   case LT: return N; // N != V
   case GT: return 0; // Z == 0 && N == V
   case LE: return Z; // Z == 1 || N != V
-  }
-}
-
-/// Return true if Code is a reflexive relationship:
-/// forall x. (CSET Code (CMP x x)) == 1
-inline static bool isReflexive(CondCode Code) {
-  switch (Code) {
-  case EQ:
-  case HS:
-  case PL:
-  case LS:
-  case GE:
-  case LE:
-  case AL:
-  case NV:
-    return true;
-  default:
-    return false;
-  }
-}
-
-/// Return true if Code is an irreflexive relationship:
-/// forall x. (CSET Code (CMP x x)) == 0
-inline static bool isIrreflexive(CondCode Code) {
-  switch (Code) {
-  case NE:
-  case LO:
-  case MI:
-  case HI:
-  case LT:
-  case GT:
-    return true;
-  default:
-    return false;
   }
 }
 
@@ -562,6 +557,27 @@ getSVEPredPatternFromNumElements(unsigned MinNumElts) {
     return AArch64SVEPredPattern::vl256;
   }
 }
+
+/// An enum to describe what types of loops we should attempt to tail-fold:
+///   Disabled:    None
+///   Reductions:  Loops containing reductions
+///   Recurrences: Loops with first-order recurrences, i.e. that would
+///                  require a SVE splice instruction
+///   Reverse:     Reverse loops
+///   Simple:      Loops that are not reversed and don't contain reductions
+///                  or first-order recurrences.
+///   All:         All
+enum class TailFoldingOpts : uint8_t {
+  Disabled = 0x00,
+  Simple = 0x01,
+  Reductions = 0x02,
+  Recurrences = 0x04,
+  Reverse = 0x08,
+  All = Reductions | Recurrences | Simple | Reverse
+};
+
+LLVM_DECLARE_ENUM_AS_BITMASK(TailFoldingOpts,
+                             /* LargestValue */ (long)TailFoldingOpts::Reverse);
 
 namespace AArch64ExactFPImm {
   struct ExactFPImm {
@@ -807,12 +823,11 @@ namespace AArch64II {
     /// an LDG instruction to obtain the tag value.
     MO_TAGGED = 0x400,
 
-    /// MO_DLLIMPORTAUX - Symbol refers to "auxilliary" import stub. On
-    /// Arm64EC, there are two kinds of import stubs used for DLL import of
-    /// functions: MO_DLLIMPORT refers to natively callable Arm64 code, and
-    /// MO_DLLIMPORTAUX refers to the original address which can be compared
-    /// for equality.
-    MO_DLLIMPORTAUX = 0x800,
+    /// MO_ARM64EC_CALLMANGLE - Operand refers to the Arm64EC-mangled version
+    /// of a symbol, not the original. For dllimport symbols, this means it
+    /// uses "__imp_aux".  For other symbols, this means it uses the mangled
+    /// ("#" prefix for C) name.
+    MO_ARM64EC_CALLMANGLE = 0x800,
   };
 } // end namespace AArch64II
 
@@ -842,6 +857,7 @@ inline static StringRef AArch64PACKeyIDToString(AArch64PACKey::ID KeyID) {
   case AArch64PACKey::DB:
     return StringRef("db");
   }
+  llvm_unreachable("Unhandled AArch64PACKey::ID enum");
 }
 
 /// Return numeric key ID for 2-letter identifier string.

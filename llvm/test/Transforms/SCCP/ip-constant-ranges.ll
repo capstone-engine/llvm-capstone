@@ -33,9 +33,9 @@ define internal i32 @f2(i32 %x) {
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[X]], 300
 ; CHECK-NEXT:    [[RES1:%.*]] = select i1 [[CMP]], i32 1, i32 2
 ; CHECK-NEXT:    [[RES4:%.*]] = select i1 [[CMP4]], i32 3, i32 4
-; CHECK-NEXT:    [[RES6:%.*]] = add i32 [[RES1]], 3
-; CHECK-NEXT:    [[RES7:%.*]] = add i32 5, [[RES4]]
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[RES6]], 5
+; CHECK-NEXT:    [[RES6:%.*]] = add nuw nsw i32 [[RES1]], 3
+; CHECK-NEXT:    [[RES7:%.*]] = add nuw nsw i32 5, [[RES4]]
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw i32 [[RES6]], 5
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
@@ -63,8 +63,8 @@ define i32 @caller1() {
 ; CHECK-NEXT:    [[CALL2:%.*]] = tail call i32 @f1(i32 47, i32 999)
 ; CHECK-NEXT:    [[CALL3:%.*]] = tail call i32 @f2(i32 47)
 ; CHECK-NEXT:    [[CALL4:%.*]] = tail call i32 @f2(i32 301)
-; CHECK-NEXT:    [[RES_1:%.*]] = add nsw i32 12, [[CALL3]]
-; CHECK-NEXT:    [[RES_2:%.*]] = add nsw i32 [[RES_1]], [[CALL4]]
+; CHECK-NEXT:    [[RES_1:%.*]] = add nuw nsw i32 12, [[CALL3]]
+; CHECK-NEXT:    [[RES_2:%.*]] = add nuw nsw i32 [[RES_1]], [[CALL4]]
 ; CHECK-NEXT:    ret i32 [[RES_2]]
 ;
 entry:
@@ -243,7 +243,7 @@ define internal i32 @recursive_f(i32 %i) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[I]], 1
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @recursive_f(i32 [[SUB]])
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[I]], [[CALL]]
 ; CHECK-NEXT:    br label [[RETURN]]

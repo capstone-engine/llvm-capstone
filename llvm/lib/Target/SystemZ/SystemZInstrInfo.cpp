@@ -1014,17 +1014,16 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   unsigned Opcode = MI.getOpcode();
 
   // Check CC liveness if new instruction introduces a dead def of CC.
-  MCRegUnitIterator CCUnit(MCRegister::from(SystemZ::CC), TRI);
   SlotIndex MISlot = SlotIndex();
   LiveRange *CCLiveRange = nullptr;
   bool CCLiveAtMI = true;
   if (LIS) {
     MISlot = LIS->getSlotIndexes()->getInstructionIndex(MI).getRegSlot();
-    CCLiveRange = &LIS->getRegUnit(*CCUnit);
+    auto CCUnits = TRI->regunits(MCRegister::from(SystemZ::CC));
+    assert(range_size(CCUnits) == 1 && "CC only has one reg unit.");
+    CCLiveRange = &LIS->getRegUnit(*CCUnits.begin());
     CCLiveAtMI = CCLiveRange->liveAt(MISlot);
   }
-  ++CCUnit;
-  assert(!CCUnit.isValid() && "CC only has one reg unit.");
 
   if (Ops.size() == 2 && Ops[0] == 0 && Ops[1] == 1) {
     if (!CCLiveAtMI && (Opcode == SystemZ::LA || Opcode == SystemZ::LAY) &&
@@ -1693,9 +1692,6 @@ unsigned SystemZInstrInfo::getLoadAndTest(unsigned Opcode) const {
   case SystemZ::LR:     return SystemZ::LTR;
   case SystemZ::LGFR:   return SystemZ::LTGFR;
   case SystemZ::LGR:    return SystemZ::LTGR;
-  case SystemZ::LER:    return SystemZ::LTEBR;
-  case SystemZ::LDR:    return SystemZ::LTDBR;
-  case SystemZ::LXR:    return SystemZ::LTXBR;
   case SystemZ::LCDFR:  return SystemZ::LCDBR;
   case SystemZ::LPDFR:  return SystemZ::LPDBR;
   case SystemZ::LNDFR:  return SystemZ::LNDBR;

@@ -356,3 +356,28 @@ entry:
   %2 = select <4 x i1> %1, <4 x float> %0, <4 x float> %E
   ret <4 x float> %2
 }
+
+define <16 x i16> @test_no_vbroadcast1() {
+; CHECK-LABEL: test_no_vbroadcast1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vcvtneps2bf16 %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7e,0x08,0x72,0xc0]
+; CHECK-NEXT:    vpbroadcastw %xmm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x79,0xc0]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+entry:
+  %0 = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> poison, <8 x bfloat> zeroinitializer, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  %1 = bitcast <8 x bfloat> %0 to <8 x i16>
+  %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <16 x i32> zeroinitializer
+  ret <16 x i16> %2
+}
+
+define <16 x bfloat> @test_no_vbroadcast2() nounwind {
+; CHECK-LABEL: test_no_vbroadcast2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vcvtneps2bf16 %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7e,0x08,0x72,0xc0]
+; CHECK-NEXT:    vpbroadcastw %xmm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x79,0xc0]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+entry:
+  %0 = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> poison, <8 x bfloat> zeroinitializer, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  %1 = shufflevector <8 x bfloat> %0, <8 x bfloat> undef, <16 x i32> zeroinitializer
+  ret <16 x bfloat> %1
+}

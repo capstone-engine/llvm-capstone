@@ -172,8 +172,8 @@ public:
       Expected<StringRef> ContentsOrErr = Section.getContents();
       ASSERT_TRUE(static_cast<bool>(ContentsOrErr));
       StringRef Contents = *ContentsOrErr;
-      ASSERT_TRUE(Contents.find("dir") != StringRef::npos);
-      ASSERT_TRUE(Contents.find("file") != StringRef::npos);
+      ASSERT_TRUE(Contents.contains("dir"));
+      ASSERT_TRUE(Contents.contains("file"));
       ASSERT_TRUE(Contents.size() == 9);
       return;
     }
@@ -200,7 +200,7 @@ public:
 
 TEST_F(DwarfLineTableHeaders, TestDWARF4HeaderEmission) {
   if (!MRI)
-    return;
+    GTEST_SKIP();
 
   SmallString<0> EmittedBinContents;
   raw_svector_ostream VecOS(EmittedBinContents);
@@ -224,7 +224,7 @@ TEST_F(DwarfLineTableHeaders, TestDWARF4HeaderEmission) {
 
 TEST_F(DwarfLineTableHeaders, TestDWARF5HeaderEmission) {
   if (!MRI)
-    return;
+    GTEST_SKIP();
 
   SmallString<0> EmittedBinContents;
   raw_svector_ostream VecOS(EmittedBinContents);

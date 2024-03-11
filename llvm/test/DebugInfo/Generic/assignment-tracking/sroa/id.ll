@@ -1,4 +1,5 @@
 ; RUN: opt -passes=sroa -S %s -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=sroa -S %s -o - | FileCheck %s
 
 ;; Check that multiple dbg.assign intrinsics linked to a store that is getting
 ;; split (or at least that is touched by SROA, causing a replacement store to
@@ -28,13 +29,13 @@
 
 ; CHECK: if.then:
 ; CHECK-NEXT: %1 = load float
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata float %storemerge, metadata ![[var:[0-9]+]], metadata !DIExpression(), metadata ![[id:[0-9]+]], metadata ptr undef, metadata !DIExpression()), !dbg ![[dbg:[0-9]+]]
+; CHECK-NEXT: call void @llvm.dbg.value(metadata float %storemerge, metadata ![[var:[0-9]+]], metadata !DIExpression())
 
 ; CHECK: if.else:
 ; CHECK-NEXT: %2 = load float
 ; CHECK-NEXT: %3 = load float
 ; CHECK-NEXT: %div = fdiv float
-; CHECK: call void @llvm.dbg.assign(metadata float %storemerge, metadata ![[var]], metadata !DIExpression(), metadata ![[id]], metadata ptr undef, metadata !DIExpression()), !dbg ![[dbg]]
+; CHECK: call void @llvm.dbg.value(metadata float %storemerge, metadata ![[var]], metadata !DIExpression())
 
 %class.a = type { i8 }
 

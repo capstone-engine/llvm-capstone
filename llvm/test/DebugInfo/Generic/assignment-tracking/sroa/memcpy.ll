@@ -1,5 +1,7 @@
 ; RUN: opt -passes=sroa,verify -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -passes=sroa,verify -S %s -o - \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; Check that the new slices of an alloca and memcpy intructions get dbg.assign
 ;; intrinsics with the correct fragment info.
@@ -39,7 +41,7 @@
 
 ;; Intrinsics for the splits above.
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata {{.+}} undef, metadata ![[TO]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 96), metadata ![[ID_4]], metadata ptr %To.sroa.0, metadata !DIExpression()), !dbg
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %To.sroa.3.0.copyload, metadata ![[TO]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
+; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %To.sroa.3.0.copyload, metadata ![[TO]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32))
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata {{.+}} undef, metadata ![[TO]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 96), metadata ![[ID_6]], metadata ptr %To.sroa.4, metadata !DIExpression()), !dbg
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
