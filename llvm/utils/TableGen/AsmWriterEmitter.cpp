@@ -985,8 +985,6 @@ void AsmWriterEmitter::run() {
   EmitPrintAliasInstruction();
 }
 
-namespace llvm {
-
 void EmitAsmWriter(RecordKeeper &RK, raw_ostream &OS) {
   CodeGenTarget CGTarget(RK);
   PrinterLanguage const PL = PrinterLLVM::getLanguage();
@@ -1004,4 +1002,5 @@ void EmitAsmWriter(RecordKeeper &RK, raw_ostream &OS) {
   delete PI;
 }
 
-} // end namespace llvm
+static TableGen::Emitter::Opt X("gen-asm-writer", EmitAsmWriter,
+                                "Generate instruction descriptions");

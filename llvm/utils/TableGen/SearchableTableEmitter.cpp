@@ -620,8 +620,6 @@ void SearchableTableEmitter::run() {
     PI.searchableTablesEmitUndef(Guard);
 }
 
-namespace llvm {
-
 void EmitSearchableTables(RecordKeeper &RK, raw_ostream &OS) {
   formatted_raw_ostream FOS(OS);
   PrinterLanguage const PLang = PrinterLLVM::getLanguage();
@@ -651,4 +649,5 @@ void EmitSearchableTables(RecordKeeper &RK, raw_ostream &OS) {
   delete PI;
 }
 
-} // End llvm namespace.
+static TableGen::Emitter::Opt
+    X("gen-searchable-tables", EmitSearchableTables, "Generate generic binary-searchable table");
