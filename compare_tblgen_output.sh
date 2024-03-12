@@ -7,17 +7,36 @@ archs="AArch64 ARM PPC"
 file_names="GenAsmWriter GenDisassemblerTables GenInstrInfo GenRegisterInfo GenSubtargetInfo GenSystemOperands"
 release="18"
 gen_dir="output_tmp"
-mkdir "$gen_dir"
+
+if [ ! -d $gen_dir ]; then
+  mkdir "$gen_dir"
+fi
+
+if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+  echo "$0 [--rebuild]"
+  echo "\trebuild - Rebuild Capstone llvm-tblgen after upstream LLVM tables were generated."
+  exit 0
+fi
 
 build_upstream_llvm()
 {
   echo "Build upstream llvm-tblgen"
   git checkout "auto-sync-$release-base"
   cd build
-  cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../llvm
-  cmake --build . --target llvm-tblgen --config Release
+  cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../llvm > /dev/null
+  cmake --build . --target llvm-tblgen --config Release > /dev/null
   cd ..
   git checkout "auto-sync-$release"
+}
+
+build_capstone_llvm()
+{
+  echo "Build capstone llvm-tblgen"
+  git checkout "auto-sync-$release"
+  cd build
+  cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../llvm > /dev/null
+  cmake --build . --target llvm-tblgen --config Release > /dev/null
+  cd ..
 }
 
 gen_all()
@@ -36,6 +55,8 @@ gen_all()
         arch_include="../llvm/lib/Target/$arch"
       fi
 
+      echo "\t$arch - $out_file"
+
       if [ $file_name = "GenAsmWriter" ]; then
         ../build/bin/llvm-tblgen --gen-asm-writer "$table_type" -o "$out_file" -I "$arch_include" -I "../llvm/include" "$arch_include/$arch.td"
       elif [ $file_name = "GenDisassemblerTables" ]; then
@@ -46,8 +67,10 @@ gen_all()
         ../build/bin/llvm-tblgen --gen-register-info "$table_type" -o "$out_file" -I "$arch_include" -I "../llvm/include" "$arch_include/$arch.td"
       elif [ $file_name = "GenSubtargetInfo" ]; then
         ../build/bin/llvm-tblgen --gen-subtarget "$table_type" -o "$out_file" -I "$arch_include" -I "../llvm/include" "$arch_include/$arch.td"
-      elif [ $file_name = "GenSystemOperands" ] && [ $arch != "PPC" ]; then
-        ../build/bin/llvm-tblgen --gen-searchable-tables "$table_type" -o "$out_file" -I "$arch_include" -I "../llvm/include" "$arch_include/$arch.td"
+      elif [ $file_name = "GenSystemOperands" ]; then
+        if [ $arch != "PPC" ] ; then
+          ../build/bin/llvm-tblgen --gen-searchable-tables "$table_type" -o "$out_file" -I "$arch_include" -I "../llvm/include" "$arch_include/$arch.td"
+        fi
       else
         echo "File $file_name not handled."
         exit 1
@@ -79,7 +102,6 @@ if gen_all "--color" "CPP_LLVM"; then
 fi
 
 echo "Diff LLVM files"
-mismatch="false"
 for arch in $archs; do
   for file_name in $file_names; do
     out_CPP_LLVM="$gen_dir/$arch$file_name""_CPP_LLVM.inc"
@@ -98,7 +120,6 @@ for arch in $archs; do
 done
 
 echo "C table syntax check"
-malformed_syntax="false"
 for arch in $archs; do
   for file_name in $file_names; do
     out_file="$gen_dir/$arch"$file_name"_C_CS.inc"
@@ -115,6 +136,10 @@ for arch in $archs; do
   done
 done
 
-if [ $mismatch = "true" ] || [ $malformed_syntax = "true" ]; then
+if [ "$1" = "--rebuild" ]; then
+  build_capstone_llvm
+fi
+
+if [ -n "$mismatch" ] || [ -n "$malformed_syntax" ]; then
   exit 1
 fi
