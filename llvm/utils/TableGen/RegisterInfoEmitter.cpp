@@ -813,8 +813,6 @@ void RegisterInfoEmitter::debugDump(raw_ostream &ErrOS) {
   }
 }
 
-namespace llvm {
-
 void EmitRegisterInfo(RecordKeeper &RK, raw_ostream &OS) {
   formatted_raw_ostream FOS(OS);
   PrinterLanguage const PLang = PrinterLLVM::getLanguage();
@@ -835,4 +833,5 @@ void EmitRegisterInfo(RecordKeeper &RK, raw_ostream &OS) {
   delete PI;
 }
 
-} // end namespace llvm
+static TableGen::Emitter::Opt X("gen-register-info", EmitRegisterInfo,
+                                "Generate registers and register classes info");

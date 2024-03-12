@@ -1290,8 +1290,6 @@ void SubtargetEmitter::run() {
   EmitMCInstrAnalysisPredicateFunctions();
 }
 
-namespace llvm {
-
 void EmitSubtarget(RecordKeeper &RK, raw_ostream &OS) {
   CodeGenTarget CGTarget(RK);
 
@@ -1312,4 +1310,5 @@ void EmitSubtarget(RecordKeeper &RK, raw_ostream &OS) {
   delete PI;
 }
 
-} // end namespace llvm
+static TableGen::Emitter::Opt
+    X("gen-subtarget", EmitSubtarget, "Generate subtarget enumerations");
