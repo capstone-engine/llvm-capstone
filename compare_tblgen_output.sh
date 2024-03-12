@@ -23,8 +23,8 @@ build_upstream_llvm()
   echo "Build upstream llvm-tblgen"
   git checkout "auto-sync-$release-base"
   cd build
-  cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../llvm > /dev/null
-  cmake --build . --target llvm-tblgen --config Release > /dev/null
+  cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../llvm
+  cmake --build . --target llvm-tblgen --config Release
   cd ..
   git checkout "auto-sync-$release"
 }
@@ -34,8 +34,8 @@ build_capstone_llvm()
   echo "Build capstone llvm-tblgen"
   git checkout "auto-sync-$release"
   cd build
-  cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../llvm > /dev/null
-  cmake --build . --target llvm-tblgen --config Release > /dev/null
+  cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../llvm
+  cmake --build . --target llvm-tblgen --config Release
   cd ..
 }
 
