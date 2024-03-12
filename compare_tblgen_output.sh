@@ -113,7 +113,7 @@ for arch in $archs; do
 
     diff "$out_CPP_LLVM" "$out_CPP_CS" > /dev/null
     if [ $? -ne 0 ]; then
-      echo "The following files mismatch, but they should be the same: $out_files"
+      echo "The following files mismatch: $out_CPP_LLVM <-> $out_CPP_CS"
       mismatch="true"
     fi
   done
