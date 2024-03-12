@@ -111,16 +111,6 @@ static cl::opt<std::string>
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
-class AsmMatcherEmitter {
-  RecordKeeper &Records;
-  PrinterLLVM &PI;
-
-public:
-  AsmMatcherEmitter(RecordKeeper &R, PrinterLLVM &PI) : Records(R), PI(PI) {}
-
-  void run();
-};
-
 //
 // ClassInfo implementation
 //
@@ -2043,6 +2033,18 @@ static bool emitMnemonicAliases(PrinterLLVM const &PI, const AsmMatcherInfo &Inf
   return true;
 }
 
+namespace {
+
+class AsmMatcherEmitter {
+  RecordKeeper &Records;
+  PrinterLLVM &PI;
+
+public:
+  AsmMatcherEmitter(RecordKeeper &R, PrinterLLVM &PI) : Records(R), PI(PI) {}
+
+  void run();
+};
+
 void AsmMatcherEmitter::run() {
   PI.asmMatcherEmitSourceFileHeader("Assembly Matcher Source Fragment");
   CodeGenTarget Target(Records);
@@ -2288,6 +2290,7 @@ void EmitAsmMatcher(RecordKeeper &RK, raw_ostream &OS) {
 
   AsmMatcherEmitter(RK, *PI).run();
   delete PI;
+}
 }
 
 static TableGen::Emitter::Opt
