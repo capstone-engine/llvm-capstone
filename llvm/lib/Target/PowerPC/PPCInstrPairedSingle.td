@@ -138,10 +138,10 @@ let DecoderNamespace = "PS" in {
 
 let mayLoad = 1 in {
 def PSQ_L    : PSForm_qd<56,
-               (outs f8rc:$FRT), (ins memrid12:$src, u1imm:$W, u3imm: $I),
+               (outs f8rc:$FRT), (ins (memrid12 $IMM, $RA):$src, u1imm:$W, u3imm: $I),
                "psq_l $FRT, $src, $W, $I", IIC_FPGeneral>;
 def PSQ_LU   : PSForm_qd<57,
-               (outs f8rc:$FRT), (ins memrid12:$src, u1imm:$W, u3imm: $I),
+               (outs f8rc:$FRT), (ins (memrid12 $IMM, $RA):$src, u1imm:$W, u3imm: $I),
                "psq_lu $FRT, $src, $W, $I", IIC_FPGeneral>;
 def PSQ_LX   : PSForm_qi<6,
                (outs f8rc:$FRT), (ins gprc:$rA, gprc:$rB, u1imm:$W, u3imm: $I),
@@ -153,10 +153,10 @@ def PSQ_LUX  : PSForm_qi<38,
 
 let mayStore = 1 in {
 def PSQ_ST   : PSForm_qd<60,
-               (outs), (ins f8rc:$FRT, memrid12:$dst, u1imm:$W, u3imm: $I),
+               (outs), (ins f8rc:$FRT, (memrid12 $IMM, $RA):$dst, u1imm:$W, u3imm: $I),
                "psq_st $FRT, $dst, $W, $I", IIC_FPGeneral>;
 def PSQ_STU  : PSForm_qd<61,
-               (outs), (ins f8rc:$FRT, memrid12:$dst, u1imm:$W, u3imm: $I),
+               (outs), (ins f8rc:$FRT, (memrid12 $IMM, $RA):$dst, u1imm:$W, u3imm: $I),
                "psq_stu $FRT, $dst, $W, $I", IIC_FPGeneral>;
 def PSQ_STX  : PSForm_qi<7,
                (outs), (ins f8rc:$FRT,gprc:$rA, gprc:$rB, u1imm:$W, u3imm: $I),
