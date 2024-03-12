@@ -806,6 +806,7 @@ def SPELWZ        : DForm_1<32, (outs spe4rc:$RST), (ins (memri $D, $RA):$addr),
 def SPELWZX       : XForm_1<31,  23, (outs spe4rc:$RST), (ins (memrr $RA, $RB):$addr),
                             "lwzx $RST, $addr", IIC_LdStLoad,
                             [(set f32:$RST, (load xaddr:$addr))]>;
+} // mayLoad = 1
 
 let mayStore = 1 in {
 def SPESTW        : DForm_1<36, (outs), (ins spe4rc:$RST, (memri $D, $RA):$addr),
@@ -814,7 +815,7 @@ def SPESTW        : DForm_1<36, (outs), (ins spe4rc:$RST, (memri $D, $RA):$addr)
 def SPESTWX       : XForm_8<31, 151, (outs), (ins spe4rc:$RST, (memrr $RA, $RB):$addr),
                            "stwx $RST, $addr", IIC_LdStStore,
                            [(store f32:$RST, xaddr:$addr)]>;
-}
+} // mayStore = 1
 }
 
 } // HasSPE

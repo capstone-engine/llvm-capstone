@@ -4439,6 +4439,7 @@ def LWZCIX : XForm_base_r3xo_memOp<31, 789, (outs gprc:$RST),
 def LDCIX :  XForm_base_r3xo_memOp<31, 885, (outs gprc:$RST),
                                   (ins gprc:$RA, gprc:$RB),
                                   "ldcix $RST, $RA, $RB", IIC_LdStLoad, []>;
+} // mayLoad = 1
 
 let mayStore = 1 in {
 def STBCIX : XForm_base_r3xo_memOp<31, 981, (outs),
@@ -4453,6 +4454,7 @@ def STWCIX : XForm_base_r3xo_memOp<31, 917, (outs),
 def STDCIX : XForm_base_r3xo_memOp<31, 1013, (outs),
                                   (ins gprc:$RST, gprc:$RA, gprc:$RB),
                                   "stdcix $RST, $RA, $RB", IIC_LdStLoad, []>;
+} // mayStore = 1
 
 // External PID Load Store Instructions
 
