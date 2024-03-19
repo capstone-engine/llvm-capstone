@@ -25,8 +25,10 @@ jobs:
   build-and-test-llvm-tblgen:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout llvm-capstone
+      - name: Checkout llvm-capstone (patched backends)
         uses: actions/checkout@v4
+        with:
+          clean: false
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -46,17 +48,25 @@ jobs:
         run: |
           ./gen_cs_tables.sh
 
-      - name: Checkout llvm-capstone
+      - name: Checkout LLVM
         uses: actions/checkout@v4
-        ref: auto-sync-18-base
+        with:
+          clean: false
+          ref: auto-sync-18-base
 
       - name: Build LLVM llvm-tblgen
         run: |
+          rm -rf build
           mkdir build
           cd build
           cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug ../llvm
           cmake --build . --target llvm-tblgen --config Debug
           cd ..
+
+      - name: Checkout llvm-capstone (patched backends)
+        uses: actions/checkout@v4
+        with:
+          clean: false
 
       - name: Generate original LLVM tables
         run: |
