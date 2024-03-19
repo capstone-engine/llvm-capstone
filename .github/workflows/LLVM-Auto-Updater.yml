@@ -56,7 +56,7 @@ jobs:
         git config --local user.name "github-actions[bot]"
         cd ../llvm-project
         echo "sparse checkout"
-        git sparse-checkout set llvm/ cmake/ third-party/
+        git sparse-checkout set llvm/ cmake/ third-party/ .github/
         rm -rf .git/ .github/
         ls -la
         cd -
