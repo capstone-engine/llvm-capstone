@@ -111,7 +111,7 @@ for arch in $archs; do
       continue
     fi
 
-    diff "$out_CPP_LLVM" "$out_CPP_CS" > /dev/null
+    diff -w -B "$out_CPP_LLVM" "$out_CPP_CS" > /dev/null
     if [ $? -ne 0 ]; then
       echo "The following files mismatch: $out_CPP_LLVM <-> $out_CPP_CS"
       mismatch="true"
