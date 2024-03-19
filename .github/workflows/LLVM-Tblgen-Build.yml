@@ -25,12 +25,19 @@ jobs:
   build-llvm-tblgen:
     runs-on: ubuntu-latest
     steps:
-      - uses: lukka/get-cmake@latest
-      
       - name: Checkout llvm-capstone
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+
+      - name: Install dependencies
+        run: pip install cmake Ninja
 
       - name: Build llvm tblgen
+        env:
+          CC: gcc-12
+          CXX: g++-12
         run: |
           mkdir build
           cd build
