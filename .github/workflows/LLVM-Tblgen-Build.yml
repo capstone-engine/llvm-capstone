@@ -8,7 +8,7 @@ on:
       - "README.md"
       - "LICENSE.TXT"
       - "SECURITY.md"
-    branches: 
+    branches:
       - auto-sync*
   pull_request:
     paths-ignore:
@@ -17,12 +17,12 @@ on:
       - "README.md"
       - "LICENSE.TXT"
       - "SECURITY.md"
-    branches: 
+    branches:
       - auto-sync*
       - release/**
 
 jobs:
-  build-llvm-tblgen:
+  build-and-test-llvm-tblgen:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout llvm-capstone
@@ -34,16 +34,35 @@ jobs:
       - name: Install dependencies
         run: pip install cmake Ninja
 
-      - name: Build llvm tblgen
-        env:
-          CC: gcc-12
-          CXX: g++-12
+      - name: Build patched llvm-tblgen
         run: |
           mkdir build
           cd build
           cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug ../llvm
           cmake --build . --target llvm-tblgen --config Debug
           cd ..
-      - name: Test generated tables
+
+      - name: Generate Capstone tables
+        run: |
+          ./gen_cs_tables.sh
+
+      - name: Checkout llvm-capstone
+        uses: actions/checkout@v4
+        ref: auto-sync-18-base
+
+      - name: Build LLVM llvm-tblgen
+        run: |
+          mkdir build
+          cd build
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug ../llvm
+          cmake --build . --target llvm-tblgen --config Debug
+          cd ..
+
+      - name: Generate original LLVM tables
+        run: |
+          ./gen_llvm_tables.sh
+
+      - name: Compare LLVM and Capstone tables and syntax
         run: |
           ./compare_tblgen_output.sh
+
