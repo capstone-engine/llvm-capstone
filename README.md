@@ -6,9 +6,21 @@ This LLVM version has the purpose to generate code for the
 It refactors the TableGen emitter backends, so they can emit C code
 in addition to the C++ code they normally emit.
 
-Please note that within LLVM we speak of a `Target` if we refer to an architecture.
+## Build
+
+```
+python3 -m venv .venv
+source .venv/bin/activate
+pip install Ninja cmake
+mkdir build
+cd build
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug ../llvm
+cmake --build . --target llvm-tblgen --config Debug
+```
 
 ## Code generation
+
+Please note that within LLVM we speak of a `Target` if we refer to an architecture.
 
 ### Relevant files
 
