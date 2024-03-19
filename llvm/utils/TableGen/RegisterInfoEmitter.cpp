@@ -731,7 +731,6 @@ void RegisterInfoEmitter::run() {
   CodeGenRegBank &RegBank = Target.getRegBank();
   Records.startTimer("Print enums");
 
-  PI.regInfoEmitSourceFileHeader("Target Register Enum Values");
   PI.regInfoEmitEnums(Target, RegBank);
 
   Records.startTimer("Print MC registers");

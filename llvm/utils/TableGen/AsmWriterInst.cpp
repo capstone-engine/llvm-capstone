@@ -24,21 +24,21 @@ using namespace llvm;
 static bool isIdentChar(char C) { return isAlnum(C) || C == '_'; }
 
 std::string AsmWriterOperand::getCode(bool PassSubtarget) const {
+  bool LangCS = PrinterLLVM::getLanguage() == PRINTER_LANG_CAPSTONE_C;
   if (OperandType == isLiteralTextOperand) {
     std::string Res;
     if (Str.size() == 1) {
-      Res = "SStream_concat1(O, '" + Str + "');";
+      Res = LangCS ? "SStream_concat1(O, '" + Str + "');" : "O << '" + Str + "';";
       return Res;
     }
 
-    Res = "SStream_concat0(O, \"" + Str + "\");";
+    Res = LangCS ? "SStream_concat0(O, \"" + Str + "\");" : "O << \"" + Str + "\";";
     return Res;
   }
 
   if (OperandType == isLiteralStatementOperand)
     return Str;
 
-  bool LangCS = PrinterLLVM::getLanguage() == PRINTER_LANG_CAPSTONE_C;
   PassSubtarget = LangCS ? false : PassSubtarget;
 
   std::string Result;
