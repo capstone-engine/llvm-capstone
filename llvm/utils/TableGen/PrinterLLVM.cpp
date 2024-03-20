@@ -83,21 +83,38 @@ PrinterLanguage PrinterLLVM::getLanguage() {
 /// Prints `namespace <name> {` and `} // end namespace <name>` to the output
 /// stream. If Name == "" it emits an anonymous namespace.
 void PrinterLLVM::emitNamespace(std::string const &Name, bool Begin,
-                                std::string const &Comment) const {
+                                std::string const &Comment,
+                                bool Newline) const {
   if (Begin) {
     OS << "namespace " << Name;
     std::string const Bracket = (Name == "" ? "{" : " {");
     if (Comment != "")
       OS << Bracket << " // " << Comment << "\n";
     else
-      OS << Bracket << "\n\n";
+      OS << Bracket << (Newline ? "\n\n" : "\n");
     return;
   }
 
   if (Name == "") {
-    OS << "} // end anonymous namespace\n\n";
+    OS << "} // end anonymous namespace" << (Newline ? "\n\n" : "\n");
   } else {
-    OS << "} // end namespace " << Name << "\n\n";
+    OS << "} // end namespace " << Name << (Newline ? "\n\n" : "\n");
+  }
+}
+
+/// Prints
+/// ```
+/// #if <ARG>
+/// ```
+/// and
+/// `#endif // <ARG>`
+/// Used to control inclusion of a code block via a macro definition.
+void PrinterLLVM::emitPPIf(std::string const &Arg, bool Begin,
+                                    bool Newline) const {
+  if (Begin) {
+    OS << "#if " << Arg << "\n";
+  } else {
+    OS << "#endif // " << Arg << (Newline ? "\n\n" : "\n");
   }
 }
 
@@ -3737,6 +3754,14 @@ void PrinterLLVM::instrInfoEmitSourceFileHeader() const {
   emitSourceFileHeader("Target Instruction Enum Values and Descriptors", OS);
 }
 
+void PrinterLLVM::instrInfoEmitSetGetComputeFeatureMacro() const {
+  OS << "#if (defined(ENABLE_INSTR_PREDICATE_VERIFIER) && !defined(NDEBUG)) "
+     << "||\\\n"
+     << "    defined(GET_AVAILABLE_OPCODE_CHECKER)\n"
+     << "#define GET_COMPUTE_FEATURES\n"
+     << "#endif\n";
+}
+
 void PrinterLLVM::instrInfoSetOperandInfoStr(
     std::string &Res, Record const *OpR, CGIOperandList::OperandInfo const &Op,
     CGIOperandList::ConstraintInfo const &Constraint) const {
@@ -4007,6 +4032,16 @@ void PrinterLLVM::instrInfoEmitMCInstrInfoInitRoutine(
   else
     OS << "nullptr, ";
   OS << NumberedInstrSize << ");\n}\n\n";
+}
+
+void PrinterLLVM::instrInfoEmitHeader(std::string const &TargetName) const {
+  std::string ClassName = TargetName + "GenInstrInfo";
+  OS << "struct " << ClassName << " : public TargetInstrInfo {\n"
+     << "  explicit " << ClassName
+     << "(unsigned CFSetupOpcode = ~0u, unsigned CFDestroyOpcode = ~0u, "
+        "unsigned CatchRetOpcode = ~0u, unsigned ReturnOpcode = ~0u);\n"
+     << "  ~" << ClassName << "() override = default;\n";
+  OS << "\n};\n";
 }
 
 void PrinterLLVM::instrInfoEmitClassStruct(std::string const &ClassName) const {
@@ -4489,7 +4524,7 @@ void PrinterLLVM::instrInfoEmitPredicateVerifier(StringRef const &TargetName) co
      << "    Msg << \"predicate(s) are not met\";\n"
      << "    report_fatal_error(Msg.str().c_str());\n"
      << "  }\n"
-     << "#endif // NDEBUG\n";
+     << "#endif // NDEBUG\n}\n";
 }
 
 void PrinterLLVM::instrInfoEmitEnums(
@@ -5155,7 +5190,7 @@ void PrinterLLVM::asmMatcherEmitAsmTiedOperandConstraints(
 
 std::string
 PrinterLLVM::getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset) const {
-  std::string Name = "AMFBS";
+  std::string Name = "CEFBS";
   for (const auto &Feature : FeatureBitset)
     Name += ("_" + Feature->getName()).str();
   return Name;
