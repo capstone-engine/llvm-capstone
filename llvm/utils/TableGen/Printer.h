@@ -380,7 +380,7 @@ public:
   // Backend: AsmWriter
   //-------------------------
 
-  virtual void asmWriterEmitSourceFileHeader() const;
+  virtual void asmWriterEmitSourceFileHeader(RecordKeeper &Records) const;
   virtual void asmWriterEmitGetMnemonic(std::string const &TargetName,
                                         StringRef const &ClassName) const;
   virtual void asmWriterEmitAsmStrs(
@@ -1235,7 +1235,7 @@ public:
   // Backend: AsmWriter
   //-------------------------
 
-  void asmWriterEmitSourceFileHeader() const override;
+  void asmWriterEmitSourceFileHeader(RecordKeeper &Records) const override;
   void asmWriterEmitGetMnemonic(std::string const &TargetName,
                                 StringRef const &ClassName) const override;
   void asmWriterEmitAsmStrs(
