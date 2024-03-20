@@ -3444,9 +3444,10 @@ void PrinterCapstone::searchableTablesEmitGenericTable(
     const GenericTable &Enum) const {}
 
 void PrinterCapstone::searchableTablesEmitIfdef(const std::string Guard,
-                                                StreamType ST) const {
+                                                StreamType ST) {
   raw_string_ostream &OutS = searchableTablesGetOS(ST);
   OutS << "#ifdef " << Guard << "\n";
+  PreprocessorGuards.insert(Guard);
 }
 
 void PrinterCapstone::searchableTablesEmitEndif(StreamType ST) const {
@@ -3454,10 +3455,10 @@ void PrinterCapstone::searchableTablesEmitEndif(StreamType ST) const {
   OutS << "#endif\n\n";
 }
 
-void PrinterCapstone::searchableTablesEmitUndef(
-    std::string const &Guard) const {
+void PrinterCapstone::searchableTablesEmitUndef() const {
   raw_string_ostream &OutS = searchableTablesGetOS(ST_IMPL_OS);
-  OutS << "#undef " << Guard << "\n";
+  for (const auto &Guard : PreprocessorGuards)
+    OutS << "#undef " << Guard << "\n";
 }
 
 std::string PrinterCapstone::searchableTablesSearchableFieldType(

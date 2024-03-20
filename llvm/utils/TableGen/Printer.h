@@ -86,8 +86,10 @@ private:
   //----------------------------
   // Backends: InstrInfo
   //           SubTargetInfo
+  //           SearchableTables
   //----------------------------
   PredicateExpander *PE = nullptr;
+  std::set<std::string> PreprocessorGuards = std::set<std::string>();
 
   //--------------------------
   // Backend: AsmMatcher
@@ -936,9 +938,9 @@ public:
   virtual void searchableTablesEmitGenericEnum(const GenericEnum &Enum) const;
   virtual void searchableTablesEmitGenericTable(const GenericTable &Enum) const;
   virtual void searchableTablesEmitIfdef(const std::string Guard,
-                                         StreamType ST = ST_NONE) const;
+                                         StreamType ST = ST_NONE);
   virtual void searchableTablesEmitEndif(StreamType ST = ST_NONE) const;
-  virtual void searchableTablesEmitUndef(std::string const &Guard) const;
+  virtual void searchableTablesEmitUndef() const;
   virtual void searchableTablesEmitLookupDeclaration(const GenericTable &Table,
                                                      const SearchIndex &Index,
                                                      StreamType ST);
@@ -1798,9 +1800,9 @@ public:
   void
   searchableTablesEmitGenericTable(const GenericTable &Enum) const override;
   void searchableTablesEmitIfdef(const std::string Guard,
-                                 StreamType ST = ST_NONE) const override;
+                                 StreamType ST = ST_NONE) override;
   void searchableTablesEmitEndif(StreamType ST = ST_NONE) const override;
-  void searchableTablesEmitUndef(std::string const &Guard) const override;
+  void searchableTablesEmitUndef() const override;
   void searchableTablesEmitLookupDeclaration(const GenericTable &Table,
                                              const SearchIndex &Index,
                                              StreamType ST) override;
