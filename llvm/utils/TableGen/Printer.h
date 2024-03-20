@@ -634,11 +634,6 @@ public:
   subtargetEmitStageAndSycleTables(std::string const &StageTable,
                                    std::string const &OperandCycleTable,
                                    std::string const &BypassTable) const;
-  virtual void subtargetEmitDFASubtargetInfoImpl(std::string const &TargetName,
-                                                 std::string const &ClassName,
-                                                 unsigned NumFeatures,
-                                                 unsigned NumProcs,
-                                                 bool SchedModelHasItin) const;
   virtual void subtargetEmitGetMacroFusions(
             CodeGenTarget &TGT,
             std::string Target,
@@ -1489,11 +1484,6 @@ public:
   void subtargetEmitStageAndSycleTables(
       std::string const &StageTable, std::string const &OperandCycleTable,
       std::string const &BypassTable) const override;
-  void subtargetEmitDFASubtargetInfoImpl(std::string const &TargetName,
-                                         std::string const &ClassName,
-                                         unsigned NumFeatures,
-                                         unsigned NumProcs,
-                                         bool SchedModelHasItin) const override;
 
   //---------------------------
   // Backend: InstrInfoEmitter

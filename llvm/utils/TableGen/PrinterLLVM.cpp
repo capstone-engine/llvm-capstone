@@ -3526,35 +3526,6 @@ void PrinterLLVM::subtargetEmitDFAPacketizerClass(
           "override;\n";
 }
 
-void PrinterLLVM::subtargetEmitDFASubtargetInfoImpl(
-    std::string const &TargetName, std::string const &ClassName,
-    unsigned NumFeatures, unsigned NumProcs, bool SchedModelHasItin) const {
-  OS << ClassName << "::" << ClassName << "(const Triple &TT, StringRef CPU, "
-     << "StringRef TuneCPU, StringRef FS)\n"
-     << "  : TargetSubtargetInfo(TT, CPU, TuneCPU, FS, ";
-  if (NumFeatures)
-    OS << "makeArrayRef(" << TargetName << "FeatureKV, " << NumFeatures
-       << "), ";
-  else
-    OS << "std::nullopt, ";
-  if (NumProcs)
-    OS << "makeArrayRef(" << TargetName << "SubTypeKV, " << NumProcs << "), ";
-  else
-    OS << "None, ";
-  OS << '\n';
-  OS.indent(24);
-  OS << TargetName << "WriteProcResTable, " << TargetName
-     << "WriteLatencyTable, " << TargetName << "ReadAdvanceTable, ";
-  OS << '\n';
-  OS.indent(24);
-  if (SchedModelHasItin) {
-    OS << TargetName << "Stages, " << TargetName << "OperandCycles, "
-       << TargetName << "ForwardingPaths";
-  } else
-    OS << "nullptr, nullptr, nullptr";
-  OS << ") {}\n\n";
-}
-
 void PrinterLLVM::subtargetEmitDFAPacketizerClassEnd() const { OS << "};\n"; }
 
 void PrinterLLVM::subtargetEmitSTICtor() const {
