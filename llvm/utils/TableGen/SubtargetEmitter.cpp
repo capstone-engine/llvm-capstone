@@ -1259,8 +1259,6 @@ void SubtargetEmitter::run() {
   PI.subtargetEmitDFAPacketizerClass(TGT, Target, ClassName);
 
   PI.subtargetEmitExpandedSTIPredsHeader(Target, SchedModels);
-  PI.subtargetEmitDFASubtargetInfoImpl(Target, ClassName, NumFeatures, NumProcs,
-    SchedModels.hasItineraries());
   PI.subtargetEmitDFAPacketizerClassEnd();
 
   PI.emitNamespace("llvm", false);

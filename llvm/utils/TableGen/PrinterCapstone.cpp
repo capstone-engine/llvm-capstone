@@ -2124,10 +2124,6 @@ void PrinterCapstone::subtargetEmitDFAPacketizerClass(
     CodeGenTarget &TGT,
     std::string const &TargetName, std::string const &ClassName) const {}
 
-void PrinterCapstone::subtargetEmitDFASubtargetInfoImpl(
-    std::string const &TargetName, std::string const &ClassName,
-    unsigned NumFeatures, unsigned NumProcs, bool SchedModelHasItin) const {}
-
 void PrinterCapstone::subtargetEmitDFAPacketizerClassEnd() const {}
 
 void PrinterCapstone::subtargetEmitSTICtor() const {}
