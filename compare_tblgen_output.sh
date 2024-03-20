@@ -4,7 +4,8 @@
 archs="AArch64 ARM PPC"
 file_names="GenAsmWriter GenDisassemblerTables GenInstrInfo GenRegisterInfo GenSubtargetInfo GenSystemOperands"
 release="18"
-gen_dir="output_tmp"
+repo_root=$(git rev-parse --show-toplevel)
+gen_dir="$repo_root/output_tmp"
 
 # Requires that LLVM tables were generated before.
 echo "Diff LLVM files (blanks and empty lines are ignored)"
