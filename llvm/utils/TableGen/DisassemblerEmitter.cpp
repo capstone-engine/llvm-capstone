@@ -8,6 +8,7 @@
 
 #include "CodeGenTarget.h"
 #include "TableGenBackends.h"
+#include "Printer.h"
 #include "WebAssemblyDisassemblerEmitter.h"
 #include "X86DisassemblerTables.h"
 #include "X86RecognizableInstr.h"
@@ -96,14 +97,14 @@ using namespace llvm::X86Disassembler;
 
 static void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
   CodeGenTarget Target(Records);
-  emitSourceFileHeader(" * " + Target.getName().str() + " Disassembler", OS);
 
   // X86 uses a custom disassembler.
   if (Target.getName() == "X86") {
+    emitSourceFileHeader(" * " + Target.getName().str() + " Disassembler", OS);
     DisassemblerTables Tables;
 
-    ArrayRef<const CodeGenInstruction*> numberedInstructions =
-      Target.getInstructionsByEnumValue();
+    ArrayRef<const CodeGenInstruction *> numberedInstructions =
+        Target.getInstructionsByEnumValue();
 
     for (unsigned i = 0, e = numberedInstructions.size(); i != e; ++i)
       RecognizableInstr::processInstr(Tables, *numberedInstructions[i], i);
@@ -121,14 +122,11 @@ static void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
   // below (which depends on a Size table-gen Record), and also uses a custom
   // disassembler.
   if (Target.getName() == "WebAssembly") {
+    emitSourceFileHeader(" * " + Target.getName().str() + " Disassembler", OS);
     emitWebAssemblyDisassemblerTables(OS, Target.getInstructionsByEnumValue());
     return;
   }
-
-  std::string PredicateNamespace = std::string(Target.getName());
-  if (PredicateNamespace == "Thumb")
-    PredicateNamespace = "ARM";
-  EmitDecoder(Records, OS, PredicateNamespace);
+  EmitDecoder(Records, OS, Target);
 }
 
 static TableGen::Emitter::Opt X("gen-disassembler", EmitDisassembler,

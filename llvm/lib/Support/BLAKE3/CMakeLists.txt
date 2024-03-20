@@ -10,6 +10,7 @@ if (LLVM_DISABLE_ASSEMBLY_FILES)
 else()
   set(CAN_USE_ASSEMBLER TRUE)
 endif()
+set(CAN_USE_ASSEMBLER FALSE)
 
 macro(disable_blake3_x86_simd)
   add_compile_definitions(BLAKE3_NO_AVX512 BLAKE3_NO_AVX2 BLAKE3_NO_SSE41 BLAKE3_NO_SSE2)

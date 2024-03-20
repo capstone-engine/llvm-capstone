@@ -70,12 +70,15 @@ add_tablegen(llvm-tblgen LLVM
   OptParserEmitter.cpp
   OptRSTEmitter.cpp
   PredicateExpander.cpp
+  PrinterLLVM.cpp
+  PrinterCapstone.cpp
   PseudoLoweringEmitter.cpp
   CompressInstEmitter.cpp
   MacroFusionPredicatorEmitter.cpp
   RegisterBankEmitter.cpp
   RegisterInfoEmitter.cpp
   SearchableTableEmitter.cpp
+  StringMatcher.cpp
   SubtargetEmitter.cpp
   SubtargetFeatureInfo.cpp
   TableGen.cpp

@@ -426,6 +426,7 @@ def LVXL : XForm_1_memOp<31, 359, (outs vrrc:$RST), (ins (memrr $RA, $RB):$addr)
                    [(set v4i32:$RST, (int_ppc_altivec_lvxl ForceXForm:$addr))]>;
 }
 
+let mayLoad = 1 in {
 def LVSL : XForm_1_memOp<31,   6, (outs vrrc:$RST), (ins (memrr $RA, $RB):$addr),
                    "lvsl $RST, $addr", IIC_LdStLoad,
                    [(set v16i8:$RST, (int_ppc_altivec_lvsl ForceXForm:$addr))]>,
@@ -434,6 +435,7 @@ def LVSR : XForm_1_memOp<31,  38, (outs vrrc:$RST), (ins (memrr $RA, $RB):$addr)
                    "lvsr $RST, $addr", IIC_LdStLoad,
                    [(set v16i8:$RST, (int_ppc_altivec_lvsr ForceXForm:$addr))]>,
                    PPC970_Unit_LSU;
+}
 
 let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {   // Stores.
 def STVEBX: XForm_8_memOp<31, 135, (outs), (ins vrrc:$RST, (memrr $RA, $RB):$addr),
