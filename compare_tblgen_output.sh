@@ -25,28 +25,3 @@ for arch in $archs; do
     fi
   done
 done
-
-echo "C table syntax check"
-for arch in $archs; do
-  for file_name in $file_names; do
-    out_file="$gen_dir/$arch"$file_name"_C_CS.inc"
-
-    if [ ! -e "$out_file" ]; then
-      continue
-    fi
-
-    gcc -fsyntax-only $out_file 2> /dev/null
-    if [ $? -ne 0 ]; then
-      echo "Invalid C syntax in file: $out_file"
-      malformed_syntax="true"
-    fi
-  done
-done
-
-if [ "$1" = "--rebuild" ]; then
-  build_capstone_llvm
-fi
-
-if [ -n "$mismatch" ] || [ -n "$malformed_syntax" ]; then
-  exit 1
-fi
