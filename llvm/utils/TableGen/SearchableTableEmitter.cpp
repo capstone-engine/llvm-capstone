@@ -616,8 +616,7 @@ void SearchableTableEmitter::run() {
 
   // Put all #undefs last, to allow multiple sections guarded by the same
   // define.
-  for (const auto &Guard : PreprocessorGuards)
-    PI.searchableTablesEmitUndef(Guard);
+  PI.searchableTablesEmitUndef();
 }
 
 void EmitSearchableTables(RecordKeeper &RK, raw_ostream &OS) {

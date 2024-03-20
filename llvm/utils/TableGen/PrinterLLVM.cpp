@@ -6178,16 +6178,18 @@ void PrinterLLVM::searchableTablesEmitGenericTable(
     const GenericTable &Enum) const {}
 
 void PrinterLLVM::searchableTablesEmitIfdef(const std::string Guard,
-                                            StreamType ST) const {
+                                            StreamType ST) {
   OS << "#ifdef " << Guard << "\n";
+  PreprocessorGuards.insert(Guard);
 }
 
 void PrinterLLVM::searchableTablesEmitEndif(StreamType ST) const {
   OS << "#endif\n\n";
 }
 
-void PrinterLLVM::searchableTablesEmitUndef(std::string const &Guard) const {
-  OS << "#undef " << Guard << "\n";
+void PrinterLLVM::searchableTablesEmitUndef() const {
+  for (const auto &Guard : PreprocessorGuards)
+    OS << "#undef " << Guard << "\n";
 }
 
 std::string PrinterLLVM::searchableTablesSearchableFieldType(
@@ -6380,6 +6382,8 @@ void PrinterLLVM::searchableTablesEmitIndexLamda(
       OS << "        return false;\n";
     }
   }
+  OS << "      return false;\n";
+  OS << "    });\n\n";
 }
 
 void PrinterLLVM::searchableTablesEmitReturns(const GenericTable &Table,
