@@ -3,7 +3,8 @@
 archs="AArch64 ARM PPC"
 file_names="GenAsmWriter GenDisassemblerTables GenInstrInfo GenRegisterInfo GenSubtargetInfo GenSystemOperands"
 release="18"
-gen_dir="output_tmp"
+repo_root=$(git rev-parse --show-toplevel)
+gen_dir="$repo_root/output_tmp"
 
 if [ ! -d $gen_dir ]; then
   mkdir "$gen_dir"
@@ -26,26 +27,26 @@ gen_all()
     for file_name in $file_names; do
       out_file="$arch$file_name""_$postfix.inc"
       if [ "$arch" = "PPC" ]; then
-        arch_include="../llvm/lib/Target/PowerPC"
+        arch_include="$repo_root/llvm/lib/Target/PowerPC"
       else
-        arch_include="../llvm/lib/Target/$arch"
+        arch_include="$repo_root/llvm/lib/Target/$arch"
       fi
 
       echo "\t$arch - $out_file"
 
       if [ $file_name = "GenAsmWriter" ]; then
-        ../build/bin/llvm-tblgen --gen-asm-writer "$table_type" -o "$out_file" -I "$arch_include" -I "../llvm/include" "$arch_include/$arch.td"
+        $repo_root/build/bin/llvm-tblgen --gen-asm-writer "$table_type" -o "$out_file" -I "$arch_include" -I "$repo_root/llvm/include" "$arch_include/$arch.td"
       elif [ $file_name = "GenDisassemblerTables" ]; then
-        ../build/bin/llvm-tblgen --gen-disassembler "$table_type" -o "$out_file" -I "$arch_include" -I "../llvm/include" "$arch_include/$arch.td"
+        $repo_root/build/bin/llvm-tblgen --gen-disassembler "$table_type" -o "$out_file" -I "$arch_include" -I "$repo_root/llvm/include" "$arch_include/$arch.td"
       elif [ $file_name = "GenInstrInfo" ]; then
-        ../build/bin/llvm-tblgen --gen-instr-info "$table_type" -o "$out_file" -I "$arch_include" -I "../llvm/include" "$arch_include/$arch.td"
+        $repo_root/build/bin/llvm-tblgen --gen-instr-info "$table_type" -o "$out_file" -I "$arch_include" -I "$repo_root/llvm/include" "$arch_include/$arch.td"
       elif [ $file_name = "GenRegisterInfo" ]; then
-        ../build/bin/llvm-tblgen --gen-register-info "$table_type" -o "$out_file" -I "$arch_include" -I "../llvm/include" "$arch_include/$arch.td"
+        $repo_root/build/bin/llvm-tblgen --gen-register-info "$table_type" -o "$out_file" -I "$arch_include" -I "$repo_root/llvm/include" "$arch_include/$arch.td"
       elif [ $file_name = "GenSubtargetInfo" ]; then
-        ../build/bin/llvm-tblgen --gen-subtarget "$table_type" -o "$out_file" -I "$arch_include" -I "../llvm/include" "$arch_include/$arch.td"
+        $repo_root/build/bin/llvm-tblgen --gen-subtarget "$table_type" -o "$out_file" -I "$arch_include" -I "$repo_root/llvm/include" "$arch_include/$arch.td"
       elif [ $file_name = "GenSystemOperands" ]; then
         if [ $arch != "PPC" ] ; then
-          ../build/bin/llvm-tblgen --gen-searchable-tables "$table_type" -o "$out_file" -I "$arch_include" -I "../llvm/include" "$arch_include/$arch.td"
+          $repo_root/build/bin/llvm-tblgen --gen-searchable-tables "$table_type" -o "$out_file" -I "$arch_include" -I "$repo_root/llvm/include" "$arch_include/$arch.td"
         fi
       else
         echo "File $file_name not handled."
