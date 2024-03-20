@@ -139,6 +139,8 @@ public:
   virtual void emitIncludeToggle(std::string const &Name, bool Begin,
                                  bool Newline = true,
                                  bool UndefAtEnd = false) const;
+  virtual void emitPPIf(std::string const &Arg, bool Begin,
+                                    bool Newline = true) const;
   virtual void emitNewline(unsigned Count) const {
     for (unsigned I = Count; I > 0; --I)
       OS << "\n";
@@ -152,7 +154,8 @@ public:
   }
   virtual void emitString(std::string const &Str) const { OS << Str; }
   virtual void emitNamespace(std::string const &Name, bool Begin,
-                             std::string const &Comment = "") const;
+                             std::string const &Comment = "",
+                             bool Newline = true) const;
 
   //------------------------
   // Backend: RegisterInfo
@@ -649,6 +652,7 @@ public:
   //---------------------------
 
   virtual void instrInfoEmitSourceFileHeader() const;
+  virtual void instrInfoEmitSetGetComputeFeatureMacro() const;
   virtual void instrInfoSetOperandInfoStr(
       std::string &Res, Record const *OpR,
       CGIOperandList::OperandInfo const &Op,
@@ -697,6 +701,7 @@ public:
   virtual void instrInfoEmitMCInstrInfoInitRoutine(
       std::string const &TargetName, unsigned NumberedInstrSize,
       bool HasDeprecationFeatures, bool HasComplexDeprecationInfos) const;
+  virtual void instrInfoEmitHeader(std::string const &TargetName) const;
   virtual void instrInfoEmitClassStruct(std::string const &ClassName) const;
   virtual void instrInfoEmitTIIHelperMethod(StringRef const &TargetName,
                                             Record const *Rec,
@@ -1013,11 +1018,14 @@ public:
   //--------------------------
 
   void emitNamespace(std::string const &Name, bool Begin,
-                     std::string const &Comment) const override;
+                                std::string const &Comment = "",
+                                bool Newline = true) const override;
   void emitIfNotDef(std::string const &Name, bool Begin) const override;
   void emitIncludeToggle(std::string const &Name, bool Begin,
                          bool Newline = true,
                          bool UndefAtEnd = false) const override;
+  void emitPPIf(std::string const &Arg, bool Begin,
+                bool Newline = true) const override;
 
   static std::string translateToC(std::string const &TargetName,
                                   std::string const &Dec);
@@ -1492,6 +1500,7 @@ public:
   //---------------------------
 
   void instrInfoEmitSourceFileHeader() const override;
+  void instrInfoEmitSetGetComputeFeatureMacro() const override;
   void instrInfoSetOperandInfoStr(
       std::string &Res, Record const *OpR,
       CGIOperandList::OperandInfo const &Op,
@@ -1542,6 +1551,7 @@ public:
       std::string const &TargetName, unsigned NumberedInstrSize,
       bool HasDeprecationFeatures,
       bool HasComplexDeprecationInfos) const override;
+  void instrInfoEmitHeader(std::string const &TargetName) const override;
   void instrInfoEmitClassStruct(std::string const &ClassName) const override;
   void instrInfoEmitTIIHelperMethod(StringRef const &TargetName,
                                     Record const *Rec,

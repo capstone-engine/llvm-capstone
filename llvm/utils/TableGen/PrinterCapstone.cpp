@@ -43,8 +43,25 @@ namespace llvm {
 /// Prints `namespace <name> {` and `} // end namespace <name>` to the output
 /// stream. If Name == "" it emits an anonymous namespace.
 void PrinterCapstone::emitNamespace(std::string const &Name, bool Begin,
-                                    std::string const &Comment = "") const {
+                                    std::string const &Comment,
+                                    bool Newline) const {
   return;
+}
+
+/// Prints
+/// ```
+/// #if <ARG>
+/// ```
+/// and
+/// `#endif // <ARG>`
+/// Used to control inclusion of a code block via a macro definition.
+void PrinterCapstone::emitPPIf(std::string const &Arg, bool Begin,
+                                    bool Newline) const {
+  if (Begin) {
+    OS << "#if " << Arg << "\n";
+  } else {
+    OS << "#endif // " << Arg << (Newline ? "\n\n" : "\n");
+  }
 }
 
 /// Prints
@@ -2169,6 +2186,8 @@ void PrinterCapstone::instrInfoEmitSourceFileHeader() const {
   emitDefaultSourceFileHeader(OS);
 }
 
+void PrinterCapstone::instrInfoEmitSetGetComputeFeatureMacro() const {}
+
 void PrinterCapstone::instrInfoSetOperandInfoStr(
     std::string &Res, Record const *OpR, CGIOperandList::OperandInfo const &Op,
     CGIOperandList::ConstraintInfo const &Constraint) const {
@@ -2331,6 +2350,8 @@ void PrinterCapstone::instrInfoEmitInstrComplexDeprInfos(
 void PrinterCapstone::instrInfoEmitMCInstrInfoInitRoutine(
     std::string const &TargetName, unsigned NumberedInstrSize,
     bool HasDeprecationFeatures, bool HasComplexDeprecationInfos) const {}
+
+void PrinterCapstone::instrInfoEmitHeader(std::string const &TargetName) const {}
 
 void PrinterCapstone::instrInfoEmitClassStruct(
     std::string const &ClassName) const {}

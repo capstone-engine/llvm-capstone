@@ -209,7 +209,7 @@ void InstrInfoEmitter::emitOperandNameMappings(
   PI.instrInfoEmitOperandEnum(Operands);
   PI.emitNamespace(OpNameNS, false);
   PI.emitNamespace(Namespace.str(), false);
-  PI.emitNamespace("llvm", false);
+  PI.emitNamespace("llvm", false, "", false);
   PI.emitIncludeToggle("GET_INSTRINFO_OPERAND_ENUM", false);
 
   PI.emitIncludeToggle("GET_INSTRINFO_NAMED_OPS", true);
@@ -217,7 +217,7 @@ void InstrInfoEmitter::emitOperandNameMappings(
   PI.emitNamespace(Namespace.str(), true);
   PI.instrInfoEmitGetNamedOperandIdx(Operands, OperandMap);
   PI.emitNamespace(Namespace.str(), false);
-  PI.emitNamespace("llvm", false);
+  PI.emitNamespace("llvm", false, "", false);
   PI.emitIncludeToggle("GET_INSTRINFO_NAMED_OPS", false);
 }
 
@@ -466,7 +466,8 @@ void InstrInfoEmitter::emitMCIIHelperMethods(
   PI.emitNamespace(TargetName.str() + "_MC", false);
   PI.emitNamespace("llvm", false);
 
-  PI.emitIncludeToggle("GET_INSTRINFO_MC_HELPERS", false);
+  // Typo in LLVM source
+  PI.emitIncludeToggle("GET_GENISTRINFO_MC_HELPERS", false);
 }
 
 void InstrInfoEmitter::emitFeatureVerifier(
@@ -594,7 +595,7 @@ void InstrInfoEmitter::run() {
 
   ArrayRef<const CodeGenInstruction *> NumberedInstructions =
       Target.getInstructionsByEnumValue();
-  PI.emitIncludeToggle("GET_INSTRINFO_MC_DESC", true);
+  PI.emitPPIf("defined(GET_INSTRINFO_MC_DESC) || defined(GET_INSTRINFO_CTOR_DTOR)", true);
   PI.emitNamespace("llvm", true);
 
   PI.instrInfoEmitMCInstrDescDecl(TargetName,
@@ -603,7 +604,7 @@ void InstrInfoEmitter::run() {
     std::max(ImplicitListSize, 1U));
 
   PI.emitNamespace("llvm", false);
-  PI.emitIncludeToggle("GET_INSTRINFO_MC_DESC", false);
+  PI.emitPPIf("defined(GET_INSTRINFO_MC_DESC) || defined(GET_INSTRINFO_CTOR_DTOR)", false);
 
   PI.emitIncludeToggle("GET_INSTRINFO_MC_DESC", true);
   PI.emitNamespace("llvm", true);
@@ -673,8 +674,19 @@ void InstrInfoEmitter::run() {
   PI.emitNamespace("llvm", false);
   PI.emitIncludeToggle("GET_INSTRINFO_MC_DESC", false);
 
+  PI.emitIncludeToggle("GET_INSTRINFO_HEADER", true);
+  PI.emitNamespace("llvm", true);
+  PI.instrInfoEmitHeader(Target.getName().str());
+  PI.emitNamespace("llvm", false);
+  PI.emitIncludeToggle("GET_INSTRINFO_HEADER", false);
+
+  PI.emitIncludeToggle("GET_INSTRINFO_HELPER_DECLS", true);
+  emitTIIHelperMethods(TargetName, /* ExpandDefinition = */ false);
+  PI.emitIncludeToggle("GET_INSTRINFO_HELPER_DECLS", false);
+
   PI.emitIncludeToggle("GET_INSTRINFO_HELPERS", true);
   emitTIIHelperMethods(TargetName, /* ExpandDefinition = */ true);
+  PI.emitIncludeToggle("GET_INSTRINFO_HELPERS", false);
 
   PI.emitIncludeToggle("GET_INSTRINFO_CTOR_DTOR", true);
   PI.emitNamespace("llvm", true);
@@ -705,6 +717,7 @@ void InstrInfoEmitter::run() {
   Records.startTimer("Emit helper methods");
   emitMCIIHelperMethods(TargetName);
 
+  PI.instrInfoEmitSetGetComputeFeatureMacro();
   Records.startTimer("Emit verifier methods");
   emitFeatureVerifier(Target);
 }
