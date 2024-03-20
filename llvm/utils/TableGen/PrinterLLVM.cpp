@@ -2123,8 +2123,8 @@ void PrinterLLVM::decoderEmitterEmitSourceFileHeader() const {
 // Backend: AsmWriter
 //-------------------------
 
-void PrinterLLVM::asmWriterEmitSourceFileHeader() const {
-  emitSourceFileHeader("Assembly Writer Source Fragment", OS);
+void PrinterLLVM::asmWriterEmitSourceFileHeader(RecordKeeper &Records) const {
+  emitSourceFileHeader("Assembly Writer Source Fragment", OS, Records);
 }
 
 void PrinterLLVM::asmWriterEmitGetMnemonic(std::string const &TargetName,

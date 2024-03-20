@@ -978,7 +978,7 @@ void AsmWriterEmitter::run() {
   unsigned BitsLeft = 0;
   unsigned AsmStrBits = 0;
 
-  PI.asmWriterEmitSourceFileHeader();
+  PI.asmWriterEmitSourceFileHeader(Records);
   EmitGetMnemonic(TableDrivenOperandPrinters, BitsLeft, AsmStrBits);
   EmitPrintInstruction(TableDrivenOperandPrinters, BitsLeft, AsmStrBits);
   EmitGetRegisterName();

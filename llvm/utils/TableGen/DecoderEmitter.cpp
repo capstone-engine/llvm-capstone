@@ -1861,45 +1861,26 @@ static void setPrinterParameters(CodeGenTarget &Target, PrinterLanguage PL,
                                  std::string &GPrefix, std::string &GPostfix,
                                  std::string &ROK, std::string &RFail,
                                  std::string &L) {
-  // ARM and Thumb have a CHECK() macro to deal with DecodeStatuses.
-  if (Target.getName() == "ARM" || Target.getName() == "Thumb" ||
-      Target.getName() == "AArch64" || Target.getName() == "ARM64") {
-    PredicateNamespace = std::string(Target.getName());
+  PredicateNamespace = std::string(Target.getName());
 
-    if (PredicateNamespace == "Thumb")
-      PredicateNamespace = "ARM";
+  if (PredicateNamespace == "Thumb")
+    PredicateNamespace = "ARM";
 
-    switch (PL) {
-    default:
-      PrintFatalNote("DecoderEmitter does not support the given output language.");
-    case llvm::PRINTER_LANG_CPP:
-      GPrefix = "if (!Check(S, ";
-      L = "  MCDisassembler::DecodeStatus S = "
-          "MCDisassembler::Success;\n(void)S;";
-      break;
-    case llvm::PRINTER_LANG_CAPSTONE_C:
-      GPrefix = "if (!Check(&S, ";
-      L = "  MCDisassembler_DecodeStatus S = "
-          "MCDisassembler_Success;\n(void)S;";
-      break;
-    }
-    GPostfix = "))";
-  } else {
-    PredicateNamespace = Target.getName().str();
-    GPrefix = "if (";
-    L = "";
-
-    switch (PL) {
-    default:
-      PrintFatalNote("DecoderEmitter does not support the given output language.");
-    case llvm::PRINTER_LANG_CPP:
-      GPostfix = " == MCDisassembler::Fail)";
-      break;
-    case llvm::PRINTER_LANG_CAPSTONE_C:
-      GPostfix = " == MCDisassembler_Fail)";
-      break;
-    }
+  switch (PL) {
+  default:
+    PrintFatalNote("DecoderEmitter does not support the given output language.");
+  case llvm::PRINTER_LANG_CPP:
+    GPrefix = "if (!Check(S, ";
+    L = "  MCDisassembler::DecodeStatus S = "
+        "MCDisassembler::Success;\n(void)S;";
+    break;
+  case llvm::PRINTER_LANG_CAPSTONE_C:
+    GPrefix = "if (!Check(&S, ";
+    L = "  MCDisassembler_DecodeStatus S = "
+        "MCDisassembler_Success;\n(void)S;";
+    break;
   }
+  GPostfix = "))";
 
   ROK = "S";
 

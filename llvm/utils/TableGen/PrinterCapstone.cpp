@@ -27,7 +27,7 @@
 static void emitDefaultSourceFileHeader(raw_ostream &OS) {
   OS << "/* Capstone Disassembly Engine, https://www.capstone-engine.org */\n"
      << "/* By Nguyen Anh Quynh <aquynh@gmail.com>, 2013-2022, */\n"
-     << "/*    Rot127 <unisono@quyllur.org> 2022-2023 */\n"
+     << "/*    Rot127 <unisono@quyllur.org> 2022-2024 */\n"
      << "/* Automatically generated file by Capstone's LLVM TableGen "
         "Disassembler "
         "Backend. */\n\n"
@@ -1295,7 +1295,7 @@ void PrinterCapstone::decoderEmitterEmitSourceFileHeader() const {
 // Backend: AsmWriter
 //-------------------------
 
-void PrinterCapstone::asmWriterEmitSourceFileHeader() const {
+void PrinterCapstone::asmWriterEmitSourceFileHeader(RecordKeeper &Records) const {
   emitDefaultSourceFileHeader(OS);
   OS << "#include <capstone/platform.h>\n"
      << "#include <assert.h>\n\n";
