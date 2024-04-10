@@ -1838,7 +1838,7 @@ void PrinterCapstone::asmWriterEmitPrintMC(
        << "  switch (PredicateIndex) {\n"
        << "  default:\n"
        << "    assert(0 && \"Unknown MCOperandPredicate kind\");\n"
-       << "    break;\n";
+       << "    return false;\n";
 
     for (unsigned I = 0; I < MCOpPredicates.size(); ++I) {
       StringRef const MCOpPred =
