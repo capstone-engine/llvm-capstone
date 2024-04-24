@@ -2677,140 +2677,6 @@ std::string getCSOperandType(Record const *OpRec) {
   return OperandType;
 }
 
-std::string getCSOperandEncoding(CodeGenInstruction const *CGI,
-                                 Record const *OpRec, StringRef const &OpName) {
-  BitsInit const *const InstrBits =
-      !CGI->TheDef->getValueAsBit("isPseudo")
-          ? CGI->TheDef->getValueAsBitsInit("Inst")
-          : nullptr;
-  if (!InstrBits)
-    return "{ 0 }";
-
-  std::string ResultStr;
-  raw_string_ostream Result(ResultStr);
-  int64_t const Size = CGI->TheDef->getValueAsInt("Size") * 8;
-  // For some reason even on 2 byte THUMB instructions the Inst field has 32
-  // bits with the first 16 left as 0, so we skip them.
-  // I assume the same may happen for other architectures as well.
-  unsigned const BitCount = InstrBits->getNumBits();
-  unsigned const StartIdx = BitCount - Size;
-
-  struct {
-    unsigned OperandPiecesCount;
-    std::array<unsigned, 8> Indexes;
-    std::array<unsigned, 8> Sizes;
-  } EncodingData{};
-
-  // scan all bits one by one to try and find any references of the operand
-  for (unsigned InstrBitIdx = StartIdx; InstrBitIdx != BitCount;
-       ++InstrBitIdx) {
-    VarBitInit const *VarBit;
-    if ((VarBit = dyn_cast<VarBitInit>(
-             InstrBits->getBit(BitCount - InstrBitIdx - 1))) &&
-            VarBit->getBitVar()->getAsString() == OpName) {
-      unsigned const BitNum = (InstrBitIdx + VarBit->getBitNum()) >= BitCount
-                                  ? BitCount - InstrBitIdx - 1
-                                  : VarBit->getBitNum();
-      if (EncodingData.OperandPiecesCount == 8)
-        llvm_unreachable("Too many operand pieces in the instruction!");
-
-      // place current index
-      EncodingData.Indexes[EncodingData.OperandPiecesCount] =
-          InstrBitIdx - StartIdx;
-
-      unsigned VarBitIdx;
-      // this is meant for getting the size of the operand and to also see
-      // whether there are more pieces of the operand further
-      for (VarBitIdx = 1; VarBitIdx <= BitNum; ++VarBitIdx) {
-        VarBit = dyn_cast<VarBitInit>(
-            InstrBits->getBit(BitCount - (InstrBitIdx + VarBitIdx) - 1));
-
-        if (VarBit && VarBit->getBitVar()->getAsString() == OpName)
-          continue;
-        break;
-      }
-      // place current size
-      EncodingData.Sizes[EncodingData.OperandPiecesCount] = VarBitIdx;
-      ++EncodingData.OperandPiecesCount;
-
-      // if we broke out of the loop before it finishes, it means we aren't
-      // done here. more pieces of the operand are to be found
-      if (VarBitIdx <= BitNum) {
-        InstrBitIdx += VarBitIdx - 1;
-        continue;
-      }
-      break;
-    }
-  }
-
-  // if no references were found we exit, otherwise we add the encoding to the string
-  if (!EncodingData.OperandPiecesCount)
-    return "{ 0 }";
-  Result << "{ " << EncodingData.OperandPiecesCount << ", { ";
-
-  for (unsigned i = 0; i != EncodingData.OperandPiecesCount; ++i) {
-    if (i)
-      Result << ", ";
-    Result << EncodingData.Indexes[i];
-  }
-  Result << " }, { ";
-  for (unsigned i = 0; i != EncodingData.OperandPiecesCount; ++i) {
-    if (i)
-      Result << ", ";
-    Result << EncodingData.Sizes[i];
-  }
-  Result << " } }";
-  return ResultStr;
-}
-
-std::string getCSOpcodeEncoding(CodeGenInstruction const *CGI) {
-  BitsInit const *const InstrBits =
-      !CGI->TheDef->getValueAsBit("isPseudo")
-          ? CGI->TheDef->getValueAsBitsInit("Inst")
-          : nullptr;
-  if (!InstrBits)
-    return "{ 0 }";
-
-  std::string ResultStr;
-  raw_string_ostream Result(ResultStr);
-  int64_t const Size = CGI->TheDef->getValueAsInt("Size") * 8;
-  unsigned const BitCount = InstrBits->getNumBits();
-  unsigned const StartIdx = BitCount - Size;
-
-  struct {
-    std::bitset<64> Bits;
-    std::array<unsigned, 64> Indexes;
-    unsigned BitCount;
-  } OpcodeData{};
-
-  for (unsigned InstrBitIdx = StartIdx; InstrBitIdx != BitCount;
-       ++InstrBitIdx) {
-    if (auto const *const Bit =
-            dyn_cast<BitInit>(InstrBits->getBit(BitCount - InstrBitIdx - 1))) {
-      if (OpcodeData.BitCount == 64)
-        llvm_unreachable("Instruction's opcode size is greater than 8 bytes!");
-      OpcodeData.Bits.set(OpcodeData.BitCount, Bit->getValue());
-      OpcodeData.Indexes[OpcodeData.BitCount] = InstrBitIdx - StartIdx;
-      ++OpcodeData.BitCount;
-    }
-  }
-
-  // Most likely unreachable since there is no instruction to my knowledge that doesn't have any opcode bits
-  if (!OpcodeData.BitCount)
-    llvm_unreachable("Instruction without opcode bits!");
-
-  Result << "{ " << OpcodeData.Bits.to_ullong() << ", { ";
-  for (auto Current = OpcodeData.Indexes.begin(),
-            end = Current + OpcodeData.BitCount;
-       Current != end; ++Current) {
-    if (Current != OpcodeData.Indexes.begin())
-      Result << ", ";
-    Result << *Current;
-  }
-  Result << " }, " << OpcodeData.BitCount << " }";
-  return ResultStr;
-}
-
 void printInsnMapEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
                        std::unique_ptr<MatchableInfo> const &MI, bool UseMI,
                        CodeGenInstruction const *CGI,
@@ -2834,10 +2700,9 @@ void printInsnMapEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
     InsnMap << getReqFeatures(TargetName, AMI, MI, UseMI, CGI) << ", ";
     InsnMap << (CGI->isBranch ? "1" : "0") << ", ";
     InsnMap << (CGI->isIndirectBranch ? "1" : "0") << ", ";
-    InsnMap << getArchSupplInfo(TargetName, CGI, PPCFormatEnum) << ",\n";
-    InsnMap.indent(4) << getCSOpcodeEncoding(CGI);
+    InsnMap << getArchSupplInfo(TargetName, CGI, PPCFormatEnum) << "\n";
   } else {
-    InsnMap.indent(4) << "{ 0 }, { 0 }, { 0 }, 0, 0, {{ 0 }}, { 0 }";
+    InsnMap.indent(4) << "{ 0 }, { 0 }, { 0 }, 0, 0, {{ 0 }}";
   }
   InsnMap << '\n';
   InsnMap.indent(2) << "#endif\n";
@@ -2901,7 +2766,6 @@ typedef struct OpData {
   std::string OpType;
   std::string DataTypes;
   unsigned Access; ///< 0b00 = unkown, 0b01 = In, 0b10 = Out, 0b11 = In and Out
-  std::string OpEncoding;
   std::string str() const {
     return "Asm: " + OpAsm + " Type: " + OpType +
            " Access: " + std::to_string(Access);
@@ -2925,7 +2789,7 @@ uint8_t getOpAccess(CodeGenInstruction const *CGI, std::string OperandType,
 
 void addComplexOperand(CodeGenInstruction const *CGI,
                        Record const *ComplexOp, StringRef const &ArgName,
-                       bool IsOutOp, std::string const &Encoding,
+                       bool IsOutOp,
                        std::vector<OpData> &InsOps) {
   DagInit *SubOps = ComplexOp->getValueAsDag("MIOperandInfo");
 
@@ -2951,7 +2815,7 @@ void addComplexOperand(CodeGenInstruction const *CGI,
     // If so update its access flags.
     std::string OpName = ArgName.str() + " - " + SubOp->getName().str();
     InsOps.push_back(OpData{SubOp, std::move(OpName), std::move(OperandType),
-                            std::move(OpDataTypes), AccessFlag, Encoding});
+                            std::move(OpDataTypes), AccessFlag});
   }
 }
 
@@ -2998,13 +2862,11 @@ void printInsnOpMapEntry(CodeGenTarget const &Target,
     }
     Record *Rec = argInitOpToRecord(ArgInit);
 
-    std::string const &Encoding = getCSOperandEncoding(CGI, Rec, ArgName);
-
     // Add complex operands.
     // Operands which effectively consists of two or more operands.
     if (Rec->getValue("MIOperandInfo")) {
       if (Rec->getValueAsDag("MIOperandInfo")->getNumArgs() > 0) {
-        addComplexOperand(CGI, Rec, ArgName, IsOutOp, Encoding, InsOps);
+        addComplexOperand(CGI, Rec, ArgName, IsOutOp, InsOps);
         continue;
       }
     }
@@ -3020,8 +2882,7 @@ void printInsnOpMapEntry(CodeGenTarget const &Target,
     // If so update its access flags.
     unsigned AccessFlag = getOpAccess(CGI, OperandType, IsOutOp);
     InsOps.push_back(OpData{Rec, ArgName.str(), std::move(OperandType),
-                            std::move(OpDataTypes), AccessFlag,
-                            std::move(Encoding)});
+                            std::move(OpDataTypes), AccessFlag});
   }
 
   if (InsOps.size() > 15) {
@@ -3041,8 +2902,7 @@ void printInsnOpMapEntry(CodeGenTarget const &Target,
   InsnOpMap << "{\n";
   for (OpData const &OD : InsOps) {
     InsnOpMap.indent(2) << "{ " << OD.OpType << ", " << getCSAccess(OD.Access)
-                        << ", " << OD.DataTypes << ", " << OD.OpEncoding
-                        << " }, /* " << OD.OpAsm << " */\n";
+                        << ", " << OD.DataTypes << " }, /* " << OD.OpAsm << " */\n";
   }
   InsnOpMap.indent(2) << "{ 0 }\n";
   InsnOpMap << "}},\n";
