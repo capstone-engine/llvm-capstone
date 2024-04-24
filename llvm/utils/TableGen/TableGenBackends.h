@@ -64,7 +64,7 @@ namespace llvm {
 class raw_ostream;
 class RecordKeeper;
 
-void EmitMapTable(RecordKeeper &RK, raw_ostream &OS);
+void EmitMapTable(RecordKeeper &RK, raw_ostream &OS, bool EmitC);
 
 // Defined in DecoderEmitter.cpp
 void EmitDecoder(RecordKeeper &RK, raw_ostream &OS,
