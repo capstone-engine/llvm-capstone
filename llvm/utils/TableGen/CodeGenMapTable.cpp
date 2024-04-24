@@ -188,9 +188,12 @@ private:
   std::vector<Record*> KeyInstrVec;
   DenseMap<Record*, std::vector<Record*> > MapTable;
 
+  // Simple flag for Capstone C files.
+  bool EmitC;
+
 public:
-  MapTableEmitter(CodeGenTarget &Target, RecordKeeper &Records, Record *IMRec):
-                  Target(Target), InstrMapDesc(IMRec) {
+  MapTableEmitter(CodeGenTarget &Target, RecordKeeper &Records, Record *IMRec, bool EmitC = false):
+                  Target(Target), InstrMapDesc(IMRec), EmitC(EmitC) {
     const std::string &FilterClass = InstrMapDesc.getFilterClass();
     InstrDefs = Records.getAllDerivedDefinitions(FilterClass);
   }
@@ -210,8 +213,8 @@ public:
   void buildMapTable();
 
   void emitBinSearch(raw_ostream &OS, unsigned TableSize);
-  void emitTablesWithFunc(raw_ostream &OS);
-  unsigned emitBinSearchTable(raw_ostream &OS);
+  void emitTablesWithFunc(raw_ostream &OS, bool EmitC);
+  unsigned emitBinSearchTable(raw_ostream &OS, bool EmitC);
 
   // Lookup functions to query binary search tables.
   void emitMapFuncBody(raw_ostream &OS, unsigned TableSize);
@@ -358,7 +361,7 @@ Record *MapTableEmitter::getInstrForColumn(Record *KeyInstr,
 // Binary search is used for locating instructions in the table.
 //===----------------------------------------------------------------------===//
 
-unsigned MapTableEmitter::emitBinSearchTable(raw_ostream &OS) {
+unsigned MapTableEmitter::emitBinSearchTable(raw_ostream &OS, bool EmitC) {
 
   ArrayRef<const CodeGenInstruction*> NumberedInstructions =
                                             Target.getInstructionsByEnumValue();
@@ -367,6 +370,7 @@ unsigned MapTableEmitter::emitBinSearchTable(raw_ostream &OS) {
   unsigned NumCol = ValueCols.size();
   unsigned TotalNumInstr = NumberedInstructions.size();
   unsigned TableSize = 0;
+  std::string NSSep = (EmitC ? "_" : "::");
 
   OS << "static const uint16_t "<<InstrMapDesc.getName();
   // Number of columns in the table are NumCol+1 because key instructions are
@@ -383,21 +387,21 @@ unsigned MapTableEmitter::emitBinSearchTable(raw_ostream &OS) {
           RelExists = 1;
           OutStr += ", ";
           OutStr += Namespace;
-          OutStr += "::";
+          OutStr += NSSep;
           OutStr += ColInstrs[j]->getName();
         } else { OutStr += ", (uint16_t)-1U";}
       }
 
       if (RelExists) {
-        OS << "  { " << Namespace << "::" << CurInstr->getName();
+        OS << "  { " << Namespace << NSSep << CurInstr->getName();
         OS << OutStr <<" },\n";
         TableSize++;
       }
     }
   }
   if (!TableSize) {
-    OS << "  { " << Namespace << "::" << "INSTRUCTION_LIST_END, ";
-    OS << Namespace << "::" << "INSTRUCTION_LIST_END }";
+    OS << "  { " << Namespace << NSSep << "INSTRUCTION_LIST_END, ";
+    OS << Namespace << NSSep << "INSTRUCTION_LIST_END }";
   }
   OS << "}; // End of " << InstrMapDesc.getName() << "Table\n\n";
   return TableSize;
@@ -469,7 +473,7 @@ void MapTableEmitter::emitMapFuncBody(raw_ostream &OS,
 // Emit relation tables and the functions to query them.
 //===----------------------------------------------------------------------===//
 
-void MapTableEmitter::emitTablesWithFunc(raw_ostream &OS) {
+void MapTableEmitter::emitTablesWithFunc(raw_ostream &OS, bool EmitC) {
 
   // Emit function name and the input parameters : mostly opcode value of the
   // current instruction. However, if a table has multiple columns (more than 2
@@ -478,7 +482,8 @@ void MapTableEmitter::emitTablesWithFunc(raw_ostream &OS) {
 
   ListInit *ColFields = InstrMapDesc.getColFields();
   const std::vector<ListInit*> &ValueCols = InstrMapDesc.getValueCols();
-  OS << "// "<< InstrMapDesc.getName() << "\nLLVM_READONLY\n";
+  OS << "// "<< InstrMapDesc.getName() << "\n";
+  OS << (EmitC ? "" : "LLVM_READONLY\n");
   OS << "int "<< InstrMapDesc.getName() << "(uint16_t Opcode";
   if (ValueCols.size() > 1) {
     for (Init *CF : ColFields->getValues()) {
@@ -489,7 +494,7 @@ void MapTableEmitter::emitTablesWithFunc(raw_ostream &OS) {
   OS << ") {\n";
 
   // Emit map table.
-  unsigned TableSize = emitBinSearchTable(OS);
+  unsigned TableSize = emitBinSearchTable(OS, EmitC);
 
   // Emit rest of the function body.
   emitMapFuncBody(OS, TableSize);
@@ -563,7 +568,7 @@ namespace llvm {
 // between instructions. These relations are emitted as a tables along with the
 // functions to query them.
 //===----------------------------------------------------------------------===//
-void EmitMapTable(RecordKeeper &Records, raw_ostream &OS) {
+void EmitMapTable(RecordKeeper &Records, raw_ostream &OS, bool EmitC = false) {
   CodeGenTarget Target(Records);
   StringRef NameSpace = Target.getInstNamespace();
   std::vector<Record*> InstrMapVec;
@@ -574,8 +579,10 @@ void EmitMapTable(RecordKeeper &Records, raw_ostream &OS) {
 
   OS << "#ifdef GET_INSTRMAP_INFO\n";
   OS << "#undef GET_INSTRMAP_INFO\n";
-  OS << "namespace llvm {\n\n";
-  OS << "namespace " << NameSpace << " {\n\n";
+  if (!EmitC) {
+    OS << "namespace llvm {\n\n";
+    OS << "namespace " << NameSpace << " {\n\n";
+  }
 
   // Emit coulumn field names and their values as enums.
   emitEnums(OS, Records);
@@ -596,10 +603,12 @@ void EmitMapTable(RecordKeeper &Records, raw_ostream &OS) {
     IMap.buildMapTable();
 
     // Emit map tables and the functions to query them.
-    IMap.emitTablesWithFunc(OS);
+    IMap.emitTablesWithFunc(OS, EmitC);
   }
-  OS << "} // end namespace " << NameSpace << "\n";
-  OS << "} // end namespace llvm\n";
+  if (!EmitC) {
+    OS << "} // end namespace " << NameSpace << "\n";
+    OS << "} // end namespace llvm\n";
+  }
   OS << "#endif // GET_INSTRMAP_INFO\n\n";
 }
 

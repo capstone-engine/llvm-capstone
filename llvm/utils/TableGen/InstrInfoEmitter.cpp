@@ -13,6 +13,7 @@
 
 #include "InstrInfoEmitterTypes.h"
 #include "Printer.h"
+#include "PrinterTypes.h"
 
 using namespace llvm;
 
@@ -792,7 +793,7 @@ void EmitInstrInfo(RecordKeeper &RK, raw_ostream &OS) {
   RK.startTimer("Analyze DAG patterns");
   InstrInfoEmitter(RK, *PI).run();
   RK.startTimer("Emit map table");
-  EmitMapTable(RK, OS);
+  EmitMapTable(RK, OS, PL == PRINTER_LANG_CAPSTONE_C);
   delete PI;
 }
 
