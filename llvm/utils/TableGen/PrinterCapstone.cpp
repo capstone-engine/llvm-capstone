@@ -690,7 +690,10 @@ static std::string handleDefaultArg(const std::string &TargetName,
       AArch64TemplFuncWithDefaults = {// Default is 1
                                       {"printVectorIndex", "1"},
                                       // Default is false == 0
-                                      {"printPrefetchOp", "0"}};
+                                      {"printPrefetchOp", "0"},
+                                      // Default is 0
+                                      {"printSVERegOp", "0"}
+                                      };
   SmallVector<std::pair<std::string, std::string>> *TemplFuncWithDefaults;
   if (TargetName == "AArch64")
     TemplFuncWithDefaults = &AArch64TemplFuncWithDefaults;
