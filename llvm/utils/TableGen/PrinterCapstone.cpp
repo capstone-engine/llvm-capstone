@@ -2971,6 +2971,8 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
       "MatrixIndex_8",
       "MatrixIndex_0",
       "MatrixIndex_1",
+      "AdrLabel",
+      "AdrpLabel",
       "ZPRasFPR_128"};
 
   bool NoExceptions = false;
