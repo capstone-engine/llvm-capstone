@@ -3889,6 +3889,7 @@ void PrinterLLVM::instrInfoEmitUseDefsLists(
 }
 
 void PrinterLLVM::instrInfoEmitOperandInfoOffset(
+    StringRef TargetName,
     std::vector<std::string> const &OperandInfo,
     OperandInfoMapTy const &OperandInfoMap) const {
   OS << OperandInfoMap.find(OperandInfo)->second << ",\t0";

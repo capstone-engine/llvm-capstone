@@ -744,7 +744,7 @@ void InstrInfoEmitter::emitRecord(
 
   // Emit the operand info offset.
   OperandInfoTy OperandInfo = GetOperandInfo(Inst);
-  PI.instrInfoEmitOperandInfoOffset(OperandInfo, OperandInfoMap);
+  PI.instrInfoEmitOperandInfoOffset(Target.getName(), OperandInfo, OperandInfoMap);
 
   // Emit all of the target independent flags...
   PI.instrInfoEmitTargetIndepFlags(Inst, Target.getAllowRegisterRenaming());
