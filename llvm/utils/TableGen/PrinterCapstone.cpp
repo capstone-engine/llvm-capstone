@@ -2246,8 +2246,7 @@ void PrinterCapstone::instrInfoSetOperandInfoStr(
 
 void PrinterCapstone::instrInfoEmitMCInstrDescHdr(
     std::string TargetName) const {
-  OS << "assert(sizeof(MCOperandInfo) % sizeof(MCPhysReg) == 0);\n";
-  OS << "static constexpr unsigned " << TargetName << "ImpOpBase = sizeof("
+  OS << "static const unsigned " << TargetName << "ImpOpBase = sizeof("
      << TargetName << "InstrTable_OperandInfo / (sizeof(MCPhysReg));\n\n";
   OS << "static const " << TargetName << "InstrTable " << TargetName
      << "Descs = {\n  {\n";
@@ -2317,11 +2316,7 @@ void PrinterCapstone::instrInfoEmitMCInstrDescDecl(
   unsigned OperandInfoSize, unsigned ImplicitListSize) const {
   OS << "struct " << TargetName << "InstrTable {\n";
   OS << "  MCInstrDesc Insts[" << NumberedInstructionsSize << "];\n";
-  OS << "  static_assert(alignof(MCInstrDesc) >= alignof(MCOperandInfo), "
-        "\"Unwanted padding between Insts and OperandInfo\");\n";
   OS << "  MCOperandInfo OperandInfo[" << OperandInfoSize << "];\n";
-  OS << "  static_assert(alignof(MCOperandInfo) >= alignof(MCPhysReg), "
-        "\"Unwanted padding between OperandInfo and ImplicitOps\");\n";
   OS << "  MCPhysReg ImplicitOps[" << ImplicitListSize << "];\n";
   OS << "};\n\n";
 }
