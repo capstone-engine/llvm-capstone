@@ -1376,10 +1376,6 @@ void PrinterCapstone::asmWriterEmitMnemonicDecodeTable(
   OS << "  // Emit the opcode for the instruction.\n";
   OS << BitsString;
 
-  // Make sure we don't return an invalid pointer if bits is 0
-  OS << "  if (Bits == 0)\n"
-       "    return NULL;\n";
-
   // Return mnemonic string and bits.
   OS << "  MnemonicBitsInfo MBI = {\n"
      << "#ifndef CAPSTONE_DIET\n"
