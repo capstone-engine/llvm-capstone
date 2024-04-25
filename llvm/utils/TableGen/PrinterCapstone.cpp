@@ -3295,9 +3295,10 @@ raw_string_ostream &PrinterCapstone::searchableTablesGetOS(StreamType G) const {
 
 void PrinterCapstone::searchableTablesEmitGenericEnum(
     const GenericEnum &Enum) const {
-  // We do not emit enums here, but generate them when we print the tables
+  // We do not emit enums here, but generate them when we print the mapping tables
   // Because the table has the type information for its fields,
   // we have a chance to distinguish between Sys regs, imms and other alias.
+  // The generated enums are written to <ARCH>GenCSSystemOperandsEnum.inc
 }
 
 void PrinterCapstone::searchableTablesEmitGenericTable(
