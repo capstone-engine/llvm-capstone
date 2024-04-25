@@ -2247,7 +2247,7 @@ void PrinterCapstone::instrInfoSetOperandInfoStr(
 void PrinterCapstone::instrInfoEmitMCInstrDescHdr(
     std::string TargetName) const {
   OS << "static const unsigned " << TargetName << "ImpOpBase = sizeof("
-     << TargetName << "InstrTable_OperandInfo / (sizeof(MCPhysReg));\n\n";
+     << TargetName << "InstrTable.OperandInfo) / (sizeof(MCPhysReg));\n\n";
   OS << "static const " << TargetName << "InstrTable " << TargetName
      << "Descs = {\n  {\n";
 }
@@ -2314,11 +2314,11 @@ void PrinterCapstone::instrInfoEmitMCInstrDescDecl(
   std::string const &TargetName,
   unsigned NumberedInstructionsSize,
   unsigned OperandInfoSize, unsigned ImplicitListSize) const {
-  OS << "struct " << TargetName << "InstrTable {\n";
+  OS << "typedef struct " << TargetName << "InstrTable {\n";
   OS << "  MCInstrDesc Insts[" << NumberedInstructionsSize << "];\n";
   OS << "  MCOperandInfo OperandInfo[" << OperandInfoSize << "];\n";
   OS << "  MCPhysReg ImplicitOps[" << ImplicitListSize << "];\n";
-  OS << "};\n\n";
+  OS << "} " << TargetName << "InstrTable;\n\n";
 }
 
 void PrinterCapstone::instrInfoEmitStringLiteralDef(
