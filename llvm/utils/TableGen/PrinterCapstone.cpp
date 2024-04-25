@@ -2968,6 +2968,9 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
       "SVELogicalImm_int16_t",
       "SVELogicalImm_int32_t",
       "SVELogicalImm_int64_t",
+      "MatrixIndex_8",
+      "MatrixIndex_0",
+      "MatrixIndex_1",
       "ZPRasFPR_128"};
 
   bool NoExceptions = false;

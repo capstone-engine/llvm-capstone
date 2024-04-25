@@ -104,6 +104,13 @@ So you need to figure out where this specific code snipped is printed and add `t
   To fix this the function declaration is probably missing in the header (e.g. `<ARCH>InstPrinter.h`). You can copy the `DEFINE_printMatrix()` function to the header
   and rewrite it as declaration. Just check the other `DECLARE_...` macros in the header file.
 
+- And `ARCH_OP_GROUP_...` is missing or not generated. Build error like:
+  ```
+  AArch64InstPrinter.c:2249:42: error: ‘AArch64_OP_GROUP_MatrixIndex_8’ undeclared (first use in this function); did you mean ‘AArch64_OP_GROUP_MatrixIndex’?
+   2249 |                 add_cs_detail(MI, CONCAT(AArch64_OP_GROUP_MatrixIndex, Scale), \
+  ```
+  Fix it by adding the postfix `MatrixIndex_8` to one of the exception lists in `PrinterCapstone::printOpPrintGroupEnum()`.
+
 - If the mapping files miss operand types or access information, then the `.td` files are incomplete (happens surprisingly often).
 You need to search for the instruction or operands with missing or incorrect values and fix them.
   ```
