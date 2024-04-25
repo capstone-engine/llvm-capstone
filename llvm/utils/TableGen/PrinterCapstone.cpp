@@ -666,33 +666,17 @@ void patchIsGetImmReg(std::string &Code) {
   }
 }
 
-std::string edgeCaseTemplArg(std::string &Code) {
-  size_t const B = Code.find_first_of("<");
-  size_t const E = Code.find(">");
-  if (B == std::string::npos) {
-    // No template
-    PrintFatalNote("Edge case for C++ code not handled: " + Code);
-  }
-  std::string const &DecName = Code.substr(0, B);
-  std::string Args = Code.substr(B + 1, E - B - 1);
-  std::string Rest = Code.substr(E + 1);
-  if (Code.find("printSVERegOp") != std::string::npos)
-    // AArch64: Template argument is of type char and
-    // no argument is interpreded as 0
-    return DecName + "_0" + Rest;
-
-  PrintFatalNote("Edge case for C++ code not handled: " + Code);
-}
-
 static std::string handleDefaultArg(const std::string &TargetName,
                                     std::string &Code) {
+  // Default values of the template function arguments.
   static SmallVector<std::pair<std::string, std::string>>
       AArch64TemplFuncWithDefaults = {// Default is 1
                                       {"printVectorIndex", "1"},
                                       // Default is false == 0
                                       {"printPrefetchOp", "0"},
                                       // Default is 0
-                                      {"printSVERegOp", "0"}
+                                      {"printSVERegOp", "0"},
+                                      {"printMatrixIndex", "1"}
                                       };
   SmallVector<std::pair<std::string, std::string>> *TemplFuncWithDefaults;
   if (TargetName == "AArch64")
@@ -701,46 +685,53 @@ static std::string handleDefaultArg(const std::string &TargetName,
     return Code;
 
   for (std::pair Func : *TemplFuncWithDefaults) {
-    if (Code.find(Func.first) != std::string::npos) {
-      unsigned long const B =
-          Code.find(Func.first) + std::string(Func.first).size();
-      if (Code[B] == '<' || Code[B] == '_')
-        // False positive or already fixed.
-        continue;
-      std::string const &DecName = Code.substr(0, B);
-      std::string Rest = Code.substr(B);
-      return DecName + "_" + Func.second + Rest;
+    // Search for function name without "<>" and replace it with <name>_<default-arg>
+    // Note: There can be multiple calls to such a function in the code.
+    // We only replace one here.
+    auto func = Func.first;
+    SmallVector<StringRef> Matches;
+    while (Regex(func + "(<>)?($|\\()").match(Code, &Matches)) {
+      StringRef Match = Matches[0];
+      if (Match.ends_with("(")) {
+        Code = Regex(func + "(<>)?\\(").sub(func + "_" + Func.second + "(", Code);
+      } else {
+        Code = Regex(func + "(<>)?$").sub(func + "_" + Func.second, Code);
+      }
     }
   }
-  // No template function, false positive or fixed
   return Code;
 }
 
+/// @brief Replaces template arguments of the form <arg, arg, ...> and similar.
+/// It also handles default arguments for certain hard-coded function names.
+///
+/// @param TargetName The current target name
+/// @param Code The C++ code.
 static void patchTemplateArgs(const std::string &TargetName,
                               std::string &Code) {
-  size_t const B = Code.find_first_of("<");
-  size_t const E = Code.find(">");
-  if (B == std::string::npos) {
-    Code = handleDefaultArg(TargetName, Code);
-    return;
+  Code = handleDefaultArg(TargetName, Code);
+  size_t B = Code.find_first_of("<");
+  size_t E = Code.find(">");
+  while (B != std::string::npos && E != std::string::npos) {
+    std::string const &DecName = Code.substr(0, B);
+    std::string Args = Code.substr(B + 1, E - B - 1);
+    std::string Rest = Code.substr(E + 1);
+    if (Args.empty()) {
+      return;
+    }
+    while ((Args.find("true") != std::string::npos) ||
+          (Args.find("false") != std::string::npos) ||
+          (Args.find(",") != std::string::npos) ||
+          (Args.find("'") != std::string::npos)) {
+      Args = Regex("true").sub("1", Args);
+      Args = Regex("false").sub("0", Args);
+      Args = Regex(" *, *").sub("_", Args);
+      Args = Regex("'").sub("", Args);
+    }
+    Code = DecName + "_" + Args + Rest;
+    E = Code.find(">");
+    B = Code.find_first_of("<");
   }
-  std::string const &DecName = Code.substr(0, B);
-  std::string Args = Code.substr(B + 1, E - B - 1);
-  std::string Rest = Code.substr(E + 1);
-  if (Args.empty()) {
-    Code = edgeCaseTemplArg(Code);
-    return;
-  }
-  while ((Args.find("true") != std::string::npos) ||
-         (Args.find("false") != std::string::npos) ||
-         (Args.find(",") != std::string::npos) ||
-         (Args.find("'") != std::string::npos)) {
-    Args = Regex("true").sub("1", Args);
-    Args = Regex("false").sub("0", Args);
-    Args = Regex(" *, *").sub("_", Args);
-    Args = Regex("'").sub("", Args);
-  }
-  Code = DecName + "_" + Args + Rest;
 }
 
 std::string PrinterCapstone::translateToC(std::string const &TargetName,
@@ -757,11 +748,7 @@ void PrinterCapstone::decoderEmitterEmitOpDecoder(raw_ostream &DecoderOS,
                                                   const OperandInfo &Op) const {
   unsigned const Indent = 4;
   DecoderOS.indent(Indent) << GuardPrefix;
-  if (Op.Decoder.find("<") != std::string::npos) {
-    DecoderOS << translateToC(TargetName, Op.Decoder);
-  } else {
-    DecoderOS << Op.Decoder;
-  }
+  DecoderOS << translateToC(TargetName, Op.Decoder);
 
   DecoderOS << "(MI, insn, Address, Decoder)" << GuardPostfix << " { "
             << (Op.HasCompleteDecoder ? "" : "*DecodeComplete = false; ")
@@ -771,9 +758,7 @@ void PrinterCapstone::decoderEmitterEmitOpDecoder(raw_ostream &DecoderOS,
 void PrinterCapstone::decoderEmitterEmitOpBinaryParser(
     raw_ostream &DecOS, const OperandInfo &OpInfo) const {
   unsigned const Indent = 4;
-  const std::string &Decoder = (OpInfo.Decoder.find("<") != std::string::npos)
-                                   ? translateToC(TargetName, OpInfo.Decoder)
-                                   : OpInfo.Decoder;
+  const std::string &Decoder = translateToC(TargetName, OpInfo.Decoder);
 
   bool const UseInsertBits = OpInfo.numFields() != 1 || OpInfo.InitValue != 0;
 
@@ -2967,6 +2952,8 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
       "LdStmModeOperand",
       "MandatoryInvertedPredicateOperand",
   };
+  /// Some groups are hard to generate. Like standard template arguments.
+  /// Those are added here.
   static const std::set<std::string> AArch64Exceptions = {
       "VectorIndex_8",
       "PrefetchOp_1",

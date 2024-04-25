@@ -93,6 +93,17 @@ So you need to figure out where this specific code snipped is printed and add `t
 - Template functions with default values for their arguments, don't get replaced properly.
   See: `handleDefaultArg()` in `PrinterCapstone.cpp` to add the default argument value.
 
+- Some operand printer or decoder are not recognized. Compiler error like:
+  ```
+  .../AArch64GenAsmWriter.inc:18216:5: warning: implicit declaration of function ‘printMatrixIndex_1’; did you mean ‘printMatrix_0’? [-Wimplicit-function-declaration]
+  18216 |     printMatrixIndex_1(MI, 2, O);
+      |     ^~~~~~~~~~~~~~~~~~
+      |     printMatrix_0
+
+  ```
+  To fix this the function declaration is probably missing in the header (e.g. `<ARCH>InstPrinter.h`). You can copy the `DEFINE_printMatrix()` function to the header
+  and rewrite it as declaration. Just check the other `DECLARE_...` macros in the header file.
+
 - If the mapping files miss operand types or access information, then the `.td` files are incomplete (happens surprisingly often).
 You need to search for the instruction or operands with missing or incorrect values and fix them.
   ```
