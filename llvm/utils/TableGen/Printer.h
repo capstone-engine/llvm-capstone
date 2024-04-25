@@ -142,7 +142,7 @@ public:
                                  bool Newline = true,
                                  bool UndefAtEnd = false) const;
   virtual void emitPPIf(std::string const &Arg, bool Begin,
-                                    bool Newline = true) const;
+                        bool Newline = true) const;
   virtual void emitNewline(unsigned Count) const {
     for (unsigned I = Count; I > 0; --I)
       OS << "\n";
@@ -339,7 +339,7 @@ public:
       std::deque<CodeGenSubRegIndex> const &SubRegIndices) const;
   virtual void regInfoEmitRegBaseClassMapping(
       std::string const &ClassName,
-      SmallVector<const CodeGenRegisterClass*> BaseClasses,
+      SmallVector<const CodeGenRegisterClass *> BaseClasses,
       std::deque<CodeGenRegister> const Regs) const;
 
   //-------------------------
@@ -594,10 +594,10 @@ public:
                                                 unsigned NumProcs,
                                                 bool SchedModelHasItin) const;
   virtual void subtargetEmitIncludeSTIDesc() const;
-  virtual void subtargetEmitDFAPacketizerClass(
-    CodeGenTarget &TGT,
-            std::string const &TargetName,
-                                               std::string const &ClassName) const;
+  virtual void
+  subtargetEmitDFAPacketizerClass(CodeGenTarget &TGT,
+                                  std::string const &TargetName,
+                                  std::string const &ClassName) const;
   virtual void subtargetEmitDFAPacketizerClassEnd() const;
   virtual void subtargetEmitSTICtor() const;
   virtual void subtargetEmitExternKVArrays(std::string const &TargetName,
@@ -636,10 +636,9 @@ public:
   subtargetEmitStageAndSycleTables(std::string const &StageTable,
                                    std::string const &OperandCycleTable,
                                    std::string const &BypassTable) const;
-  virtual void subtargetEmitGetMacroFusions(
-            CodeGenTarget &TGT,
-            std::string Target,
-            const std::string &ClassName) const;
+  virtual void subtargetEmitGetMacroFusions(CodeGenTarget &TGT,
+                                            std::string Target,
+                                            const std::string &ClassName) const;
   virtual void asmMatcherEmitSTFBitEnum(AsmMatcherInfo &Info) const;
   virtual void asmMatcherEmitComputeAssemblerAvailableFeatures(
       AsmMatcherInfo &Info, StringRef const &ClassName) const;
@@ -658,8 +657,8 @@ public:
   virtual void instrInfoEmitMCInstrDescClose() const;
   virtual void instrInfoEmitMCInstrDescEnd() const;
   virtual void instrInfoEmitMCInstrImplUses(
-    std::vector<std::vector<Record *>> ImplicitLists,
-    std::map<std::vector<Record*>, unsigned> &EmittedLists) const;
+      std::vector<std::vector<Record *>> ImplicitLists,
+      std::map<std::vector<Record *>, unsigned> &EmittedLists) const;
   virtual void instrInfoEmitRecord(CodeGenSchedModels const &SchedModels,
                                    CodeGenInstruction const &Inst, unsigned Num,
                                    int MinOperands) const;
@@ -668,19 +667,21 @@ public:
                                 bool GetAllowRegisterRenaming) const;
   virtual void instrInfoEmitTSFFlags(uint64_t Value) const;
   virtual void instrInfoEmitUseDefsLists(
-    StringRef TargetName,
-    const CodeGenInstruction &Inst,
+      StringRef TargetName, const CodeGenInstruction &Inst,
       std::map<std::vector<Record *>, unsigned> &EmittedLists,
       std::vector<Record *> const &ImplicitOps) const;
-  virtual void instrInfoEmitOperandInfo(OperandInfoListTy &OperandInfoList) const;
-  virtual void instrInfoEmitOperandInfoOffset(std::vector<std::string> const &OperandInfo,
-                           OperandInfoMapTy const &OperandInfoMap) const;
+  virtual void
+  instrInfoEmitOperandInfo(OperandInfoListTy &OperandInfoList) const;
+  virtual void
+  instrInfoEmitOperandInfoOffset(StringRef TargetName,
+                                 std::vector<std::string> const &OperandInfo,
+                                 OperandInfoMapTy const &OperandInfoMap) const;
   virtual void instrInfoEmitRecordEnd(unsigned InstNum,
                                       std::string const &InstName) const;
-  virtual void instrInfoEmitMCInstrDescDecl(
-    std::string const &TargetName,
-    unsigned NumberedInstructionsSize,
-    unsigned OperandInfoSize, unsigned ImplicitListSize) const;
+  virtual void instrInfoEmitMCInstrDescDecl(std::string const &TargetName,
+                                            unsigned NumberedInstructionsSize,
+                                            unsigned OperandInfoSize,
+                                            unsigned ImplicitListSize) const;
   virtual void instrInfoEmitStringLiteralDef(
       std::string const &TargetName,
       SequenceToOffsetTable<std::string> InstrNames) const;
@@ -707,9 +708,8 @@ public:
                                          bool HasDeprecationFeatures,
                                          bool HasComplexDeprecationInfos) const;
   virtual void instrInfoEmitMCInstrInfoInit(
-      std::string const &TargetName,
-      unsigned NumberedInstrSize, bool HasDeprecationFeatures,
-      bool HasComplexDeprecationInfos) const;
+      std::string const &TargetName, unsigned NumberedInstrSize,
+      bool HasDeprecationFeatures, bool HasComplexDeprecationInfos) const;
   virtual void instrInfoEmitOperandEnum(
       std::map<std::string, unsigned> const &Operands) const;
   virtual void instrInfoEmitGetNamedOperandIdx(
@@ -731,7 +731,8 @@ public:
   virtual void instrInfoEmitGetOpTypeUnreachable() const;
   virtual void instrInfoEmitGetOpTypeEnd() const;
   virtual void instrInfoEmitGetMemOpSizeHdr() const;
-  virtual void instrInfoEmitGetOpMemSizeTbl(std::map<int, SmallVector<StringRef, 0>> &SizeToOperandName) const;
+  virtual void instrInfoEmitGetOpMemSizeTbl(
+      std::map<int, SmallVector<StringRef, 0>> &SizeToOperandName) const;
   virtual std::string
   instrInfoGetInstMapEntry(StringRef const &Namespace,
                            StringRef const &InstrName) const;
@@ -781,7 +782,8 @@ public:
           &SubtargetFeatures,
       CodeGenTarget const &Target) const;
   virtual void instrInfoEmitOpcodeChecker() const;
-  virtual void instrInfoEmitPredicateVerifier(StringRef const &TargetName) const;
+  virtual void
+  instrInfoEmitPredicateVerifier(StringRef const &TargetName) const;
   virtual void instrInfoEmitEnums(CodeGenTarget const &Target,
                                   StringRef const &Namespace,
                                   CodeGenSchedModels const &SchedModels) const;
@@ -1015,8 +1017,8 @@ public:
   //--------------------------
 
   void emitNamespace(std::string const &Name, bool Begin,
-                                std::string const &Comment = "",
-                                bool Newline = true) const override;
+                     std::string const &Comment = "",
+                     bool Newline = true) const override;
   void emitIfNotDef(std::string const &Name, bool Begin) const override;
   void emitIncludeToggle(std::string const &Name, bool Begin,
                          bool Newline = true,
@@ -1444,10 +1446,10 @@ public:
                                         unsigned NumFeatures, unsigned NumProcs,
                                         bool SchedModelHasItin) const override;
   void subtargetEmitIncludeSTIDesc() const override;
-  void subtargetEmitDFAPacketizerClass(
-    CodeGenTarget &TGT,
-            std::string const &TargetName,
-                                       std::string const &ClassName) const override;
+  void
+  subtargetEmitDFAPacketizerClass(CodeGenTarget &TGT,
+                                  std::string const &TargetName,
+                                  std::string const &ClassName) const override;
   void subtargetEmitDFAPacketizerClassEnd() const override;
   void subtargetEmitSTICtor() const override;
   void subtargetEmitExternKVArrays(std::string const &TargetName,
@@ -1501,8 +1503,8 @@ public:
   void instrInfoEmitMCInstrDescClose() const override;
   void instrInfoEmitMCInstrDescEnd() const override;
   void instrInfoEmitMCInstrImplUses(
-    std::vector<std::vector<Record *>> ImplicitLists,
-    std::map<std::vector<Record*>, unsigned> &EmittedLists) const override;
+      std::vector<std::vector<Record *>> ImplicitLists,
+      std::map<std::vector<Record *>, unsigned> &EmittedLists) const override;
   void instrInfoEmitRecord(CodeGenSchedModels const &SchedModels,
                            CodeGenInstruction const &Inst, unsigned Num,
                            int MinOperands) const override;
@@ -1511,19 +1513,20 @@ public:
                                 bool GetAllowRegisterRenaming) const override;
   void instrInfoEmitTSFFlags(uint64_t Value) const override;
   void instrInfoEmitUseDefsLists(
-    StringRef TargetName,
-    const CodeGenInstruction &Inst,
+      StringRef TargetName, const CodeGenInstruction &Inst,
       std::map<std::vector<Record *>, unsigned> &EmittedLists,
       std::vector<Record *> const &ImplicitOps) const override;
-  void instrInfoEmitOperandInfo(OperandInfoListTy &OperandInfoList) const override;
-  void instrInfoEmitOperandInfoOffset(std::vector<std::string> const &OperandInfo,
-                                OperandInfoMapTy const &OperandInfoMap) const override;
+  void
+  instrInfoEmitOperandInfo(OperandInfoListTy &OperandInfoList) const override;
+  void instrInfoEmitOperandInfoOffset(
+      StringRef TargetName, std::vector<std::string> const &OperandInfo,
+      OperandInfoMapTy const &OperandInfoMap) const override;
   void instrInfoEmitRecordEnd(unsigned InstNum,
                               std::string const &InstName) const override;
-  void instrInfoEmitMCInstrDescDecl(
-    std::string const &TargetName,
-    unsigned NumberedInstructionsSize,
-    unsigned OperandInfoSize, unsigned ImplicitListSize) const override;
+  void instrInfoEmitMCInstrDescDecl(std::string const &TargetName,
+                                    unsigned NumberedInstructionsSize,
+                                    unsigned OperandInfoSize,
+                                    unsigned ImplicitListSize) const override;
   void instrInfoEmitStringLiteralDef(
       std::string const &TargetName,
       SequenceToOffsetTable<std::string> InstrNames) const override;
@@ -1552,10 +1555,11 @@ public:
   instrInfoEmitExternArrays(std::string const &TargetName,
                             bool HasDeprecationFeatures,
                             bool HasComplexDeprecationInfos) const override;
-  void instrInfoEmitMCInstrInfoInit(
-      std::string const &TargetName,
-      unsigned NumberedInstrSize, bool HasDeprecationFeatures,
-      bool HasComplexDeprecationInfos) const override;
+  void
+  instrInfoEmitMCInstrInfoInit(std::string const &TargetName,
+                               unsigned NumberedInstrSize,
+                               bool HasDeprecationFeatures,
+                               bool HasComplexDeprecationInfos) const override;
   void instrInfoEmitOperandEnum(
       std::map<std::string, unsigned> const &Operands) const override;
   void instrInfoEmitGetNamedOperandIdx(
@@ -1579,7 +1583,8 @@ public:
   void instrInfoEmitGetOpTypeUnreachable() const override;
   void instrInfoEmitGetOpTypeEnd() const override;
   void instrInfoEmitGetMemOpSizeHdr() const override;
-  void instrInfoEmitGetOpMemSizeTbl(std::map<int, SmallVector<StringRef, 0>> &SizeToOperandName) const override;
+  void instrInfoEmitGetOpMemSizeTbl(std::map<int, SmallVector<StringRef, 0>>
+                                        &SizeToOperandName) const override;
   std::string
   instrInfoGetInstMapEntry(StringRef const &Namespace,
                            StringRef const &InstrName) const override;
@@ -1629,7 +1634,8 @@ public:
           &SubtargetFeatures,
       CodeGenTarget const &Target) const override;
   void instrInfoEmitOpcodeChecker() const override;
-  void instrInfoEmitPredicateVerifier(StringRef const &TargetName) const override;
+  void
+  instrInfoEmitPredicateVerifier(StringRef const &TargetName) const override;
   void instrInfoEmitEnums(CodeGenTarget const &Target,
                           StringRef const &Namespace,
                           CodeGenSchedModels const &SchedModels) const override;
@@ -1782,10 +1788,9 @@ public:
   void asmMatcherEmitApplyMnemonicAliasesIII() const override;
   void asmMatcherEmitApplyMnemonicAliasesIV() const override;
   void asmMatcherEmitApplyMnemonicAliasesV() const override;
-  void subtargetEmitGetMacroFusions(
-            CodeGenTarget &TGT,
-            std::string Target,
-            const std::string &ClassName) const override;
+  void
+  subtargetEmitGetMacroFusions(CodeGenTarget &TGT, std::string Target,
+                               const std::string &ClassName) const override;
   void asmMatcherEmitSTFBitEnum(AsmMatcherInfo &Info) const override;
   void asmMatcherEmitComputeAssemblerAvailableFeatures(
       AsmMatcherInfo &Info, StringRef const &ClassName) const override;
