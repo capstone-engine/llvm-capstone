@@ -90,6 +90,9 @@ We use the following emitter backends
 If this still doesn't fix the problem, the code snipped wasn't passed through `translateToC()` before emitting.
 So you need to figure out where this specific code snipped is printed and add `translateToC()`.
 
+- Template functions with default values for their arguments, don't get replaced properly.
+  See: `handleDefaultArg()` in `PrinterCapstone.cpp` to add the default argument value.
+
 - If the mapping files miss operand types or access information, then the `.td` files are incomplete (happens surprisingly often).
 You need to search for the instruction or operands with missing or incorrect values and fix them.
   ```
