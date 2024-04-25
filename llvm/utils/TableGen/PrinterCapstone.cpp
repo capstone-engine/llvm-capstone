@@ -2250,7 +2250,7 @@ void PrinterCapstone::instrInfoSetOperandInfoStr(
 void PrinterCapstone::instrInfoEmitMCInstrDescHdr(
     std::string TargetName) const {
   OS << "static const unsigned " << TargetName << "ImpOpBase = sizeof("
-     << TargetName << "InstrTable.OperandInfo) / (sizeof(MCPhysReg));\n\n";
+     << "MCOperandInfo) / (sizeof(MCPhysReg));\n\n";
   OS << "static const " << TargetName << "InstrTable " << TargetName
      << "Descs = {\n  {\n";
 }
@@ -2303,9 +2303,11 @@ void PrinterCapstone::instrInfoEmitOperandInfo(OperandInfoListTy &OperandInfoLis
 }
 
 void PrinterCapstone::instrInfoEmitOperandInfoOffset(
+    StringRef TargetName,
     std::vector<std::string> const &OperandInfo,
     OperandInfoMapTy const &OperandInfoMap) const {
-  OS << OperandInfoMap.find(OperandInfo)->second << ",\t0";
+  // We emit the pointer to the MCOperandInfo entry within this array.
+  OS << "&" << TargetName << "Descs.OperandInfo[" << OperandInfoMap.find(OperandInfo)->second << "]";
 }
 
 void PrinterCapstone::instrInfoEmitRecordEnd(
