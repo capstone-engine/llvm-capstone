@@ -42,18 +42,7 @@ std::string AsmWriterOperand::getCode(bool PassSubtarget) const {
   PassSubtarget = LangCS ? false : PassSubtarget;
 
   std::string Result;
-  if (LangCS && PCRel) {
-    // Those two functions have two different signatures which is not supported
-    // in C. For the PCRel version (gets the Address as parameter), we add an
-    // "Addr" to the name.
-    if (Str.find("printOperand") == 0)
-      Result = Str + "Addr";
-    else if (Str.find("printAdrLabelOperand") == 0) {
-      unsigned TemplArgsIdx = Str.find("<");
-      Result = Str.substr(0, TemplArgsIdx) + "Addr" + Str.substr(TemplArgsIdx);
-    }
-  } else
-    Result = Str;
+  Result = Str;
 
   Result = Result + "(MI";
 
