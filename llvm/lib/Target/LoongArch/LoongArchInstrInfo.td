@@ -450,6 +450,7 @@ def BareSymbol : AsmOperandClass {
 // A bare symbol used in "PseudoLA_*" instructions.
 def bare_symbol : Operand<GRLenVT> {
   let ParserMatchClass = BareSymbol;
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 // Standalone (codegen-only) immleaf patterns.
