@@ -230,7 +230,7 @@ static void printDiff16(raw_ostream &OS, int16_t Val) { OS << Val; }
 void PrinterCapstone::regInfoEmitRegDiffLists(
     std::string const TargetName,
     SequenceToOffsetTable<DiffVec> const &DiffSeqs) const {
-  OS << "static const int16_t " << TargetName << "RegDiffLists[] = {\n";
+  OS << "static const MCPhysReg " << TargetName << "RegDiffLists[] = {\n";
   DiffSeqs.emit(OS, printDiff16);
   OS << "};\n\n";
 }
