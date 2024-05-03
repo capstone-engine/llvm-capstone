@@ -1832,7 +1832,7 @@ void PrinterCapstone::asmWriterEmitPrintAliasOp(
      << "         SStream *OS) {\n"
      << "#ifndef CAPSTONE_DIET\n";
   if (PrintMethods.empty())
-    OS << "  llvm_unreachable(\"Unknown PrintMethod kind\");\n";
+    OS << "  assert(0 && \"Unknown PrintMethod kind\");\n";
   else {
     OS << "  switch (PrintMethodIdx) {\n"
        << "  default:\n"
