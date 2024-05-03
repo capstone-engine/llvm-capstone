@@ -669,33 +669,66 @@ void patchIsGetImmReg(std::string &Code) {
 static std::string handleDefaultArg(const std::string &TargetName,
                                     std::string &Code) {
   // Default values of the template function arguments.
-  static SmallVector<std::pair<std::string, std::string>>
+  // Tuple is (function name, default argument, number of argumetns)
+  static SmallVector<std::tuple<std::string, std::string, int>>
       AArch64TemplFuncWithDefaults = {// Default is 1
-                                      {"printVectorIndex", "1"},
+                                      {"printVectorIndex", "1", 1},
                                       // Default is false == 0
-                                      {"printPrefetchOp", "0"},
+                                      {"printPrefetchOp", "0", 1},
                                       // Default is 0
-                                      {"printSVERegOp", "0"},
-                                      {"printMatrixIndex", "1"}
+                                      {"printSVERegOp", "0", 1},
+                                      {"printMatrixIndex", "1", 1}
                                       };
-  SmallVector<std::pair<std::string, std::string>> *TemplFuncWithDefaults;
+  static SmallVector<std::tuple<std::string, std::string, int>>
+      LoongArchTemplFuncWithDefaults = {// Default is 0
+                                      {"decodeSImmOperand", "0", 2},
+                                      {"decodeUImmOperand", "0", 2},
+                                      };
+  SmallVector<std::tuple<std::string, std::string, int>> *TemplFuncWithDefaults;
   if (TargetName == "AArch64")
     TemplFuncWithDefaults = &AArch64TemplFuncWithDefaults;
+  else if (TargetName == "LoongArch")
+    TemplFuncWithDefaults = &LoongArchTemplFuncWithDefaults;
   else
     return Code;
 
-  for (std::pair Func : *TemplFuncWithDefaults) {
-    // Search for function name without "<>" and replace it with <name>_<default-arg>
-    // Note: There can be multiple calls to such a function in the code.
-    // We only replace one here.
-    auto func = Func.first;
+  for (std::tuple Func : *TemplFuncWithDefaults) {
+    // Search for function where default argument is not passed
+    // e.g. printVectorIndex -> printVectorIndex_1
+    // e.g. decodeSImmOperand<1> -> decodeSImmOperand_1_0
+    auto Name = std::get<0>(Func);
+    auto DefaultArg = std::get<1>(Func);
+    auto ExpectedArgCount = std::get<2>(Func);
     SmallVector<StringRef> Matches;
-    while (Regex(func + "(<>)?($|\\()").match(Code, &Matches)) {
+    while (Regex(Name + "(<[0-9a-zA-Z,]*>)?($|\\()").match(Code, &Matches)) {
+      StringRef Arg = Matches[1];
+      // Count the number of passed arguments
+      int ActualArgCount = 0;
+      if (!Arg.empty() && Arg != "<>") {
+        ActualArgCount = Arg.count(',') + 1;
+      }
+
+      std::string NewArg;
+      NewArg = Regex("<").sub("", Arg);
+      NewArg = Regex(">").sub("", NewArg);
+      NewArg = Regex(",").sub("_", NewArg);
+      if (ActualArgCount != ExpectedArgCount) {
+        // Add default argument
+        if (Arg.empty()) {
+          // e.g. printVectorIndex -> printVectorIndex_1
+          NewArg += DefaultArg;
+        } else {
+          // e.g. decodeSImmOperand<1> -> decodeSimmOperand_1_0
+          NewArg += "_";
+          NewArg += DefaultArg;
+        }
+      }
+
       StringRef Match = Matches[0];
       if (Match.ends_with("(")) {
-        Code = Regex(func + "(<>)?\\(").sub(func + "_" + Func.second + "(", Code);
+        Code = Regex(Name + "(<[0-9a-zA-Z,]*>)?\\(").sub(Name + "_" + NewArg + "(", Code);
       } else {
-        Code = Regex(func + "(<>)?$").sub(func + "_" + Func.second, Code);
+        Code = Regex(Name + "(<[0-9a-zA-Z,]*>)?$").sub(Name + "_" + NewArg, Code);
       }
     }
   }
