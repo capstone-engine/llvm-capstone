@@ -2662,13 +2662,59 @@ std::string getArchSupplInfoPPC(StringRef const &TargetName,
   return "{{ 0 }}";
 }
 
+std::string getArchSupplInfoLoongArch(StringRef const &TargetName,
+                                CodeGenInstruction const *CGI,
+                                raw_string_ostream &LoongArchFormatEnum) {
+  static std::set<std::string> Formats;
+  // Get instruction format
+  ArrayRef<std::pair<Record *, SMRange>> SCs = CGI->TheDef->getSuperClasses();
+  if (SCs.empty()) {
+    llvm_unreachable("A CGI without superclass should not exist.");
+  }
+
+  // Compute memory access type
+  std::string MemoryAccess;
+  if (CGI->mayLoad && CGI->mayStore) {
+    MemoryAccess = "CS_AC_READ_WRTE";
+  } else if (CGI->mayLoad && !CGI->mayStore) {
+    MemoryAccess = "CS_AC_READ";
+  } else if (!CGI->mayLoad && CGI->mayStore) {
+    MemoryAccess = "CS_AC_WRITE";
+  } else {
+    MemoryAccess = "CS_AC_INVALID";
+  }
+
+  // Get base instruction format class "LAInst"
+  const Record *PrevSC = nullptr;
+  // Superclasses are in post-order. So we go through them backwards.
+  // The class before the "LAInst" class is the format class.
+  for (int I = SCs.size() - 1; I >= 0; --I) {
+    const Record *SC = SCs[I].first;
+    if (SC->getName() == "LAInst") {
+      if (!PrevSC)
+        llvm_unreachable("I class has no predecessor.");
+      std::string Format = "LoongArch_INSN_FORM_" + PrevSC->getName().upper();
+      if (Formats.find(Format) == Formats.end()) {
+        LoongArchFormatEnum << Format + ",\n";
+      }
+      Formats.emplace(Format);
+      return "{ .loongarch = { " + Format + ", " + MemoryAccess + " }}";
+    }
+    PrevSC = SC;
+  }
+  // Pseudo instructions
+  return "{ .loongarch = { 0, " + MemoryAccess + " }}";
+}
+
 std::string getArchSupplInfo(StringRef const &TargetName,
                              CodeGenInstruction const *CGI,
-                             raw_string_ostream &PPCFormatEnum) {
+                             raw_string_ostream &FormatEnum) {
   if (TargetName == "PPC")
-    return getArchSupplInfoPPC(TargetName, CGI, PPCFormatEnum);
+    return getArchSupplInfoPPC(TargetName, CGI, FormatEnum);
   else if (TargetName == "AArch64") {
     return getArchSupplInfoAArch64(CGI);
+  } else if (TargetName == "LoongArch") {
+    return getArchSupplInfoLoongArch(TargetName, CGI, FormatEnum);
   }
   return "{{ 0 }}";
 }
@@ -2929,7 +2975,7 @@ void printInsnMapEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
                        std::unique_ptr<MatchableInfo> const &MI, bool UseMI,
                        CodeGenInstruction const *CGI,
                        raw_string_ostream &InsnMap, unsigned InsnNum,
-                       raw_string_ostream &PPCFormatEnum) {
+                       raw_string_ostream &FormatEnum) {
   InsnMap << "{\n";
   InsnMap.indent(2) << "/* "
                     << (CGI->AsmString != "" ? CGI->AsmString
@@ -2948,7 +2994,7 @@ void printInsnMapEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
     InsnMap << getReqFeatures(TargetName, AMI, MI, UseMI, CGI) << ", ";
     InsnMap << ((CGI->isBranch || CGI->isReturn) ? "1" : "0") << ", ";
     InsnMap << (CGI->isIndirectBranch ? "1" : "0") << ", ";
-    InsnMap << getArchSupplInfo(TargetName, CGI, PPCFormatEnum) << "\n";
+    InsnMap << getArchSupplInfo(TargetName, CGI, FormatEnum) << "\n";
   } else {
     InsnMap.indent(4) << "{ 0 }, { 0 }, { 0 }, 0, 0, {{ 0 }}";
   }
@@ -3383,7 +3429,7 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   std::string FeatureEnumStr;
   std::string FeatureNameArrayStr;
   std::string OpGroupStr;
-  std::string PPCFormatEnumStr;
+  std::string FormatEnumStr;
   std::string AliasEnumStr;
   std::string AliasMnemMapStr;
   raw_string_ostream InsnMap(InsnMapStr);
@@ -3393,7 +3439,7 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   raw_string_ostream FeatureEnum(FeatureEnumStr);
   raw_string_ostream FeatureNameArray(FeatureNameArrayStr);
   raw_string_ostream OpGroups(OpGroupStr);
-  raw_string_ostream PPCFormatEnum(PPCFormatEnumStr);
+  raw_string_ostream FormatEnum(FormatEnumStr);
   raw_string_ostream AliasEnum(AliasEnumStr);
   raw_string_ostream AliasMnemMap(AliasMnemMapStr);
   emitDefaultSourceFileHeader(InsnMap);
@@ -3403,7 +3449,7 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   emitDefaultSourceFileHeader(FeatureEnum);
   emitDefaultSourceFileHeader(FeatureNameArray);
   emitDefaultSourceFileHeader(OpGroups);
-  emitDefaultSourceFileHeader(PPCFormatEnum);
+  emitDefaultSourceFileHeader(FormatEnum);
   emitDefaultSourceFileHeader(AliasEnum);
   emitDefaultSourceFileHeader(AliasMnemMap);
 
@@ -3453,7 +3499,7 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
     printInsnOpMapEntry(Target, MI, UseMI, CGI, InsnOpMap, InsnNum,
                         InsnPatternMap);
     printInsnMapEntry(Target.getName(), Info, MI, UseMI, CGI, InsnMap, InsnNum,
-                      PPCFormatEnum);
+                      FormatEnum);
 
     ++InsnNum;
   }
@@ -3478,9 +3524,9 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   writeFile(InsnMapFilename, AliasEnumStr);
   InsnMapFilename = TName + "GenCSAliasMnemMap.inc";
   writeFile(InsnMapFilename, AliasMnemMapStr);
-  if (TName == "PPC") {
-    InsnMapFilename = "PPCGenCSInsnFormatsEnum.inc";
-    writeFile(InsnMapFilename, PPCFormatEnumStr);
+  if (TName == "PPC" || TName == "LoongArch") {
+    InsnMapFilename = TName + "GenCSInsnFormatsEnum.inc";
+    writeFile(InsnMapFilename, FormatEnumStr);
   }
 }
 
