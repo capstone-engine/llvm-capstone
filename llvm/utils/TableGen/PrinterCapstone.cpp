@@ -2582,6 +2582,21 @@ std::string getLLVMInstEnumName(StringRef const &TargetName,
   return Enum;
 }
 
+std::string getArchSupplInfoAArch64(CodeGenInstruction const *CGI) {
+  // Compute memory access type
+  std::string MemoryAccess;
+  if (CGI->mayLoad && CGI->mayStore) {
+    MemoryAccess = "CS_AC_READ_WRTE";
+  } else if (CGI->mayLoad && !CGI->mayStore) {
+    MemoryAccess = "CS_AC_READ";
+  } else if (!CGI->mayLoad && CGI->mayStore) {
+    MemoryAccess = "CS_AC_WRITE";
+  } else {
+    MemoryAccess = "CS_AC_INVALID";
+  }
+  return "{ .aarch64 = { .mem_acc = " + MemoryAccess + " }}";
+}
+
 std::string getArchSupplInfoPPC(StringRef const &TargetName,
                                 CodeGenInstruction const *CGI,
                                 raw_string_ostream &PPCFormatEnum) {
@@ -2619,6 +2634,9 @@ std::string getArchSupplInfo(StringRef const &TargetName,
                              raw_string_ostream &PPCFormatEnum) {
   if (TargetName == "PPC")
     return getArchSupplInfoPPC(TargetName, CGI, PPCFormatEnum);
+  else if (TargetName == "AArch64") {
+    return getArchSupplInfoAArch64(CGI);
+  }
   return "{{ 0 }}";
 }
 
