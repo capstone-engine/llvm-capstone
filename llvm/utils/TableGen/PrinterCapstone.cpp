@@ -1273,6 +1273,7 @@ void PrinterCapstone::decoderEmitterEmitDecoderFunction(
          "*DecodeComplete) \\\n"
       << "{ \\\n";
   Indentation += 2;
+  OS.indent(Indentation) << "*DecodeComplete = true; \\\n";
   OS.indent(Indentation) << "InsnType tmp; \\\n";
   OS.indent(Indentation) << "switch (Idx) { \\\n";
   OS.indent(Indentation)
