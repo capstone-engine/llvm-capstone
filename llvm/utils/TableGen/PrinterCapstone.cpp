@@ -2850,9 +2850,9 @@ std::string getCSOperandType(
   std::string OperandType = getPrimaryCSOperandType(OpRec);
 
   if (TargetName.equals("AArch64") && OperandType != "CS_OP_MEM") {
-    // The definitions of AArch64 are so broken, when it comes to memory
-    // operands, that we just search for the op name enclosed in [].
-    if (Regex("\\[.*\\$" + OpName.str() + ".*]").match(CGI->AsmString))
+    // The definitions of AArch64 are so flawed, when it comes to memory
+    // operands (they are not labeled as such), that we just search for the op name enclosed in [].
+    if (Regex("\\[[^]]*\\$" + OpName.str() + "[^[]*]").match(CGI->AsmString))
       return OperandType += " | CS_OP_MEM";
   }
 
