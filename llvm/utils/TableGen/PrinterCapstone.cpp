@@ -2619,7 +2619,7 @@ std::string getArchSupplInfoAArch64(CodeGenInstruction const *CGI) {
   // Compute memory access type
   std::string MemoryAccess;
   if (CGI->mayLoad && CGI->mayStore) {
-    MemoryAccess = "CS_AC_READ_WRTE";
+    MemoryAccess = "CS_AC_READ_WRITE";
   } else if (CGI->mayLoad && !CGI->mayStore) {
     MemoryAccess = "CS_AC_READ";
   } else if (!CGI->mayLoad && CGI->mayStore) {
@@ -2675,7 +2675,7 @@ std::string getArchSupplInfoLoongArch(StringRef const &TargetName,
   // Compute memory access type
   std::string MemoryAccess;
   if (CGI->mayLoad && CGI->mayStore) {
-    MemoryAccess = "CS_AC_READ_WRTE";
+    MemoryAccess = "CS_AC_READ_WRITE";
   } else if (CGI->mayLoad && !CGI->mayStore) {
     MemoryAccess = "CS_AC_READ";
   } else if (!CGI->mayLoad && CGI->mayStore) {
