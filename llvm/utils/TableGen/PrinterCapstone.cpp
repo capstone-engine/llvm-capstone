@@ -2852,8 +2852,15 @@ std::string getCSOperandType(
   if (TargetName.equals("AArch64") && OperandType != "CS_OP_MEM") {
     // The definitions of AArch64 are so flawed, when it comes to memory
     // operands (they are not labeled as such), that we just search for the op name enclosed in [].
-    if (Regex("\\[[^]]*\\$" + OpName.str() + "[^[]*]").match(CGI->AsmString))
-      return OperandType += " | CS_OP_MEM";
+    if (Regex("\\[[^]]*\\$" + OpName.str() + "[^[]*]").match(CGI->AsmString)) {
+      // Memory operands are always preceded by a ' '.
+      // Angle brackets not preceded by a ' ' mark offset operands
+      // of SME/SVE matrix operands. They are bound to the previous operand, so to say.
+      if (Regex("[\t ]\\[[^]]*\\$" + OpName.str() + "[^[]*]").match(CGI->AsmString)) {
+        return OperandType += " | CS_OP_MEM";
+      }
+      return OperandType += " | CS_OP_BOUND";
+    }
   }
 
   DagInit *PatternDag = nullptr;
