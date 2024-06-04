@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Compare the generated tables of our refactored TableGen to the original ones.
-archs="AArch64 ARM PPC"
+archs="AArch64 ARM PPC LoongArch"
 file_names="GenAsmWriter GenDisassemblerTables GenInstrInfo GenRegisterInfo GenSubtargetInfo GenSystemOperands"
 release="18"
 repo_root=$(git rev-parse --show-toplevel)

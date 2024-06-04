@@ -1,6 +1,6 @@
 #!/bin/sh
 
-archs="AArch64 ARM PPC"
+archs="AArch64 ARM PPC LoongArch Alpha"
 file_names="GenAsmWriter GenDisassemblerTables GenInstrInfo GenRegisterInfo GenSubtargetInfo GenSystemOperands"
 release="18"
 repo_root=$(git rev-parse --show-toplevel)
@@ -45,7 +45,7 @@ gen_all()
       elif [ $file_name = "GenSubtargetInfo" ]; then
         $repo_root/build/bin/llvm-tblgen --gen-subtarget "$table_type" -o "$out_file" -I "$arch_include" -I "$repo_root/llvm/include" "$arch_include/$arch.td"
       elif [ $file_name = "GenSystemOperands" ]; then
-        if [ $arch != "PPC" ] ; then
+        if [ $arch != "PPC" ] && [ $arch != "LoongArch" ] ; then
           $repo_root/build/bin/llvm-tblgen --gen-searchable-tables "$table_type" -o "$out_file" -I "$arch_include" -I "$repo_root/llvm/include" "$arch_include/$arch.td"
         fi
       else
