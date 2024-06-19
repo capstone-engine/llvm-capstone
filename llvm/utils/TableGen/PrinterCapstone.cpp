@@ -165,19 +165,19 @@ void PrinterCapstone::regInfoEmitEnums(CodeGenTarget const &Target,
   StringRef TargetName = Target.getName();
 
   OS << "enum {\n  " << TargetName << "_NoRegister,\n";
-  CSRegEnum << "\t" << TargetName << "_REG_INVALID = 0,\n";
+  CSRegEnum << "\t" << TargetName.upper() << "_REG_INVALID = 0,\n";
 
   for (const auto &Reg : Registers) {
     OS << "  " << TargetName << "_" << Reg.getName() << " = " << Reg.EnumValue
        << ",\n";
-    CSRegEnum << "\t" << TargetName << "_REG_" << Reg.getName() << " = "
+    CSRegEnum << "\t" << TargetName.upper() << "_REG_" << Reg.getName().upper() << " = "
               << Reg.EnumValue << ",\n";
   }
   assert(Registers.size() == Registers.back().EnumValue &&
          "Register enum value mismatch!");
   OS << "  NUM_TARGET_REGS // " << Registers.size() + 1 << "\n";
   OS << "};\n";
-  CSRegEnum << "\t" << TargetName << "_REG_ENDING, // " << Registers.size() + 1
+  CSRegEnum << "\t" << TargetName.upper() << "_REG_ENDING, // " << Registers.size() + 1
             << "\n";
 
   writeFile(TargetName.str() + "GenCSRegEnum.inc", CSRegEnumStr);
@@ -2601,7 +2601,7 @@ std::string getReqFeatures(StringRef const &TargetName, AsmMatcherInfo &AMI,
     if (const SubtargetFeatureInfo *Feature =
             AMI.getSubtargetFeature(Predicate))
       Flags += TargetName.str() + "_FEATURE_" +
-               Feature->TheDef->getName().str() + ", ";
+               Feature->TheDef->getName().upper() + ", ";
   }
   Flags += "0 }";
   return Flags;
@@ -2649,7 +2649,7 @@ std::string getArchSupplInfoPPC(StringRef const &TargetName,
     if (SC->getName() == "I") {
       if (!PrevSC)
         llvm_unreachable("I class has no predecessor.");
-      std::string Format = "PPC_INSN_FORM_" + PrevSC->getName().upper();
+      std::string Format = "LOONGARCH_INSN_FORM_" + PrevSC->getName().upper();
       if (Formats.find(Format) == Formats.end()) {
         PPCFormatEnum << Format + ",\n";
       }
@@ -2693,7 +2693,7 @@ std::string getArchSupplInfoLoongArch(StringRef const &TargetName,
     if (SC->getName() == "LAInst") {
       if (!PrevSC)
         llvm_unreachable("I class has no predecessor.");
-      std::string Format = "LoongArch_INSN_FORM_" + PrevSC->getName().upper();
+      std::string Format = "LOONGARCH_INSN_FORM_" + PrevSC->getName().upper();
       if (Formats.find(Format) == Formats.end()) {
         LoongArchFormatEnum << Format + ",\n";
       }
@@ -2711,9 +2711,9 @@ std::string getArchSupplInfo(StringRef const &TargetName,
                              raw_string_ostream &FormatEnum) {
   if (TargetName == "PPC")
     return getArchSupplInfoPPC(TargetName, CGI, FormatEnum);
-  else if (TargetName == "AArch64") {
+  else if (TargetName == "AARCH64") {
     return getArchSupplInfoAArch64(CGI);
-  } else if (TargetName == "LoongArch") {
+  } else if (TargetName == "LOONGARCH") {
     return getArchSupplInfoLoongArch(TargetName, CGI, FormatEnum);
   }
   return "{{ 0 }}";
@@ -2928,7 +2928,7 @@ std::string getCSOperandType(
     std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
   std::string OperandType = getPrimaryCSOperandType(OpRec);
 
-  if (TargetName.equals("AArch64") && OperandType != "CS_OP_MEM") {
+  if (TargetName.equals("AARCH64") && OperandType != "CS_OP_MEM") {
     // The definitions of AArch64 are so flawed, when it comes to memory
     // operands (they are not labeled as such), that we just search for the op name enclosed in [].
     if (Regex("\\[[^]]*\\$" + OpName.str() + "[^[]*]").match(CGI->AsmString)) {
@@ -2991,17 +2991,17 @@ void printInsnMapEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
   // adds id
   InsnMap.indent(2) << getLLVMInstEnumName(TargetName, CGI) << " /* " << InsnNum
                     << " */";
-  InsnMap << ", " << TargetName << "_INS_"
+  InsnMap << ", " << TargetName.upper() << "_INS_"
           << (UseMI ? getNormalMnemonic(MI) : "INVALID") << ",\n";
   // no diet only
   InsnMap.indent(2) << "#ifndef CAPSTONE_DIET\n";
   if (UseMI) {
-    InsnMap.indent(4) << getImplicitUses(TargetName, CGI) << ", ";
-    InsnMap << getImplicitDefs(TargetName, CGI) << ", ";
-    InsnMap << getReqFeatures(TargetName, AMI, MI, UseMI, CGI) << ", ";
+    InsnMap.indent(4) << getImplicitUses(TargetName.upper(), CGI) << ", ";
+    InsnMap << getImplicitDefs(TargetName.upper(), CGI) << ", ";
+    InsnMap << getReqFeatures(TargetName.upper(), AMI, MI, UseMI, CGI) << ", ";
     InsnMap << ((CGI->isBranch || CGI->isReturn) ? "1" : "0") << ", ";
     InsnMap << (CGI->isIndirectBranch ? "1" : "0") << ", ";
-    InsnMap << getArchSupplInfo(TargetName, CGI, FormatEnum) << "\n";
+    InsnMap << getArchSupplInfo(TargetName.upper(), CGI, FormatEnum) << "\n";
   } else {
     InsnMap.indent(4) << "{ 0 }, { 0 }, { 0 }, 0, 0, {{ 0 }}";
   }
@@ -3140,7 +3140,7 @@ void printInsnOpMapEntry(
     bool UseMI, CodeGenInstruction const *CGI, raw_string_ostream &InsnOpMap,
     unsigned InsnNum,
     std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
-  StringRef TargetName = Target.getName();
+  std::string TargetName = Target.getName().upper();
 
   // Instruction without mnemonic.
   if (!UseMI) {
@@ -3257,13 +3257,13 @@ void printFeatureEnumEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
 
   for (std::pair<Record *, SubtargetFeatureInfo> ST : AMI.SubtargetFeatures) {
     const SubtargetFeatureInfo &STF = ST.second;
-    std::string Feature = STF.TheDef->getName().str();
+    std::string Feature = STF.TheDef->getName().upper();
     if (Features.find(Feature) != Features.end())
       continue;
     Features.emplace(Feature);
 
     // Enum
-    EnumName = TargetName.str() + "_FEATURE_" + STF.TheDef->getName().str();
+    EnumName = TargetName.str() + "_FEATURE_" + STF.TheDef->getName().upper();
     FeatureEnum << EnumName;
     if (Features.size() == 1)
       FeatureEnum << " = 128";
@@ -3319,7 +3319,7 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
   const std::set<std::string> *Exc;
   if (TargetName == "ARM")
     Exc = &ARMExceptions;
-  else if (TargetName == "AArch64")
+  else if (TargetName == "AARCH64")
     Exc = &AArch64Exceptions;
   else if (TargetName == "PPC")
     Exc = &PPCExceptions;
@@ -3328,7 +3328,8 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
 
   if (OpGroups.empty() && !NoExceptions) {
     for (const std::string &OpGroup : *Exc) {
-      OpGroupEnum.indent(2) << TargetName + "_OP_GROUP_" + OpGroup + " = "
+      std::string UpperOpGroup = StringRef(OpGroup).upper();
+      OpGroupEnum.indent(2) << TargetName + "_OP_GROUP_" + UpperOpGroup + " = "
                             << OpGroups.size() << ",\n";
       OpGroups.emplace(OpGroup);
     }
@@ -3340,7 +3341,8 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
             .substr(5);
     if (OpGroups.find(OpGroup) != OpGroups.end())
       continue;
-    OpGroupEnum.indent(2) << TargetName + "_OP_GROUP_" + OpGroup + " = "
+    std::string UpperOpGroup = StringRef(OpGroup).upper();
+    OpGroupEnum.indent(2) << TargetName + "_OP_GROUP_" + UpperOpGroup + " = "
                           << OpGroups.size() << ",\n";
     OpGroups.emplace(OpGroup);
   }
@@ -3367,7 +3369,7 @@ void printInsnAliasEnum(CodeGenTarget const &Target,
     // Some Alias only differ by operands. Get only the mnemonic part.
     Regex("^[a-zA-Z0-9+-.]+").match(AliasAsm, &Matches);
     StringRef &AliasMnemonic = Matches[0];
-    std::string NormAliasMnem = Target.getName().str() + "_INS_ALIAS_" +
+    std::string NormAliasMnem = Target.getName().upper() + "_INS_ALIAS_" +
                                 normalizedMnemonic(AliasMnemonic);
     if (AliasMnemonicsSeen.find(NormAliasMnem) != AliasMnemonicsSeen.end())
       continue;
@@ -3375,7 +3377,7 @@ void printInsnAliasEnum(CodeGenTarget const &Target,
     AliasMnemonicsSeen.emplace(NormAliasMnem);
 
     AliasEnum << "\t" + NormAliasMnem + ", // Real instr.: " +
-                     getLLVMInstEnumName(Target.getName(), RealInst) + "\n";
+                     getLLVMInstEnumName(Target.getName().upper(), RealInst) + "\n";
 
     AliasMnemMap << "\t{ " + NormAliasMnem + ", \"" +
                         normalizedMnemonic(AliasMnemonic, false) + "\" },\n";
@@ -3498,10 +3500,10 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
       MI->Mnemonic = "invalid";
     } else
       MI->Mnemonic = MI->AsmOperands[0].Token;
-    printInsnNameMapEnumEntry(Target.getName(), MI, InsnNameMap, InsnEnum);
-    printFeatureEnumEntry(Target.getName(), Info, CGI, FeatureEnum,
+    printInsnNameMapEnumEntry(Target.getName().upper(), MI, InsnNameMap, InsnEnum);
+    printFeatureEnumEntry(Target.getName().upper(), Info, CGI, FeatureEnum,
                           FeatureNameArray);
-    printOpPrintGroupEnum(Target.getName(), CGI, OpGroups);
+    printOpPrintGroupEnum(Target.getName().upper(), CGI, OpGroups);
 
     printInsnOpMapEntry(Target, MI, UseMI, CGI, InsnOpMap, InsnNum,
                         InsnPatternMap);
@@ -3849,10 +3851,10 @@ std::string getTableNamespacePrefix(const GenericTable &Table,
 
   std::set<std::pair<std::string, std::string>> *NSTable;
 
-  if (TargetName != "AArch64" && TargetName != "ARM")
+  if (TargetName != "AARCH64" && TargetName != "ARM")
     return Table.CppTypeName + "_";
 
-  if (TargetName == "AArch64")
+  if (TargetName == "AARCH64")
     NSTable = &AArch64NSTypePairs;
   else if (TargetName == "ARM")
     NSTable = &ARMNSTypePairs;
