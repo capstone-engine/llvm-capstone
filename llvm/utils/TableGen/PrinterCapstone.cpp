@@ -685,9 +685,9 @@ static std::string handleDefaultArg(const std::string &TargetName,
                                       {"decodeUImmOperand", "0", 2},
                                       };
   SmallVector<std::tuple<std::string, std::string, int>> *TemplFuncWithDefaults;
-  if (TargetName == "AArch64")
+  if (TargetName == "AARCH64" || TargetName == "AArch64")
     TemplFuncWithDefaults = &AArch64TemplFuncWithDefaults;
-  else if (TargetName == "LoongArch")
+  else if (TargetName == "LoongArch" || TargetName == "LOONGARCH")
     TemplFuncWithDefaults = &LoongArchTemplFuncWithDefaults;
   else
     return Code;
@@ -706,6 +706,9 @@ static std::string handleDefaultArg(const std::string &TargetName,
       int ActualArgCount = 0;
       if (!Arg.empty() && Arg != "<>") {
         ActualArgCount = Arg.count(',') + 1;
+        if (ActualArgCount == ExpectedArgCount) {
+          break;
+        }
       }
 
       std::string NewArg;
@@ -714,7 +717,7 @@ static std::string handleDefaultArg(const std::string &TargetName,
       NewArg = Regex(",").sub("_", NewArg);
       if (ActualArgCount != ExpectedArgCount) {
         // Add default argument
-        if (Arg.empty()) {
+        if (NewArg.empty()) {
           // e.g. printVectorIndex -> printVectorIndex_1
           NewArg += DefaultArg;
         } else {
@@ -2251,8 +2254,10 @@ void PrinterCapstone::instrInfoSetOperandInfoStr(
   assert(!Op.OperandType.empty() && "Invalid operand type.");
   std::string OpTypeCpy = Op.OperandType;
   if (OpTypeCpy.find("VPRED") != std::string::npos ||
-      OpTypeCpy.find("IMPLICIT_IMM") != std::string::npos)
+      OpTypeCpy.find("IMPLICIT_IMM") != std::string::npos) {
     OpTypeCpy = Regex("OPERAND").sub("OP", OpTypeCpy);
+    OpTypeCpy = Regex("AArch64").sub(StringRef("AARCH64").upper(), OpTypeCpy);
+  }
   Res += OpTypeCpy.replace(OpTypeCpy.find("::"), 2, "_");
 
   // Fill in constraint info.
@@ -2711,9 +2716,9 @@ std::string getArchSupplInfo(StringRef const &TargetName,
                              raw_string_ostream &FormatEnum) {
   if (TargetName == "PPC")
     return getArchSupplInfoPPC(TargetName, CGI, FormatEnum);
-  else if (TargetName == "AARCH64") {
+  else if (TargetName == "AARCH64" || TargetName == "AArch64") {
     return getArchSupplInfoAArch64(CGI);
-  } else if (TargetName == "LOONGARCH") {
+  } else if (TargetName == "LOONGARCH" || TargetName == "LoongArch") {
     return getArchSupplInfoLoongArch(TargetName, CGI, FormatEnum);
   }
   return "{{ 0 }}";
@@ -2928,7 +2933,7 @@ std::string getCSOperandType(
     std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
   std::string OperandType = getPrimaryCSOperandType(OpRec);
 
-  if (TargetName.equals("AARCH64") && OperandType != "CS_OP_MEM") {
+  if ((TargetName.equals("AARCH64") || TargetName.equals("AArch64")) && OperandType != "CS_OP_MEM") {
     // The definitions of AArch64 are so flawed, when it comes to memory
     // operands (they are not labeled as such), that we just search for the op name enclosed in [].
     if (Regex("\\[[^]]*\\$" + OpName.str() + "[^[]*]").match(CGI->AsmString)) {
@@ -3319,7 +3324,7 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
   const std::set<std::string> *Exc;
   if (TargetName == "ARM")
     Exc = &ARMExceptions;
-  else if (TargetName == "AARCH64")
+  else if (TargetName == "AARCH64" || TargetName == "AArch64")
     Exc = &AArch64Exceptions;
   else if (TargetName == "PPC")
     Exc = &PPCExceptions;
@@ -3851,10 +3856,10 @@ std::string getTableNamespacePrefix(const GenericTable &Table,
 
   std::set<std::pair<std::string, std::string>> *NSTable;
 
-  if (TargetName != "AARCH64" && TargetName != "ARM")
+  if (TargetName != "AARCH64" && TargetName != "AArch64" && TargetName != "ARM")
     return Table.CppTypeName + "_";
 
-  if (TargetName == "AARCH64")
+  if (TargetName == "AARCH64" || TargetName == "AArch64")
     NSTable = &AArch64NSTypePairs;
   else if (TargetName == "ARM")
     NSTable = &ARMNSTypePairs;
@@ -4032,7 +4037,7 @@ void PrinterCapstone::searchableTablesEmitMapIII(const GenericTable &Table,
     std::string OpName = Repr;
     while (OpName.find("\"") != std::string::npos)
       OpName = Regex("\"").sub("", OpName);
-    EnumName = TargetName + "_" + StringRef(Table.CppTypeName).upper() + "_" +
+    EnumName = StringRef(TargetName).upper() + "_" + StringRef(Table.CppTypeName).upper() + "_" +
                StringRef(OpName).upper();
     Repr = "\"" + OpName + "\", { .raw_val = " + EnumName + " }";
     OutS << Repr;
