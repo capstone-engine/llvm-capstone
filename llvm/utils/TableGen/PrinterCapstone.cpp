@@ -3324,7 +3324,7 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
   const std::set<std::string> *Exc;
   if (TargetName == "ARM")
     Exc = &ARMExceptions;
-  else if (TargetName == "AARCH64" || TargetName == "AArch64")
+  else if (TargetName == "AArch64")
     Exc = &AArch64Exceptions;
   else if (TargetName == "PPC")
     Exc = &PPCExceptions;
@@ -3333,8 +3333,7 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
 
   if (OpGroups.empty() && !NoExceptions) {
     for (const std::string &OpGroup : *Exc) {
-      std::string UpperOpGroup = StringRef(OpGroup).upper();
-      OpGroupEnum.indent(2) << TargetName + "_OP_GROUP_" + UpperOpGroup + " = "
+      OpGroupEnum.indent(2) << TargetName + "_OP_GROUP_" + OpGroup + " = "
                             << OpGroups.size() << ",\n";
       OpGroups.emplace(OpGroup);
     }
@@ -3346,8 +3345,7 @@ void printOpPrintGroupEnum(StringRef const &TargetName,
             .substr(5);
     if (OpGroups.find(OpGroup) != OpGroups.end())
       continue;
-    std::string UpperOpGroup = StringRef(OpGroup).upper();
-    OpGroupEnum.indent(2) << TargetName + "_OP_GROUP_" + UpperOpGroup + " = "
+    OpGroupEnum.indent(2) << TargetName + "_OP_GROUP_" + OpGroup + " = "
                           << OpGroups.size() << ",\n";
     OpGroups.emplace(OpGroup);
   }
@@ -3508,7 +3506,7 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
     printInsnNameMapEnumEntry(Target.getName().upper(), MI, InsnNameMap, InsnEnum);
     printFeatureEnumEntry(Target.getName().upper(), Info, CGI, FeatureEnum,
                           FeatureNameArray);
-    printOpPrintGroupEnum(Target.getName().upper(), CGI, OpGroups);
+    printOpPrintGroupEnum(Target.getName(), CGI, OpGroups);
 
     printInsnOpMapEntry(Target, MI, UseMI, CGI, InsnOpMap, InsnNum,
                         InsnPatternMap);
