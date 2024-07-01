@@ -685,9 +685,9 @@ static std::string handleDefaultArg(const std::string &TargetName,
                                       {"decodeUImmOperand", "0", 2},
                                       };
   SmallVector<std::tuple<std::string, std::string, int>> *TemplFuncWithDefaults;
-  if (TargetName == "AARCH64" || TargetName == "AArch64")
+  if (StringRef(TargetName).upper() == "AARCH64")
     TemplFuncWithDefaults = &AArch64TemplFuncWithDefaults;
-  else if (TargetName == "LoongArch" || TargetName == "LOONGARCH")
+  else if (StringRef(TargetName).upper() == "LOONGARCH")
     TemplFuncWithDefaults = &LoongArchTemplFuncWithDefaults;
   else
     return Code;
@@ -2716,9 +2716,9 @@ std::string getArchSupplInfo(StringRef const &TargetName,
                              raw_string_ostream &FormatEnum) {
   if (TargetName == "PPC")
     return getArchSupplInfoPPC(TargetName, CGI, FormatEnum);
-  else if (TargetName == "AARCH64" || TargetName == "AArch64") {
+  else if (StringRef(TargetName).upper() == "AARCH64") {
     return getArchSupplInfoAArch64(CGI);
-  } else if (TargetName == "LOONGARCH" || TargetName == "LoongArch") {
+  } else if (StringRef(TargetName).upper() == "LOONGARCH") {
     return getArchSupplInfoLoongArch(TargetName, CGI, FormatEnum);
   }
   return "{{ 0 }}";
@@ -2933,7 +2933,7 @@ std::string getCSOperandType(
     std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
   std::string OperandType = getPrimaryCSOperandType(OpRec);
 
-  if ((TargetName.equals("AARCH64") || TargetName.equals("AArch64")) && OperandType != "CS_OP_MEM") {
+  if ((StringRef(TargetName).upper() == "AARCH64") && OperandType != "CS_OP_MEM") {
     // The definitions of AArch64 are so flawed, when it comes to memory
     // operands (they are not labeled as such), that we just search for the op name enclosed in [].
     if (Regex("\\[[^]]*\\$" + OpName.str() + "[^[]*]").match(CGI->AsmString)) {
@@ -3854,10 +3854,10 @@ std::string getTableNamespacePrefix(const GenericTable &Table,
 
   std::set<std::pair<std::string, std::string>> *NSTable;
 
-  if (TargetName != "AARCH64" && TargetName != "AArch64" && TargetName != "ARM")
+  if (StringRef(TargetName).upper() != "AARCH64" && TargetName != "ARM")
     return Table.CppTypeName + "_";
 
-  if (TargetName == "AARCH64" || TargetName == "AArch64")
+  if (StringRef(TargetName).upper() == "AARCH64")
     NSTable = &AArch64NSTypePairs;
   else if (TargetName == "ARM")
     NSTable = &ARMNSTypePairs;
