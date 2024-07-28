@@ -16,6 +16,11 @@ class CCIfSubtarget<string F, CCAction A, string Invert = "">
                       F),
            A>;
 
+// Match if the argument is lower part of a 64-bit value.
+class CCIfOrigArgWas64BitLo<CCAction A>
+    : CCIf<"static_cast<MipsCCState *>(&State)->WasOriginalArg64BitLo(ValNo)",
+           A>;
+
 // The inverse of CCIfSubtarget
 class CCIfSubtargetNot<string F, CCAction A> : CCIfSubtarget<F, A, "!">;
 
@@ -116,6 +121,34 @@ def CC_MipsO32_FP64 : CustomCallingConv;
 def CC_MipsO32_FP : CallingConv<[
   CCIfSubtargetNot<"isFP64bit()", CCDelegateTo<CC_MipsO32_FP32>>,
   CCIfSubtarget<"isFP64bit()", CCDelegateTo<CC_MipsO32_FP64>>
+]>;
+
+//===----------------------------------------------------------------------===//
+// nanoMIPS P32 Calling Convention
+//===----------------------------------------------------------------------===//
+
+def CC_NanoMipsP32_64BitLo : CustomCallingConv;
+
+def CC_NanoMipsP32 : CallingConv<[
+  // Promote i8/i16 arguments to i32.
+  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+
+  CCIfOrigArgWas64BitLo<CCDelegateTo<CC_NanoMipsP32_64BitLo>>,
+
+  // Pass arguments in A0_NM...A7_NM.
+  CCIfType<[i32], CCAssignToReg<[A0_NM, A1_NM, A2_NM, A3_NM, A4_NM, A5_NM, A6_NM, A7_NM]>>,
+
+  // Integer values get stored in stack slots that are 4 bytes in
+  // size and 4-byte aligned.
+  CCIfType<[i32], CCAssignToStack<4, 4>>,
+]>;
+
+def RetCC_NanoMipsP32 : CallingConv<[
+  // Promote i1/i8/i16 return values to i32.
+  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+
+  // i32 are returned in registers A0_NM, A1_NM.
+  CCIfType<[i32], CCAssignToReg<[A0_NM, A1_NM]>>,
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -290,6 +323,7 @@ def CC_Mips_FastCC : CallingConv<[
   CCIfType<[i32, f32], CCAssignToStack<4, 4>>,
 
   CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FastCC>>,
+  CCIfSubtarget<"isABI_P32()", CCDelegateTo<CC_NanoMipsP32>>,
   CCDelegateTo<CC_MipsN_FastCC>
 ]>;
 
@@ -300,11 +334,14 @@ def CC_Mips_FastCC : CallingConv<[
 def RetCC_Mips : CallingConv<[
   CCIfSubtarget<"isABI_N32()", CCDelegateTo<RetCC_MipsN>>,
   CCIfSubtarget<"isABI_N64()", CCDelegateTo<RetCC_MipsN>>,
-  CCDelegateTo<RetCC_MipsO32>
+  CCIfSubtarget<"isABI_P32()", CCDelegateTo<RetCC_NanoMipsP32>>,
+  // nanoMIPS cannot fall back to O32 for return values using more than 2 regs.
+  CCIfSubtargetNot<"isABI_P32()", CCDelegateTo<RetCC_MipsO32>>,
 ]>;
 
 def CC_Mips_ByVal : CallingConv<[
   CCIfSubtarget<"isABI_O32()", CCIfByVal<CCPassByVal<4, 4>>>,
+  CCIfSubtarget<"isABI_P32()", CCIfByVal<CCPassByVal<4, 4>>>,
   CCIfByVal<CCPassByVal<8, 8>>
 ]>;
 
@@ -337,6 +374,7 @@ def CC_Mips_FixedArg : CallingConv<[
       CCIfSubtargetNot<"useSoftFloat()",
           CCIfOrigArgWasF128<CCBitConvertToType<f64>>>>,
 
+  CCIfSubtarget<"isABI_P32()", CCDelegateTo<CC_NanoMipsP32>>,
   CCIfCC<"CallingConv::Fast", CCDelegateTo<CC_Mips_FastCC>>,
 
   CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FP>>,
@@ -347,6 +385,7 @@ def CC_Mips_VarArg : CallingConv<[
   CCIfByVal<CCDelegateTo<CC_Mips_ByVal>>,
 
   CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FP>>,
+  CCIfSubtarget<"isABI_P32()", CCDelegateTo<CC_NanoMipsP32>>,
   CCDelegateTo<CC_MipsN_VarArg>
 ]>;
 
@@ -410,3 +449,5 @@ def CSR_Interrupt_64 : CalleeSavedRegs<(add (sequence "A%u_64", 3, 0),
                                             (sequence "V%u_64", 1, 0),
                                             RA_64, FP_64, GP_64, AT_64,
                                             LO0_64, HI0_64)>;
+
+def CSR_P32 : CalleeSavedRegs<(add RA_NM, FP_NM, GP_NM, (sequence "S%u_NM", 7, 0))>;

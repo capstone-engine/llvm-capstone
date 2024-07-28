@@ -2573,7 +2573,7 @@ std::string getImplicitUses(StringRef const &TargetName,
   std::string Flags = "{ ";
   for (Record const *U : Inst->ImplicitUses) {
     assert(U->isSubClassOf("Register"));
-    Flags += TargetName.str() + "_REG_" + U->getName().str() + ", ";
+    Flags += TargetName.upper() + "_REG_" + U->getName().upper() + ", ";
   }
   Flags += "0 }";
   return Flags;
@@ -2583,7 +2583,7 @@ std::string getImplicitDefs(StringRef const &TargetName,
   std::string Flags = "{ ";
   for (Record const *U : Inst->ImplicitDefs) {
     assert(U->isSubClassOf("Register"));
-    Flags += TargetName.str() + "_REG_" + U->getName().str() + ", ";
+    Flags += TargetName.upper() + "_REG_" + U->getName().upper() + ", ";
   }
   Flags += "0 }";
   return Flags;
@@ -2793,8 +2793,20 @@ std::string getPrimaryCSOperandType(Record const *OpRec) {
     return "CS_OP_INVALID";
   else if (OperandType == "OPERAND_IMPLICIT_IMM_0")
     return "CS_OP_IMM";
+  // Mips
   else if (OperandType == "OPERAND_MEM_SIMM9")
     return "CS_OP_IMM";
+  // nanoMips
+  else if (OperandType == "OPERAND_NM_SPREL7")
+    return "CS_OP_REG";
+  else if (OperandType == "OPERAND_NM_GPREL9")
+    return "CS_OP_REG";
+  else if (OperandType == "OPERAND_NM_GPREL18")
+    return "CS_OP_REG";
+  else if (OperandType == "OPERAND_NM_GPREL21")
+    return "CS_OP_REG";
+  else if (OperandType == "OPERAND_NM_SAVE_REGLIST")
+    return "CS_OP_INVALID";
   else
     PrintFatalNote("Unhandled OperandType: " + OperandType);
   return OperandType;
@@ -2893,69 +2905,6 @@ bool opIsPartOfiPTRPattern(Record const *OpRec, StringRef const &OpName,
     }
   }
   return false;
-}
-
-/// Try to match a patterns resulting instr. ops to the operands of a CGI by
-/// type. If it matches it returns the index of the CGI operand from which on
-/// the pattern ops match (counted for OutOps + InOps). If it doens't match it
-/// returns -1
-int comparePatternResultToCGIOps(CodeGenInstruction const *CGI,
-                                 DagInit *PatternResDag) {
-  if (PatternResDag->getNumArgs() == 0)
-    return -1;
-  DagInit *InDI = CGI->TheDef->getValueAsDag("InOperandList");
-  DagInit *OutDI = CGI->TheDef->getValueAsDag("OutOperandList");
-  unsigned NumOuts = OutDI->getNumArgs();
-  unsigned NumOps = OutDI->getNumArgs() + InDI->getNumArgs();
-  int32_t PatMatchStart = -1;
-  for (unsigned I = 0, J = 0; I < NumOps; ++I) {
-    Init *OpInit;
-    bool IsOutOp = I < NumOuts;
-    if (IsOutOp) {
-      OpInit = OutDI->getArg(I);
-    } else {
-      OpInit = InDI->getArg(I - NumOuts);
-    }
-    std::string PatOpType = PatternResDag->getArg(J)->getAsString();
-    std::string OpType = OpInit->getAsString();
-
-    if (PatOpType == OpType) {
-      // Select next pattern op
-      if (PatMatchStart == -1)
-        PatMatchStart = I;
-      J++;
-      if (J >= PatternResDag->getNumArgs())
-        // Done
-        return PatMatchStart;
-    } else if (PatMatchStart != -1) {
-      return -1;
-    }
-  }
-  // Nothing matched
-  return -1;
-}
-
-/// Returns the pattern record which matches the CGI.
-/// Or a nullltr if none matches.
-Record *getMatchingPattern(
-    CodeGenInstruction const *CGI,
-    std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
-  std::vector<Record *> Patterns =
-      InsnPatternMap.at(CGI->TheDef->getName().str());
-  // Search for pattern which matches this instruction.
-  int32_t PatStart = -1;
-  for (Record *Pat : Patterns) {
-    DagInit *PatternResDag = dyn_cast<DagInit>(
-        Pat->getValueAsListInit("ResultInstrs")->getValues()[0]);
-    Pat->dump();
-    // Interate over every In and Out operand and get its Def.
-    // Compare ts type against the pattern.
-    PatStart = comparePatternResultToCGIOps(CGI, PatternResDag);
-    if (PatStart < 0)
-      continue;
-    return Pat;
-  }
-  return nullptr;
 }
 
 std::string getCSOperandType(
