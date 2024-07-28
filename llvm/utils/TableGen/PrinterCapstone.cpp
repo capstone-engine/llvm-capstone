@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
@@ -1063,26 +1064,36 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
      << "  /* Bogisity detected in disassembler state machine! */ \\\n"
      << "}\n\n";
 
-  std::set<std::string> HasTwoByteInsns = {"ARM"};
-  std::set<std::string> HasFourByteInsns = {"ARM", "PPC", "AArch64", "LoongArch", "Alpha"};
-
-  if (HasTwoByteInsns.find(TargetName) != HasTwoByteInsns.end())
+  std::set<std::string> InsnBytesAsUint16 = {"ARM"};
+  std::set<std::string> InsnBytesAsUint32 = {"ARM", "PPC", "AArch64", "LoongArch", "Alpha", "Mips"};
+  bool MacroDefined = false;
+  if (InsnBytesAsUint16.find(TargetName) != InsnBytesAsUint16.end()) {
     OS << "FieldFromInstruction(fieldFromInstruction_2, uint16_t)\n"
        << "DecodeToMCInst(decodeToMCInst_2, fieldFromInstruction_2, uint16_t)\n"
        << "DecodeInstruction(decodeInstruction_2, fieldFromInstruction_2, "
           "decodeToMCInst_2, uint16_t)\n\n";
-  if (HasFourByteInsns.find(TargetName) != HasFourByteInsns.end())
+    MacroDefined = true;
+  }
+  if (InsnBytesAsUint32.find(TargetName) != InsnBytesAsUint32.end()) {
     OS << "FieldFromInstruction(fieldFromInstruction_4, uint32_t)\n"
        << "DecodeToMCInst(decodeToMCInst_4, fieldFromInstruction_4, uint32_t)\n"
        << "DecodeInstruction(decodeInstruction_4, fieldFromInstruction_4, "
           "decodeToMCInst_4, uint32_t)\n";
+    MacroDefined = true;
+  }
+
   // Special case: The LLVM disassembler uses uint64_t values for decoding.
   // Although PPC instructions are 4 bytes wide.
-  if (TargetName == "PPC")
+  if (TargetName == "PPC") {
     OS << "FieldFromInstruction(fieldFromInstruction_4, uint64_t)\n"
        << "DecodeToMCInst(decodeToMCInst_4, fieldFromInstruction_4, uint64_t)\n"
        << "DecodeInstruction(decodeInstruction_4, fieldFromInstruction_4, "
           "decodeToMCInst_4, uint64_t)\n";
+    MacroDefined = true;
+  }
+  if (!MacroDefined) {
+    llvm_unreachable("No decoder macro was defined. Please add the missing arch.\n\n");
+  }
 }
 
 void PrinterCapstone::decoderEmitterEmitTable(
