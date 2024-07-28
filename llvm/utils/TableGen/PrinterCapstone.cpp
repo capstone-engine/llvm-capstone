@@ -2778,6 +2778,8 @@ std::string getPrimaryCSOperandType(Record const *OpRec) {
     return "CS_OP_INVALID";
   else if (OperandType == "OPERAND_IMPLICIT_IMM_0")
     return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_MEM_SIMM9")
+    return "CS_OP_IMM";
   else
     PrintFatalNote("Unhandled OperandType: " + OperandType);
   return OperandType;
