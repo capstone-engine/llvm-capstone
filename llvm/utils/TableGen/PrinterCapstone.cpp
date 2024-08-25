@@ -670,26 +670,36 @@ void patchIsGetImmReg(std::string &Code) {
 static std::string handleDefaultArg(const std::string &TargetName,
                                     std::string &Code) {
   // Default values of the template function arguments.
-  // Tuple is (function name, default argument, number of argumetns)
-  static SmallVector<std::tuple<std::string, std::string, int>>
+  // Tuple is (function name, default argument, number of arguments)
+  static SmallVector<std::string> Default0 = {"0"};
+  static SmallVector<std::string> Default1 = {"1"};
+  static SmallVector<std::string> Default01 = {"0", "1"};
+  static SmallVector<std::tuple<std::string, SmallVector<std::string>&, int>>
       AArch64TemplFuncWithDefaults = {// Default is 1
-                                      {"printVectorIndex", "1", 1},
+                                      {"printVectorIndex", Default1, 1},
                                       // Default is false == 0
-                                      {"printPrefetchOp", "0", 1},
+                                      {"printPrefetchOp", Default0, 1},
                                       // Default is 0
-                                      {"printSVERegOp", "0", 1},
-                                      {"printMatrixIndex", "1", 1}
+                                      {"printSVERegOp", Default0, 1},
+                                      {"printMatrixIndex", Default1, 1}
                                       };
-  static SmallVector<std::tuple<std::string, std::string, int>>
+  static SmallVector<std::tuple<std::string, SmallVector<std::string>&, int>>
       LoongArchTemplFuncWithDefaults = {// Default is 0
-                                      {"decodeSImmOperand", "0", 2},
-                                      {"decodeUImmOperand", "0", 2},
+                                      {"decodeSImmOperand", Default0, 2},
+                                      {"decodeUImmOperand", Default0, 2},
                                       };
-  SmallVector<std::tuple<std::string, std::string, int>> *TemplFuncWithDefaults;
+  static SmallVector<std::tuple<std::string, SmallVector<std::string>&, int>>
+      MipsTemplFuncWithDefaults = {
+                                      {"DecodeSImmWithOffsetAndScale", Default01, 3},
+                                      {"printUImm", Default0, 2},
+                                      };
+  SmallVector<std::tuple<std::string, SmallVector<std::string>&, int>> *TemplFuncWithDefaults;
   if (StringRef(TargetName).upper() == "AARCH64")
     TemplFuncWithDefaults = &AArch64TemplFuncWithDefaults;
   else if (StringRef(TargetName).upper() == "LOONGARCH")
     TemplFuncWithDefaults = &LoongArchTemplFuncWithDefaults;
+  else if (StringRef(TargetName).upper() == "MIPS")
+    TemplFuncWithDefaults = &MipsTemplFuncWithDefaults;
   else
     return Code;
 
@@ -705,6 +715,7 @@ static std::string handleDefaultArg(const std::string &TargetName,
       StringRef Arg = Matches[1];
       // Count the number of passed arguments
       int ActualArgCount = 0;
+      unsigned DefIdx = 0;
       if (!Arg.empty() && Arg != "<>") {
         ActualArgCount = Arg.count(',') + 1;
         if (ActualArgCount == ExpectedArgCount) {
@@ -716,17 +727,21 @@ static std::string handleDefaultArg(const std::string &TargetName,
       NewArg = Regex("<").sub("", Arg);
       NewArg = Regex(">").sub("", NewArg);
       NewArg = Regex(",").sub("_", NewArg);
-      if (ActualArgCount != ExpectedArgCount) {
+      while (ActualArgCount < ExpectedArgCount) {
+        assert(DefIdx < DefaultArg.size() && "Out of bounds for predefined template arguments");
         // Add default argument
         if (NewArg.empty()) {
           // e.g. printVectorIndex -> printVectorIndex_1
-          NewArg += DefaultArg;
+          NewArg += DefaultArg[DefIdx++];
+          ActualArgCount++;
         } else {
           // e.g. decodeSImmOperand<1> -> decodeSimmOperand_1_0
           NewArg += "_";
-          NewArg += DefaultArg;
+          NewArg += DefaultArg[DefIdx++];
+          ActualArgCount++;
         }
       }
+      assert(ActualArgCount == ExpectedArgCount && "Inconsistent template arg patching.");
 
       StringRef Match = Matches[0];
       if (Match.ends_with("(")) {
