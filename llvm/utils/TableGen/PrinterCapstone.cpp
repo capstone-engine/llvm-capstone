@@ -1080,7 +1080,8 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
      << "}\n\n";
 
   std::set<std::string> InsnBytesAsUint16 = {"ARM"};
-  std::set<std::string> InsnBytesAsUint32 = {"ARM", "PPC", "AArch64", "LoongArch", "Alpha", "Mips"};
+  std::set<std::string> InsnBytesAsUint32 = {"ARM", "AArch64", "LoongArch", "Alpha", "Mips"};
+  std::set<std::string> InsnBytesAsUint64 = {"SystemZ"};
   bool MacroDefined = false;
   if (InsnBytesAsUint16.find(TargetName) != InsnBytesAsUint16.end()) {
     OS << "FieldFromInstruction(fieldFromInstruction_2, uint16_t)\n"
@@ -1094,6 +1095,13 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
        << "DecodeToMCInst(decodeToMCInst_4, fieldFromInstruction_4, uint32_t)\n"
        << "DecodeInstruction(decodeInstruction_4, fieldFromInstruction_4, "
           "decodeToMCInst_4, uint32_t)\n";
+    MacroDefined = true;
+  }
+  if (InsnBytesAsUint64.find(TargetName) != InsnBytesAsUint64.end()) {
+    OS << "FieldFromInstruction(fieldFromInstruction_8, uint64_t)\n"
+       << "DecodeToMCInst(decodeToMCInst_8, fieldFromInstruction_8, uint64_t)\n"
+       << "DecodeInstruction(decodeInstruction_8, fieldFromInstruction_8, "
+          "decodeToMCInst_4, uint64_t)\n";
     MacroDefined = true;
   }
 
