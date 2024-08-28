@@ -1101,7 +1101,7 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
     OS << "FieldFromInstruction(fieldFromInstruction_8, uint64_t)\n"
        << "DecodeToMCInst(decodeToMCInst_8, fieldFromInstruction_8, uint64_t)\n"
        << "DecodeInstruction(decodeInstruction_8, fieldFromInstruction_8, "
-          "decodeToMCInst_4, uint64_t)\n";
+          "decodeToMCInst_8, uint64_t)\n";
     MacroDefined = true;
   }
 
