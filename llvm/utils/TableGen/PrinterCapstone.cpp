@@ -2602,6 +2602,8 @@ static inline std::string normalizedMnemonic(StringRef const &Mn,
   auto Mnemonic = Upper ? Mn.upper() : Mn.str();
   std::replace(Mnemonic.begin(), Mnemonic.end(), '.', '_');
   std::replace(Mnemonic.begin(), Mnemonic.end(), '|', '_');
+  std::replace(Mnemonic.begin(), Mnemonic.end(), '}', '_');
+  std::replace(Mnemonic.begin(), Mnemonic.end(), '{', '_');
   std::replace(Mnemonic.begin(), Mnemonic.end(), '+', 'p');
   std::replace(Mnemonic.begin(), Mnemonic.end(), '-', 'm');
   std::replace(Mnemonic.begin(), Mnemonic.end(), '/', 's');
