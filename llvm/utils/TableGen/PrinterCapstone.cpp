@@ -2694,12 +2694,45 @@ std::string getArchSupplInfoPPC(StringRef const &TargetName,
     if (SC->getName() == "I") {
       if (!PrevSC)
         llvm_unreachable("I class has no predecessor.");
-      std::string Format = "LOONGARCH_INSN_FORM_" + PrevSC->getName().upper();
+      std::string Format = "PPC_INSN_FORM_" + PrevSC->getName().upper();
       if (Formats.find(Format) == Formats.end()) {
         PPCFormatEnum << Format + ",\n";
       }
       Formats.emplace(Format);
-      return "{{ " + Format + " }}";
+      return "{ .ppc = { " + Format + " }}";
+    }
+    PrevSC = SC;
+  }
+  // Pseudo instructions
+  return "{{ 0 }}";
+}
+
+
+std::string getArchSupplInfoSystemZ(StringRef const &TargetName,
+                                CodeGenInstruction const *CGI,
+                                raw_string_ostream &PPCFormatEnum) {
+  static std::set<std::string> Formats;
+  // Get instruction format
+  ArrayRef<std::pair<Record *, SMRange>> SCs = CGI->TheDef->getSuperClasses();
+  if (SCs.empty()) {
+    llvm_unreachable("A CGI without superclass should not exist.");
+  }
+
+  // Get base instruction format class "I"
+  const Record *PrevSC = nullptr;
+  // Superclasses are in post-order. So we go through them backwards.
+  // The class before the "I" class is the format class.
+  for (int I = SCs.size() - 1; I >= 0; --I) {
+    const Record *SC = SCs[I].first;
+    if (SC->getName() == "InstSystemZ") {
+      if (!PrevSC)
+        llvm_unreachable("InstSystemZ class has no predecessor.");
+      std::string Format = "SYSTEMZ_INSN_FORM_" + PrevSC->getName().upper();
+      if (Formats.find(Format) == Formats.end()) {
+        PPCFormatEnum << Format + ",\n";
+      }
+      Formats.emplace(Format);
+      return "{ .systemz = { " + Format + " }}";
     }
     PrevSC = SC;
   }
@@ -2754,12 +2787,14 @@ std::string getArchSupplInfoLoongArch(StringRef const &TargetName,
 std::string getArchSupplInfo(StringRef const &TargetName,
                              CodeGenInstruction const *CGI,
                              raw_string_ostream &FormatEnum) {
-  if (TargetName == "PPC")
+  if (TargetName == "PPC") {
     return getArchSupplInfoPPC(TargetName, CGI, FormatEnum);
-  else if (StringRef(TargetName).upper() == "AARCH64") {
+  } else if (StringRef(TargetName).upper() == "AARCH64") {
     return getArchSupplInfoAArch64(CGI);
   } else if (StringRef(TargetName).upper() == "LOONGARCH") {
     return getArchSupplInfoLoongArch(TargetName, CGI, FormatEnum);
+  } else if (StringRef(TargetName).upper() == "SYSTEMZ") {
+    return getArchSupplInfoSystemZ(TargetName, CGI, FormatEnum);
   }
   return "{{ 0 }}";
 }
@@ -3527,7 +3562,7 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   writeFile(InsnMapFilename, AliasEnumStr);
   InsnMapFilename = TName + "GenCSAliasMnemMap.inc";
   writeFile(InsnMapFilename, AliasMnemMapStr);
-  if (TName == "PPC" || TName == "LoongArch") {
+  if (TName == "PPC" || TName == "LoongArch" || TName == "SystemZ") {
     InsnMapFilename = TName + "GenCSInsnFormatsEnum.inc";
     writeFile(InsnMapFilename, FormatEnumStr);
   }
