@@ -31,6 +31,7 @@ class MicroMipsInstBase<dag outs, dag ins, string asmstr, list<dag> pattern,
   let Pattern     = pattern;
   let Itinerary   = itin;
 
+  let AsmVariantName = "mips";
   let EncodingPredicates = [InMicroMips];
 
   Format Form = f;
