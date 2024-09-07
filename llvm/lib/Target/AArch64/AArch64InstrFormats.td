@@ -1834,7 +1834,9 @@ class MRSI : RtSystemI<1, (outs GPR64:$Rt), (ins mrs_sysreg_op:$systemreg),
   // require doing this. The alternative was to explicitly model each one, but
   // it feels like it is unnecessary because it seems there are no negative
   // consequences setting these flags for all.
-  let Defs = [NZCV];
+  // let Defs = [NZCV];
+  // For Capstone we are not happy about this. In this case it is better to be more
+  // often right than wrong. So comment it out and handle it on the CS side.
 }
 
 // FIXME: Some of these def NZCV, others don't. Best way to model that?
