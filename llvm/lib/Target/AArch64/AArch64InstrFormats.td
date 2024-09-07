@@ -11785,7 +11785,7 @@ class BaseCASEncoding<dag oops, dag iops, string asm, string operands,
 class BaseCAS<string order, string size, RegisterClass RC>
       : BaseCASEncoding<(outs RC:$out),(ins RC:$Rs, RC:$Rt, GPR64sp:$Rn),
                         "cas" # order # size, "\t$Rs, $Rt, [$Rn]",
-                        "$out = $Rs",[]>,
+                        "$out = $Rn",[]>,
         Sched<[WriteAtomic]> {
   let NP = 1;
 }
