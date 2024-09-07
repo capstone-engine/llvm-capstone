@@ -2602,14 +2602,24 @@ static inline std::string normalizedMnemonic(StringRef const &Mn,
   auto Mnemonic = Upper ? Mn.upper() : Mn.str();
   std::replace(Mnemonic.begin(), Mnemonic.end(), '.', '_');
   std::replace(Mnemonic.begin(), Mnemonic.end(), '|', '_');
-  std::replace(Mnemonic.begin(), Mnemonic.end(), '}', '_');
-  std::replace(Mnemonic.begin(), Mnemonic.end(), '{', '_');
   std::replace(Mnemonic.begin(), Mnemonic.end(), '+', 'p');
   std::replace(Mnemonic.begin(), Mnemonic.end(), '-', 'm');
   std::replace(Mnemonic.begin(), Mnemonic.end(), '/', 's');
 
-  Mnemonic = StringRef(Regex("[{}]").sub("", Mnemonic));
-  return Mnemonic;
+  auto MnemRef = StringRef(Mnemonic);
+  if (MnemRef.count("{") == MnemRef.count("{")) {
+    // Some mnemonics have actually some {} in their name
+    // (to signal choice).
+    std::replace(Mnemonic.begin(), Mnemonic.end(), '{', '_');
+    std::replace(Mnemonic.begin(), Mnemonic.end(), '}', '_');
+  } else {
+    // Others just have a bracket which actually belongs to the
+    // operand string. But is their because of flawed td files.
+    while (MnemRef.contains("{") || MnemRef.contains("}")) {
+      MnemRef = StringRef(Regex("[{}]").sub("", MnemRef));
+    }
+  }
+  return MnemRef.str();
 }
 
 static inline std::string
