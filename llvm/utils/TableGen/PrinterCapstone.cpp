@@ -1326,7 +1326,7 @@ void PrinterCapstone::decoderEmitterEmitPredicateFunction(
   if (!Predicates.empty()) {
     OS.indent(Indentation) << "switch (Idx) {\n";
     OS.indent(Indentation)
-        << "default: /* llvm_unreachable(\"Invalid index!\"); */\n";
+        << "default: CS_ASSERT_RET_VAL(0 && \"Invalid index!\", false);\n";
     unsigned Index = 0;
     for (const auto &Predicate : Predicates) {
       OS.indent(Indentation) << "case " << Index++ << ":\n";
@@ -1335,7 +1335,7 @@ void PrinterCapstone::decoderEmitterEmitPredicateFunction(
     OS.indent(Indentation) << "}\n";
   } else {
     // No case statement to emit
-    OS.indent(Indentation) << "/* llvm_unreachable(\"Invalid index!\"); */\n";
+    OS.indent(Indentation) << "CS_ASSERT_RET_VAL(0 && \"Invalid index!\", false);\n";
   }
   Indentation -= 2;
   OS.indent(Indentation) << "}\n\n";
@@ -1357,7 +1357,7 @@ void PrinterCapstone::decoderEmitterEmitDecoderFunction(
   OS.indent(Indentation) << "InsnType tmp; \\\n";
   OS.indent(Indentation) << "switch (Idx) { \\\n";
   OS.indent(Indentation)
-      << "default: /* llvm_unreachable(\"Invalid index!\"); */ \\\n";
+      << "default: CS_ASSERT_RET_VAL(0 && \"Invalid index!\", MCDisassembler_Fail); \\\n";
   unsigned Index = 0;
   for (const auto &Decoder : Decoders) {
     OS.indent(Indentation) << "case " << Index++ << ": \\\n";
@@ -1371,6 +1371,7 @@ void PrinterCapstone::decoderEmitterEmitDecoderFunction(
 
 void PrinterCapstone::decoderEmitterEmitIncludes() const {
   OS << "#include \"../../MCInst.h\"\n"
+     << "#include \"../../cs_priv.h\"\n"
      << "#include \"../../LEB128.h\"\n\n";
 }
 
@@ -1385,7 +1386,7 @@ void PrinterCapstone::decoderEmitterEmitSourceFileHeader() const {
 void PrinterCapstone::asmWriterEmitSourceFileHeader(RecordKeeper &Records) const {
   emitDefaultSourceFileHeader(OS);
   OS << "#include <capstone/platform.h>\n"
-     << "#include <assert.h>\n\n";
+     << "#include \"../../cs_priv.h\"\n\n";
 }
 
 void PrinterCapstone::asmWriterEmitGetMnemonic(
@@ -1481,7 +1482,7 @@ void PrinterCapstone::asmWriterEmitPrintInstruction(
 
   OS << "  uint" << ((BitsLeft < (OpcodeInfoBits - 32)) ? 64 : 32)
      << "_t Bits = MnemonicInfo.second;\n"
-     << "  assert(Bits != 0 && \"Cannot print this instruction.\");\n";
+     << "  CS_ASSERT_RET(Bits != 0 && \"Cannot print this instruction.\");\n";
 
   // Output the table driven operand information.
   BitsLeft = OpcodeInfoBits - AsmStrBits;
@@ -1509,7 +1510,7 @@ void PrinterCapstone::asmWriterEmitPrintInstruction(
     } else {
       OS << "  switch ((Bits >> " << (OpcodeInfoBits - BitsLeft) << ") & "
          << ((1 << NumBits) - 1) << ") {\n"
-         << "  default: assert(0 && \"Invalid command number.\");\n";
+         << "  default: CS_ASSERT_RET(0 && \"Invalid command number.\");\n";
 
       // Print out all the cases.
       for (unsigned J = 0, F = Commands.size(); J != F; ++J) {
@@ -1545,7 +1546,7 @@ void PrinterCapstone::asmWriterEmitOpCases(
 
 void PrinterCapstone::asmWriterEmitInstrSwitch() const {
   OS << "  switch (MCInst_getOpcode(MI)) {\n";
-  OS << "  default: assert(0 && \"Unexpected opcode.\");\n";
+  OS << "  default: CS_ASSERT_RET(0 && \"Unexpected opcode.\");\n";
 }
 
 void PrinterCapstone::asmWriterEmitCompoundClosure(unsigned Indent,
@@ -1578,7 +1579,7 @@ void PrinterCapstone::asmWriterEmitInstruction(
       // If this is the operand that varies between all of the instructions,
       // emit a switch for just this operand now.
       OS << "    switch (MCInst_getOpcode(MI)) {\n";
-      OS << "    default: assert(0 && \"Unexpected opcode.\");\n";
+      OS << "    default: CS_ASSERT_RET(0 && \"Unexpected opcode.\");\n";
       std::vector<std::pair<std::string, AsmWriterOperand>> OpsToPrint;
       OpsToPrint.push_back(
           std::make_pair(FirstInst.CGI->Namespace.str() + "_" +
@@ -1615,8 +1616,8 @@ void PrinterCapstone::asmWriterEmitGetRegNameAssert(
   else
     OS << "getRegisterName(unsigned RegNo) {\n";
   OS << "#ifndef CAPSTONE_DIET\n";
-  OS << "  assert(RegNo && RegNo < " << (RegSize + 1)
-     << " && \"Invalid register number!\");\n"
+  OS << "  CS_ASSERT_RET_VAL(RegNo && RegNo < " << (RegSize + 1)
+     << " && \"Invalid register number!\", NULL);\n"
      << "\n";
 }
 
@@ -1647,8 +1648,8 @@ void PrinterCapstone::asmWriterEmitAltIdxSwitch(
     StringRef const &Namespace) const {
   if (HasAltNames) {
     OS << "  switch(AltIdx) {\n"
-       << "  default: assert(0 && \"Invalid register alt name "
-          "index!\");\n";
+       << "  default: CS_ASSERT_RET_VAL(0 && \"Invalid register alt name "
+          "index!\", NULL);\n";
     for (const Record *R : AltNameIndices) {
       StringRef const AltName = R->getName();
       OS << "  case ";
@@ -1656,9 +1657,9 @@ void PrinterCapstone::asmWriterEmitAltIdxSwitch(
         OS << Namespace << "_";
       OS << AltName << ":\n";
       if (R->isValueUnset("FallbackRegAltNameIndex"))
-        OS << "    assert(*(AsmStrs" << AltName << "+RegAsmOffset" << AltName
+        OS << "    CS_ASSERT_RET_VAL(*(AsmStrs" << AltName << "+RegAsmOffset" << AltName
            << "[RegNo-1]) &&\n"
-           << "           \"Invalid alt name index for register!\");\n";
+           << "           \"Invalid alt name index for register!\", NULL);\n";
       else {
         OS << "    if (!*(AsmStrs" << AltName << "+RegAsmOffset" << AltName
            << "[RegNo-1]))\n"
@@ -1672,8 +1673,8 @@ void PrinterCapstone::asmWriterEmitAltIdxSwitch(
     }
     OS << "  }\n";
   } else {
-    OS << "  assert (*(AsmStrs+RegAsmOffset[RegNo-1]) &&\n"
-       << "          \"Invalid alt name index for register!\");\n"
+    OS << "  CS_ASSERT_RET_VAL(*(AsmStrs+RegAsmOffset[RegNo-1]) &&\n"
+       << "          \"Invalid alt name index for register!\", NULL);\n"
        << "  return AsmStrs+RegAsmOffset[RegNo-1];\n";
   }
   OS << "#else\n"
@@ -1872,11 +1873,11 @@ void PrinterCapstone::asmWriterEmitPrintAliasOp(
      << "         SStream *OS) {\n"
      << "#ifndef CAPSTONE_DIET\n";
   if (PrintMethods.empty())
-    OS << "  assert(0 && \"Unknown PrintMethod kind\");\n";
+    OS << "  CS_ASSERT_RET(0 && \"Unknown PrintMethod kind\");\n";
   else {
     OS << "  switch (PrintMethodIdx) {\n"
        << "  default:\n"
-       << "    assert(0 && \"Unknown PrintMethod kind\");\n"
+       << "    CS_ASSERT_RET(0 && \"Unknown PrintMethod kind\");\n"
        << "    break;\n";
 
     for (unsigned I = 0; I < PrintMethods.size(); ++I) {
@@ -1903,7 +1904,7 @@ void PrinterCapstone::asmWriterEmitPrintMC(
        << "                  unsigned PredicateIndex) {\n"
        << "  switch (PredicateIndex) {\n"
        << "  default:\n"
-       << "    assert(0 && \"Unknown MCOperandPredicate kind\");\n"
+       << "    CS_ASSERT_RET_VAL(0 && \"Unknown MCOperandPredicate kind\", false);\n"
        << "    return false;\n";
 
     for (unsigned I = 0; I < MCOpPredicates.size(); ++I) {
