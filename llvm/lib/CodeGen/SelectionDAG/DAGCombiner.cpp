@@ -3575,6 +3575,11 @@ static SDValue combineCarryDiamond(SelectionDAG &DAG, const TargetLowering &TLI,
     return SDValue();
   if (Opcode != ISD::UADDO && Opcode != ISD::USUBO)
     return SDValue();
+  // Guarantee identical type of CarryOut
+  EVT CarryOutType = N->getValueType(0);
+  if (CarryOutType != Carry0.getValue(1).getValueType() ||
+      CarryOutType != Carry1.getValue(1).getValueType())
+    return SDValue();
 
   // Canonicalize the add/sub of A and B (the top node in the above ASCII art)
   // as Carry0 and the add/sub of the carry in as Carry1 (the middle node).
@@ -3622,7 +3627,7 @@ static SDValue combineCarryDiamond(SelectionDAG &DAG, const TargetLowering &TLI,
   // TODO: match other operations that can merge flags (ADD, etc)
   DAG.ReplaceAllUsesOfValueWith(Carry1.getValue(0), Merged.getValue(0));
   if (N->getOpcode() == ISD::AND)
-    return DAG.getConstant(0, DL, MVT::i1);
+    return DAG.getConstant(0, DL, CarryOutType);
   return Merged.getValue(1);
 }
 
@@ -9631,8 +9636,15 @@ static SDValue combineShiftOfShiftedLogic(SDNode *Shift, SelectionDAG &DAG) {
     if (ShiftAmtVal->getBitWidth() != C1Val.getBitWidth())
       return false;
 
+    // The fold is not valid if the sum of the shift values doesn't fit in the
+    // given shift amount type.
+    bool Overflow = false;
+    APInt NewShiftAmt = C1Val.uadd_ov(*ShiftAmtVal, Overflow);
+    if (Overflow)
+      return false;
+
     // The fold is not valid if the sum of the shift values exceeds bitwidth.
-    if ((*ShiftAmtVal + C1Val).uge(V.getScalarValueSizeInBits()))
+    if (NewShiftAmt.uge(V.getScalarValueSizeInBits()))
       return false;
 
     return true;

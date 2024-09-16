@@ -17,7 +17,6 @@
 #include "CodeGenInstruction.h"
 #include "CodeGenRegisters.h"
 #include "CodeGenSchedule.h"
-#include "Printer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
@@ -264,7 +263,6 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::Untyped:   return "MVT::Untyped";
   case MVT::funcref:   return "MVT::funcref";
   case MVT::externref: return "MVT::externref";
-  case MVT::INVALID_SIMPLE_VALUE_TYPE: return "MVT::INVALID_SIMPLE_VALUE_TYPE";
   default: llvm_unreachable("ILLEGAL VALUE TYPE!");
   }
   // clang-format on
@@ -279,11 +277,7 @@ std::string llvm::getQualifiedName(const Record *R) {
     Namespace = std::string(R->getValueAsString("Namespace"));
   if (Namespace.empty())
     return std::string(R->getName());
-
-  if (PrinterLLVM::getLanguage() == PRINTER_LANG_CAPSTONE_C)
-    return Namespace + "_" + R->getName().str();
-  else
-    return Namespace + "::" + R->getName().str();
+  return Namespace + "::" + R->getName().str();
 }
 
 

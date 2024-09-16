@@ -1,126 +1,44 @@
-# Capstone's LLVM with refactored TableGen backends
+# The LLVM Compiler Infrastructure
 
-This LLVM version has the purpose to generate code for the
-[Capstone disassembler](https://github.com/capstone-engine/capstone).
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/llvm/llvm-project/badge)](https://securityscorecards.dev/viewer/?uri=github.com/llvm/llvm-project)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8273/badge)](https://www.bestpractices.dev/projects/8273)
+[![libc++](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml/badge.svg?branch=main&event=schedule)](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml?query=event%3Aschedule)
 
-It refactors the TableGen emitter backends, so they can emit C code
-in addition to the C++ code they normally emit.
+Welcome to the LLVM project!
 
-## Build
+This repository contains the source code for LLVM, a toolkit for the
+construction of highly optimized compilers, optimizers, and run-time
+environments.
 
-```
-python3 -m venv .venv
-source .venv/bin/activate
-pip install Ninja cmake
-mkdir build
-cd build
-cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug ../llvm
-cmake --build . --target llvm-tblgen --config Debug
-```
+The LLVM project has multiple components. The core of the project is
+itself called "LLVM". This contains all of the tools, libraries, and header
+files needed to process intermediate representations and convert them into
+object files. Tools include an assembler, disassembler, bitcode analyzer, and
+bitcode optimizer.
 
-## Code generation
+C-like languages use the [Clang](http://clang.llvm.org/) frontend. This
+component compiles C, C++, Objective-C, and Objective-C++ code into LLVM bitcode
+-- and from there into object files, using LLVM.
 
-Please note that within LLVM we speak of a `Target` if we refer to an architecture.
+Other components include:
+the [libc++ C++ standard library](https://libcxx.llvm.org),
+the [LLD linker](https://lld.llvm.org), and more.
 
-### Relevant files
+## Getting the Source Code and Building LLVM
 
-The TableGen emitter backends are located in `llvm/utils/TableGen/`.
+Consult the
+[Getting Started with LLVM](https://llvm.org/docs/GettingStarted.html#getting-the-source-code-and-building-llvm)
+page for information on building and running LLVM.
 
-The target definition files (`.td`), which define the
-instructions, operands, features etc., can be
-found in `llvm/lib/Target/<ARCH>/`.
+For information on how to contribute to the LLVM project, please take a look at
+the [Contributing to LLVM](https://llvm.org/docs/Contributing.html) guide.
 
-### Code generation overview
+## Getting in touch
 
-Generating code for a target has 6 steps:
+Join the [LLVM Discourse forums](https://discourse.llvm.org/), [Discord
+chat](https://discord.gg/xS7Z362),
+[LLVM Office Hours](https://llvm.org/docs/GettingInvolved.html#office-hours) or
+[Regular sync-ups](https://llvm.org/docs/GettingInvolved.html#online-sync-ups).
 
-```
-                                                                         5                 6
-                                                                    ┌──────────┐      ┌──────────┐
-                                                                    │Printer   │      │CS .inc   │
-    1               2                 3                4        ┌──►│Capstone  ├─────►│files     │
-┌───────┐     ┌───────────┐     ┌───────────┐     ┌──────────┐  │   └──────────┘      └──────────┘
-│ .td   │     │           │     │           │     │ Code-    │  │
-│ files ├────►│ TableGen  ├────►│  CodeGen  ├────►│ Emitter  │◄─┤
-└───────┘     └──────┬────┘     └───────────┘     └──────────┘  │
-                     │                                 ▲        │   ┌──────────┐      ┌──────────┐
-                     └─────────────────────────────────┘        └──►│Printer   ├─────►│LLVM .inc │
-                                                                    │LLVM      │      │files     │
-                                                                    └──────────┘      └──────────┘
-```
-
-1. LLVM targets are defined in `.td` files. They describe instructions, operands,
-features and other properties.
-
-2. [LLVM TableGen](https://llvm.org/docs/TableGen/index.html) parses these files
-and converts them to an internal representation of [Classes, Records, DAGs](https://llvm.org/docs/TableGen/ProgRef.html)
- and other types.
-
-3. In the second step a TableGen component called [CodeGen](https://llvm.org/docs/CodeGenerator.html)
-abstracts this even further.
-The result is a representation which is _not_ specific to any target
-(e.g. the `CodeGenInstruction` class can represent a machine instruction of any target).
-
-4. Different code emitter backends use the result of the former two components to
-generated code.
-
-5. Whenever the emitter emits code it calls a `Printer`. Either the `PrinterCapstone` to emit C or `PrinterLLVM` to emit C++.
-Which one is controlled by the `--printerLang=[CCS,C++]` option passed to `llvm-tblgen`.
-
-6. After the emitter backend is done, the `Printer` writes the `output_stream` content into the `.inc` files.
-
-### Emitter backends and their use cases
-
-We use the following emitter backends
-
-| Name | Generated Code | Note |
-|------|----------------|------|
-| AsmMatcherEmitter | Mapping tables for Capstone | |
-| AsmWriterEmitter | State machine to decode the asm-string for a `MCInst` | |
-| DecoderEmitter | State machine which decodes bytes to a `MCInst`. | |
-| InstrInfoEmitter | Tables with instruction information (instruction enum, instr. operand information...) | |
-| RegisterInfoEmitter | Tables with register information (register enum, register type info...) | |
-| SubtargetEmitter | Table about the target features. | |
-| SearchableTablesEmitter | Usually used to generate tables and decoding functions for system registers. | **1.** Not all targets use this. |
-| | | **2.** Backend can't access the target name. Wherever the target name is needed `__ARCH__` or `##ARCH##` is printed and later replaced. |
-
-## Developer notes
-
-- If you find C++ code within the generated files you need to extend `PrinterCapstone::translateToC()`.
-If this still doesn't fix the problem, the code snipped wasn't passed through `translateToC()` before emitting.
-So you need to figure out where this specific code snipped is printed and add `translateToC()`.
-
-- Template functions with default values for their arguments, don't get replaced properly.
-  See: `handleDefaultArg()` in `PrinterCapstone.cpp` to add the default argument value.
-
-- Some operand printer or decoder are not recognized. Compiler error like:
-  ```
-  .../AArch64GenAsmWriter.inc:18216:5: warning: implicit declaration of function ‘printMatrixIndex_1’; did you mean ‘printMatrix_0’? [-Wimplicit-function-declaration]
-  18216 |     printMatrixIndex_1(MI, 2, O);
-      |     ^~~~~~~~~~~~~~~~~~
-      |     printMatrix_0
-
-  ```
-  To fix this the function declaration is probably missing in the header (e.g. `<ARCH>InstPrinter.h`). You can copy the `DEFINE_printMatrix()` function to the header
-  and rewrite it as declaration. Just check the other `DECLARE_...` macros in the header file.
-
-- And `ARCH_OP_GROUP_...` is missing or not generated. Build error like:
-  ```
-  AArch64InstPrinter.c:2249:42: error: ‘AArch64_OP_GROUP_MatrixIndex_8’ undeclared (first use in this function); did you mean ‘AArch64_OP_GROUP_MatrixIndex’?
-   2249 |                 add_cs_detail(MI, CONCAT(AArch64_OP_GROUP_MatrixIndex, Scale), \
-  ```
-  Fix it by adding the postfix `MatrixIndex_8` to one of the exception lists in `PrinterCapstone::printOpPrintGroupEnum()`.
-
-- If the mapping files miss operand types or access information, then the `.td` files are incomplete (happens surprisingly often).
-You need to search for the instruction or operands with missing or incorrect values and fix them.
-  ```
-    Wrong access attributes for:
-      - Registers, Immediates: The instructions defines "out" and "in" operands incorrectly.
-      - Memory: The "mayLoad" or "mayStore" variable is not set for the instruction.
-
-    Operand type is invalid:
-      - The "OperandType" variable is unset for this operand type.
-  ```
-
-- If certain target features (e.g. architecture extensions) were removed from LLVM or you want to add your own,
-checkout [DeprecatedFeatures.md](DeprecatedFeatures.md).
+The LLVM project has adopted a [code of conduct](https://llvm.org/docs/CodeOfConduct.html) for
+participants to all modes of communication within the project.

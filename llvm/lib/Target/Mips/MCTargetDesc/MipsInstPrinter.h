@@ -110,7 +110,6 @@ private:
                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printFCCOperand(const MCInst *MI, int opNum, const MCSubtargetInfo &STI,
                        raw_ostream &O);
-  void printMemOperandGPRel(const MCInst *MI, int opNum,const MCSubtargetInfo &STI, raw_ostream &O);
   void printSHFMask(const MCInst *MI, int opNum, raw_ostream &O);
 
   bool printAlias(const char *Str, const MCInst &MI, uint64_t Address,
@@ -119,24 +118,12 @@ private:
   bool printAlias(const char *Str, const MCInst &MI, uint64_t Address,
                   unsigned OpNo0, unsigned OpNo1, const MCSubtargetInfo &STI,
                   raw_ostream &OS, bool IsBranch = false);
-  bool printAliasHex(const char *Str, const MCInst &MI, uint64_t Address,
-                  unsigned OpNo0, unsigned OpNo1, const MCSubtargetInfo &STI,
-                  raw_ostream &OS);
   bool printAlias(const MCInst &MI, uint64_t Address,
                   const MCSubtargetInfo &STI, raw_ostream &OS);
-  bool printAlias(const char *Str, const MCInst &MI,uint64_t Address, unsigned OpNo0,
-                  unsigned OpNo1, unsigned OpNo2, const MCSubtargetInfo &STI, raw_ostream &OS);
   void printSaveRestore(const MCInst *MI, const MCSubtargetInfo &STI,
                         raw_ostream &O);
   void printRegisterList(const MCInst *MI, int opNum,
                          const MCSubtargetInfo &STI, raw_ostream &O);
-  void printNanoMipsRegisterList(const MCInst *MI, int opNum,const MCSubtargetInfo &STI, raw_ostream &O);
-  void printHi20(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
-                 raw_ostream &O);
-  void printHi20PCRel(const MCInst *MI,  uint64_t Address, int OpNum, const MCSubtargetInfo &STI,
-                      raw_ostream &O);
-  void printPCRel(const MCInst *MI,  uint64_t Address, int OpNum, const MCSubtargetInfo &STI,
-                      raw_ostream &O);
 };
 } // end namespace llvm
 

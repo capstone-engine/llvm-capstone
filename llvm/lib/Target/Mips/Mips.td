@@ -148,22 +148,6 @@ def FeatureMips64r6    : SubtargetFeature<"mips64r6", "MipsArchVersion",
                                 "Mips64r6 ISA Support [experimental]",
                                 [FeatureMips32r6, FeatureMips64r5,
                                  FeatureNaN2008, FeatureAbs2008]>;
-
-def FeatureRelax       : SubtargetFeature<"relax", "UseLinkerRelax",
-                                "true",
-                                "Enable linker relaxation">;
-
-def FeatureNanoMips    : SubtargetFeature<"nanomips", "MipsArchVersion",
-                                "NanoMips",
-                                "NanoMips ISA Support [experimental]">;
-
-def FeatureNMS1        : SubtargetFeature<"nms1", "HasNMS",
-                                "true",
-                                "NanoMips ISA Subset Support [unimplemented]",
-				[FeatureNanoMips]>;
-def FeatureI7200       : SubtargetFeature<"i7200", "MipsArchVersion",
-                                "NanoMips",
-                                "NanoMips ISA Support [experimental]">;
 def FeatureSym32       : SubtargetFeature<"sym32", "HasSym32", "true",
                                           "Symbols are 32 bit on Mips64">;
 
@@ -187,9 +171,6 @@ def FeatureCRC : SubtargetFeature<"crc", "HasCRC", "true", "Mips R6 CRC ASE">;
 
 def FeatureVirt : SubtargetFeature<"virt", "HasVirt", "true",
                                    "Mips Virtualization ASE">;
-
-def FeatureTLB : SubtargetFeature<"tlb", "HasTLB", "true",
-                                   "Mips TLB support">;
 
 def FeatureGINV : SubtargetFeature<"ginv", "HasGINV", "true",
                                    "Mips Global Invalidate ASE">;
@@ -222,18 +203,10 @@ def FeatureLongCalls : SubtargetFeature<"long-calls", "UseLongCalls", "true",
 def FeatureXGOT
     : SubtargetFeature<"xgot", "UseXGOT", "true", "Assume 32-bit GOT">;
 
-def FeatureUseAbsoluteJumpTables
-    : SubtargetFeature<"disable-jump-table-opt", "UseAbsoluteJumpTables", "true", "Disable jump table optimization, use absolute jump tables instead">;
-
 def FeatureUseIndirectJumpsHazard : SubtargetFeature<"use-indirect-jump-hazard",
                                                     "UseIndirectJumpsHazard",
                                                     "true", "Use indirect jump"
                         " guards to prevent certain speculation based attacks">;
-
-def FeaturePCRel : SubtargetFeature<"pcrel", "UsePCRel", "true",
-                                    "Use PC-relative addressing mode for address calculations">;
-def FeatureXformHw110880 : SubtargetFeature<"fix-hw110880", "HasXformHw110880", "true",
-					"Avoid specific 48-bit instruction patterns [hw110880]">;
 
 //===----------------------------------------------------------------------===//
 // Register File, Calling Conv, Instruction Descriptions
@@ -284,10 +257,6 @@ def : Proc<"mips64r6", [FeatureMips64r6]>;
 def : Proc<"octeon", [FeatureMips64r2, FeatureCnMips]>;
 def : Proc<"octeon+", [FeatureMips64r2, FeatureCnMips, FeatureCnMipsP]>;
 def : ProcessorModel<"p5600", MipsP5600Model, [ImplP5600]>;
-def : Proc<"nanomips", [FeatureNanoMips]>;
-def : Proc<"nms1", [FeatureNMS1]>; // Not implemented!
-def : Proc<"i7200", [FeatureNanoMips, FeatureTLB, FeatureEVA,
-		     FeatureMT]>; // FIXME: DSPr3 to be implemented
 
 def MipsAsmParser : AsmParser {
   let ShouldEmitMatchRegisterName = 0;
@@ -295,7 +264,7 @@ def MipsAsmParser : AsmParser {
 
 def MipsAsmParserVariant : AsmParserVariant {
   int Variant = 0;
-  string Name = "mips";
+
   // Recognize hard coded registers.
   string RegisterPrefix = "$";
 }
@@ -304,21 +273,13 @@ def MipsAsmWriter : AsmWriter {
   int PassSubtarget = 1;
 }
 
-def NanoMipsAsmParserVariant : AsmParserVariant {
-  int Variant = 1;
-  string Name = "nanomips";
-  string TokenizingCharacters = "*!";
-  string RegisterPrefix = "$";
-}
-
 def Mips : Target {
   let InstructionSet = MipsInstrInfo;
   let AssemblyWriters = [MipsAsmWriter];
   let AssemblyParsers = [MipsAsmParser];
-  let AssemblyParserVariants = [MipsAsmParserVariant, NanoMipsAsmParserVariant];
+  let AssemblyParserVariants = [MipsAsmParserVariant];
   let AllowRegisterRenaming = 1;
 }
-
 
 //===----------------------------------------------------------------------===//
 // Pfm Counters

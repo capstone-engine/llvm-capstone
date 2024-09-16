@@ -218,7 +218,7 @@ void MacroFusionPredicatorEmitter::run(raw_ostream &OS) {
   // Emit file header.
   emitSourceFileHeader("Macro Fusion Predicators", OS);
 
-  PredicateExpanderLLVM PE(Target.getName());
+  PredicateExpander PE(Target.getName());
   PE.setByRef(false);
   PE.setExpandForMC(false);
 

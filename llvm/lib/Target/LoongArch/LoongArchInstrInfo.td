@@ -218,17 +218,14 @@ def GPRMemAtomic : RegisterOperand<GPR> {
 def grlenimm : Operand<GRLenVT>;
 def imm32 : Operand<GRLenVT> {
   let ParserMatchClass = ImmAsmOperand<"", 32, "">;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm1 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<1>(Imm);}]>{
   let ParserMatchClass = UImmAsmOperand<1>;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm2 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<2>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<2>;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm2_plus1 : Operand<GRLenVT>,
@@ -236,43 +233,35 @@ def uimm2_plus1 : Operand<GRLenVT>,
   let ParserMatchClass = UImmAsmOperand<2, "plus1">;
   let EncoderMethod = "getImmOpValueSub1";
   let DecoderMethod = "decodeUImmOperand<2, 1>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm3 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<3>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<3>;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm4 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<4>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<4>;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm5 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<5>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<5>;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm6 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<6>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<6>;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm7 : Operand<GRLenVT> {
   let ParserMatchClass = UImmAsmOperand<7>;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm8 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<8>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<8>;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 class UImm12Operand : Operand<GRLenVT>,
                       ImmLeaf <GRLenVT, [{return isUInt<12>(Imm);}]> {
   let DecoderMethod = "decodeUImmOperand<12>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm12 : UImm12Operand {
@@ -286,25 +275,21 @@ def uimm12_ori : UImm12Operand {
 def uimm14 : Operand<GRLenVT>,
              ImmLeaf <GRLenVT, [{return isUInt<14>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<14>;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm15 : Operand<GRLenVT>,
              ImmLeaf <GRLenVT, [{return isUInt<15>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<15>;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm5 : Operand<GRLenVT> {
   let ParserMatchClass = SImmAsmOperand<5>;
   let DecoderMethod = "decodeSImmOperand<5>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm8 : Operand<GRLenVT> {
   let ParserMatchClass = SImmAsmOperand<8>;
   let DecoderMethod = "decodeSImmOperand<8>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 foreach I = [1, 2, 3] in {
@@ -312,7 +297,6 @@ def simm8_lsl # I : Operand<GRLenVT> {
   let ParserMatchClass = SImmAsmOperand<8, "lsl" # I>;
   let EncoderMethod = "getImmOpValueAsr<" # I # ">";
   let DecoderMethod = "decodeSImmOperand<8," # I # ">";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 }
 
@@ -320,32 +304,27 @@ def simm9_lsl3 : Operand<GRLenVT> {
   let ParserMatchClass = SImmAsmOperand<9, "lsl3">;
   let EncoderMethod = "getImmOpValueAsr<3>";
   let DecoderMethod = "decodeSImmOperand<9, 3>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm10 : Operand<GRLenVT> {
   let ParserMatchClass = SImmAsmOperand<10>;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm10_lsl2 : Operand<GRLenVT> {
   let ParserMatchClass = SImmAsmOperand<10, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<10, 2>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm11_lsl1 : Operand<GRLenVT> {
   let ParserMatchClass = SImmAsmOperand<11, "lsl1">;
   let EncoderMethod = "getImmOpValueAsr<1>";
   let DecoderMethod = "decodeSImmOperand<11, 1>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 class SImm12Operand : Operand<GRLenVT>,
                       ImmLeaf <GRLenVT, [{return isInt<12>(Imm);}]> {
   let DecoderMethod = "decodeSImmOperand<12>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm12 : SImm12Operand {
@@ -363,7 +342,6 @@ def simm12_lu52id : SImm12Operand {
 def simm13 : Operand<GRLenVT> {
   let ParserMatchClass = SImmAsmOperand<13>;
   let DecoderMethod = "decodeSImmOperand<13>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm14_lsl2 : Operand<GRLenVT>,
@@ -371,13 +349,11 @@ def simm14_lsl2 : Operand<GRLenVT>,
   let ParserMatchClass = SImmAsmOperand<14, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<14, 2>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm16 : Operand<GRLenVT> {
   let ParserMatchClass = SImmAsmOperand<16>;
   let DecoderMethod = "decodeSImmOperand<16>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm16_lsl2 : Operand<GRLenVT>,
@@ -385,19 +361,16 @@ def simm16_lsl2 : Operand<GRLenVT>,
   let ParserMatchClass = SImmAsmOperand<16, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<16, 2>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm16_lsl2_br : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<16, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<16, 2>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 class SImm20Operand : Operand<GRLenVT> {
   let DecoderMethod = "decodeSImmOperand<20>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm20 : SImm20Operand {
@@ -424,7 +397,6 @@ def simm21_lsl2 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<21, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<21, 2>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def SImm26OperandB: AsmOperandClass {
@@ -440,7 +412,6 @@ def simm26_b : Operand<OtherVT> {
   let ParserMatchClass = SImm26OperandB;
   let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<26, 2>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def SImm26OperandBL: AsmOperandClass {
@@ -456,7 +427,6 @@ def simm26_symbol : Operand<GRLenVT> {
   let ParserMatchClass = SImm26OperandBL;
   let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<26, 2>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 // A 32-bit signed immediate with the lowest 16 bits zeroed, suitable for
@@ -480,7 +450,6 @@ def BareSymbol : AsmOperandClass {
 // A bare symbol used in "PseudoLA_*" instructions.
 def bare_symbol : Operand<GRLenVT> {
   let ParserMatchClass = BareSymbol;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 // Standalone (codegen-only) immleaf patterns.

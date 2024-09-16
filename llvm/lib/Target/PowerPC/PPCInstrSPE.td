@@ -452,7 +452,6 @@ def EVFSTSTLT       : EVXForm_3<669, (outs crrc:$crD), (ins sperc:$RA, sperc:$RB
                                "evfststlt $crD, $RA, $RB", IIC_VecGeneral, []>;
 }
 
-let mayLoad = 1 in {
 def EVLDD          : EVXForm_D<769, (outs sperc:$RT), (ins (spe8dis $D, $RA):$dst),
                                "evldd $RT, $dst", IIC_LdStLoad,
                                [(set f64:$RT, (load iaddr:$dst))]>;
@@ -501,7 +500,6 @@ def EVLWWSPLAT     : EVXForm_D<793, (outs sperc:$RT), (ins (spe4dis $D, $RA):$ds
                                "evlwwsplat $RT, $dst", IIC_LdStLoad, []>;
 def EVLWWSPLATX    : EVXForm_1<792, (outs sperc:$RT), (ins (memrr $RA, $RB):$src),
                                "evlwwsplatx $RT, $src", IIC_LdStLoad, []>;
-} // mayLoad = 1
 
 def EVMERGEHI      : EVXForm_1<556, (outs sperc:$RT), (ins sperc:$RA, sperc:$RB),
                                "evmergehi $RT, $RA, $RB", IIC_VecGeneral, []>;
@@ -745,7 +743,6 @@ def EVSRWU         : EVXForm_1<544, (outs sperc:$RT), (ins sperc:$RA, sperc:$RB)
                                "evsrwu $RT, $RA, $RB", IIC_VecGeneral,
                                []>;
 
-let mayStore = 1 in {
 def EVSTDD         : EVXForm_D<801, (outs), (ins sperc:$RT, (spe8dis $D, $RA):$dst),
                                "evstdd $RT, $dst", IIC_LdStStore,
                                [(store f64:$RT, iaddr:$dst)]>;
@@ -778,7 +775,6 @@ def EVSTWWO        : EVXForm_D<829, (outs), (ins sperc:$RT, (spe4dis $D, $RA):$d
                                "evstwwo $RT, $dst", IIC_LdStStore, []>;
 def EVSTWWOX       : EVXForm_1<828, (outs), (ins sperc:$RT, (memrr $RA, $RB):$dst),
                                "evstwwox $RT, $dst", IIC_LdStStore, []>;
-} // mayStore = 1
 
 def EVSUBFSSIAAW   : EVXForm_2<1219, (outs sperc:$RT), (ins sperc:$RA),
                                "evsubfssiaaw $RT, $RA", IIC_VecComplex, []>;
@@ -798,7 +794,6 @@ def EVXOR          : EVXForm_1<534, (outs sperc:$RT), (ins sperc:$RA, sperc:$RB)
                                []>;
 
 let isAsmParserOnly = 1 in {
-let mayLoad = 1 in {
 // Identical to the integer Load/Stores, but to handle floats
 def SPELWZ        : DForm_1<32, (outs spe4rc:$RST), (ins (memri $D, $RA):$addr),
                             "lwz $RST, $addr", IIC_LdStLoad,
@@ -806,16 +801,12 @@ def SPELWZ        : DForm_1<32, (outs spe4rc:$RST), (ins (memri $D, $RA):$addr),
 def SPELWZX       : XForm_1<31,  23, (outs spe4rc:$RST), (ins (memrr $RA, $RB):$addr),
                             "lwzx $RST, $addr", IIC_LdStLoad,
                             [(set f32:$RST, (load xaddr:$addr))]>;
-} // mayLoad = 1
-
-let mayStore = 1 in {
 def SPESTW        : DForm_1<36, (outs), (ins spe4rc:$RST, (memri $D, $RA):$addr),
                             "stw $RST, $addr", IIC_LdStStore,
                             [(store f32:$RST, iaddr:$addr)]>;
 def SPESTWX       : XForm_8<31, 151, (outs), (ins spe4rc:$RST, (memrr $RA, $RB):$addr),
                            "stwx $RST, $addr", IIC_LdStStore,
                            [(store f32:$RST, xaddr:$addr)]>;
-} // mayStore = 1
 }
 
 } // HasSPE

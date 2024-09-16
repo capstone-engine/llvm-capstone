@@ -12,40 +12,25 @@
 
 #include "AsmWriterInst.h"
 #include "CodeGenInstruction.h"
-#include "CodeGenTarget.h"
-#include "Printer.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include <regex>
 
 using namespace llvm;
 
 static bool isIdentChar(char C) { return isAlnum(C) || C == '_'; }
 
 std::string AsmWriterOperand::getCode(bool PassSubtarget) const {
-  bool LangCS = PrinterLLVM::getLanguage() == PRINTER_LANG_CAPSTONE_C;
   if (OperandType == isLiteralTextOperand) {
-    std::string Res;
-    if (Str.size() == 1) {
-      Res = LangCS ? "SStream_concat1(O, '" + Str + "');" : "O << '" + Str + "';";
-      return Res;
-    }
-
-    Res = LangCS ? "SStream_concat0(O, \"" + Str + "\");" : "O << \"" + Str + "\";";
-    return Res;
+    if (Str.size() == 1)
+      return "O << '" + Str + "';";
+    return "O << \"" + Str + "\";";
   }
 
   if (OperandType == isLiteralStatementOperand)
     return Str;
 
-  PassSubtarget = LangCS ? false : PassSubtarget;
-
-  std::string Result;
-  Result = Str;
-
-  Result = Result + "(MI";
-
+  std::string Result = Str + "(MI";
   if (PCRel)
     Result += ", Address";
   if (MIOpNo != ~0U)
