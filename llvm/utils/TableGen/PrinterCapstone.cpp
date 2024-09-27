@@ -1080,6 +1080,7 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
      << "}\n\n";
 
   std::set<std::string> InsnBytesAsUint16 = {"ARM"};
+  std::set<std::string> InsnBytesAsUint24 = {"Xtensa"};
   std::set<std::string> InsnBytesAsUint32 = {"ARM", "AArch64", "LoongArch", "Alpha", "Mips"};
   std::set<std::string> InsnBytesAsUint64 = {"SystemZ"};
   bool MacroDefined = false;
@@ -1088,6 +1089,13 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
        << "DecodeToMCInst(decodeToMCInst_2, fieldFromInstruction_2, uint16_t)\n"
        << "DecodeInstruction(decodeInstruction_2, fieldFromInstruction_2, "
           "decodeToMCInst_2, uint16_t)\n\n";
+    MacroDefined = true;
+  }
+  if (InsnBytesAsUint24.find(TargetName) != InsnBytesAsUint24.end()) {
+    OS << "FieldFromInstruction(fieldFromInstruction_3, uint32_t)\n"
+       << "DecodeToMCInst(decodeToMCInst_3, fieldFromInstruction_3, uint32_t)\n"
+       << "DecodeInstruction(decodeInstruction_3, fieldFromInstruction_3, "
+          "decodeToMCInst_3, uint32_t)\n\n";
     MacroDefined = true;
   }
   if (InsnBytesAsUint32.find(TargetName) != InsnBytesAsUint32.end()) {
