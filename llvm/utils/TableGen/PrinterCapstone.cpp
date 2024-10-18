@@ -22,8 +22,8 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
-#include <unordered_map>
 #include <bitset>
+#include <unordered_map>
 
 static void emitDefaultSourceFileHeader(raw_ostream &OS) {
   OS << "/* Capstone Disassembly Engine, https://www.capstone-engine.org */\n"
@@ -57,7 +57,7 @@ void PrinterCapstone::emitNamespace(std::string const &Name, bool Begin,
 /// `#endif // <ARG>`
 /// Used to control inclusion of a code block via a macro definition.
 void PrinterCapstone::emitPPIf(std::string const &Arg, bool Begin,
-                                    bool Newline) const {
+                               bool Newline) const {
   if (Begin) {
     OS << "#if " << Arg << "\n";
   } else {
@@ -171,15 +171,15 @@ void PrinterCapstone::regInfoEmitEnums(CodeGenTarget const &Target,
   for (const auto &Reg : Registers) {
     OS << "  " << TargetName << "_" << Reg.getName() << " = " << Reg.EnumValue
        << ",\n";
-    CSRegEnum << "\t" << TargetName.upper() << "_REG_" << Reg.getName().upper() << " = "
-              << Reg.EnumValue << ",\n";
+    CSRegEnum << "\t" << TargetName.upper() << "_REG_" << Reg.getName().upper()
+              << " = " << Reg.EnumValue << ",\n";
   }
   assert(Registers.size() == Registers.back().EnumValue &&
          "Register enum value mismatch!");
   OS << "  NUM_TARGET_REGS // " << Registers.size() + 1 << "\n";
   OS << "};\n";
-  CSRegEnum << "\t" << TargetName.upper() << "_REG_ENDING, // " << Registers.size() + 1
-            << "\n";
+  CSRegEnum << "\t" << TargetName.upper() << "_REG_ENDING, // "
+            << Registers.size() + 1 << "\n";
 
   writeFile(TargetName.str() + "GenCSRegEnum.inc", CSRegEnumStr);
 
@@ -294,7 +294,7 @@ void PrinterCapstone::regInfoEmitRegDesc(
        << LaneMaskSeqs.get(RegUnitLaneMasks[i]) << " },\n";
     ++i;
   }
-  OS << "};\n\n";  
+  OS << "};\n\n";
 }
 
 void PrinterCapstone::regInfoEmitRegUnitRoots(
@@ -674,26 +674,27 @@ static std::string handleDefaultArg(const std::string &TargetName,
   static SmallVector<std::string> Default0 = {"0"};
   static SmallVector<std::string> Default1 = {"1"};
   static SmallVector<std::string> Default01 = {"0", "1"};
-  static SmallVector<std::tuple<std::string, SmallVector<std::string>&, int>>
+  static SmallVector<std::tuple<std::string, SmallVector<std::string> &, int>>
       AArch64TemplFuncWithDefaults = {// Default is 1
                                       {"printVectorIndex", Default1, 1},
                                       // Default is false == 0
                                       {"printPrefetchOp", Default0, 1},
                                       // Default is 0
                                       {"printSVERegOp", Default0, 1},
-                                      {"printMatrixIndex", Default1, 1}
-                                      };
-  static SmallVector<std::tuple<std::string, SmallVector<std::string>&, int>>
-      LoongArchTemplFuncWithDefaults = {// Default is 0
-                                      {"decodeSImmOperand", Default0, 2},
-                                      {"decodeUImmOperand", Default0, 2},
-                                      };
-  static SmallVector<std::tuple<std::string, SmallVector<std::string>&, int>>
+                                      {"printMatrixIndex", Default1, 1}};
+  static SmallVector<std::tuple<std::string, SmallVector<std::string> &, int>>
+      LoongArchTemplFuncWithDefaults = {
+          // Default is 0
+          {"decodeSImmOperand", Default0, 2},
+          {"decodeUImmOperand", Default0, 2},
+      };
+  static SmallVector<std::tuple<std::string, SmallVector<std::string> &, int>>
       MipsTemplFuncWithDefaults = {
-                                      {"DecodeSImmWithOffsetAndScale", Default01, 3},
-                                      {"printUImm", Default0, 2},
-                                      };
-  SmallVector<std::tuple<std::string, SmallVector<std::string>&, int>> *TemplFuncWithDefaults;
+          {"DecodeSImmWithOffsetAndScale", Default01, 3},
+          {"printUImm", Default0, 2},
+      };
+  SmallVector<std::tuple<std::string, SmallVector<std::string> &, int>>
+      *TemplFuncWithDefaults;
   if (StringRef(TargetName).upper() == "AARCH64")
     TemplFuncWithDefaults = &AArch64TemplFuncWithDefaults;
   else if (StringRef(TargetName).upper() == "LOONGARCH")
@@ -728,7 +729,8 @@ static std::string handleDefaultArg(const std::string &TargetName,
       NewArg = Regex(">").sub("", NewArg);
       NewArg = Regex(",").sub("_", NewArg);
       while (ActualArgCount < ExpectedArgCount) {
-        assert(DefIdx < DefaultArg.size() && "Out of bounds for predefined template arguments");
+        assert(DefIdx < DefaultArg.size() &&
+               "Out of bounds for predefined template arguments");
         // Add default argument
         if (NewArg.empty()) {
           // e.g. printVectorIndex -> printVectorIndex_1
@@ -741,13 +743,16 @@ static std::string handleDefaultArg(const std::string &TargetName,
           ActualArgCount++;
         }
       }
-      assert(ActualArgCount == ExpectedArgCount && "Inconsistent template arg patching.");
+      assert(ActualArgCount == ExpectedArgCount &&
+             "Inconsistent template arg patching.");
 
       StringRef Match = Matches[0];
       if (Match.ends_with("(")) {
-        Code = Regex(Name + "(<[0-9a-zA-Z,]*>)?\\(").sub(Name + "_" + NewArg + "(", Code);
+        Code = Regex(Name + "(<[0-9a-zA-Z,]*>)?\\(")
+                   .sub(Name + "_" + NewArg + "(", Code);
       } else {
-        Code = Regex(Name + "(<[0-9a-zA-Z,]*>)?$").sub(Name + "_" + NewArg, Code);
+        Code =
+            Regex(Name + "(<[0-9a-zA-Z,]*>)?$").sub(Name + "_" + NewArg, Code);
       }
     }
   }
@@ -772,9 +777,9 @@ static void patchTemplateArgs(const std::string &TargetName,
       return;
     }
     while ((Args.find("true") != std::string::npos) ||
-          (Args.find("false") != std::string::npos) ||
-          (Args.find(",") != std::string::npos) ||
-          (Args.find("'") != std::string::npos)) {
+           (Args.find("false") != std::string::npos) ||
+           (Args.find(",") != std::string::npos) ||
+           (Args.find("'") != std::string::npos)) {
       Args = Regex("true").sub("1", Args);
       Args = Regex("false").sub("0", Args);
       Args = Regex(" *, *").sub("_", Args);
@@ -1046,7 +1051,8 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
      << "        /* Decoding complete. */ \\\n"
      << "        return S; \\\n"
      << "      } else { \\\n"
-     << "        /* LLVM uses a MCInst on the stack, but for our use case, */ \\\n"
+     << "        /* LLVM uses a MCInst on the stack, but for our use case, */ "
+        "\\\n"
      << "        /* it is enough for now to reset the op counter. */ \\\n"
      << "        MCInst_clear(MI); \\\n"
      << "        /* If the decoding was incomplete, skip. */ \\\n"
@@ -1079,9 +1085,10 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
      << "  /* Bogisity detected in disassembler state machine! */ \\\n"
      << "}\n\n";
 
-  std::set<std::string> InsnBytesAsUint16 = {"ARM"};
+  std::set<std::string> InsnBytesAsUint16 = {"ARM", "TriCore"};
   std::set<std::string> InsnBytesAsUint24 = {"Xtensa"};
-  std::set<std::string> InsnBytesAsUint32 = {"ARM", "AArch64", "LoongArch", "Alpha", "Mips"};
+  std::set<std::string> InsnBytesAsUint32 = {"ARM",   "AArch64", "LoongArch",
+                                             "Alpha", "Mips",    "TriCore"};
   std::set<std::string> InsnBytesAsUint64 = {"SystemZ"};
   bool MacroDefined = false;
   if (InsnBytesAsUint16.find(TargetName) != InsnBytesAsUint16.end()) {
@@ -1123,7 +1130,8 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
     MacroDefined = true;
   }
   if (!MacroDefined) {
-    llvm_unreachable("No decoder macro was defined. Please add the missing arch.\n\n");
+    llvm_unreachable(
+        "No decoder macro was defined. Please add the missing arch.\n\n");
   }
 }
 
@@ -1343,7 +1351,8 @@ void PrinterCapstone::decoderEmitterEmitPredicateFunction(
     OS.indent(Indentation) << "}\n";
   } else {
     // No case statement to emit
-    OS.indent(Indentation) << "CS_ASSERT_RET_VAL(0 && \"Invalid index!\", false);\n";
+    OS.indent(Indentation)
+        << "CS_ASSERT_RET_VAL(0 && \"Invalid index!\", false);\n";
   }
   Indentation -= 2;
   OS.indent(Indentation) << "}\n\n";
@@ -1362,10 +1371,12 @@ void PrinterCapstone::decoderEmitterEmitDecoderFunction(
       << "{ \\\n";
   Indentation += 2;
   OS.indent(Indentation) << "*DecodeComplete = true; \\\n";
-  OS.indent(Indentation) << "InsnType tmp; \\\n";
+  if (TargetName != "TriCore") {
+    OS.indent(Indentation) << "InsnType tmp; \\\n";
+  }
   OS.indent(Indentation) << "switch (Idx) { \\\n";
-  OS.indent(Indentation)
-      << "default: CS_ASSERT_RET_VAL(0 && \"Invalid index!\", MCDisassembler_Fail); \\\n";
+  OS.indent(Indentation) << "default: CS_ASSERT_RET_VAL(0 && \"Invalid "
+                            "index!\", MCDisassembler_Fail); \\\n";
   unsigned Index = 0;
   for (const auto &Decoder : Decoders) {
     OS.indent(Indentation) << "case " << Index++ << ": \\\n";
@@ -1391,7 +1402,8 @@ void PrinterCapstone::decoderEmitterEmitSourceFileHeader() const {
 // Backend: AsmWriter
 //-------------------------
 
-void PrinterCapstone::asmWriterEmitSourceFileHeader(RecordKeeper &Records) const {
+void PrinterCapstone::asmWriterEmitSourceFileHeader(
+    RecordKeeper &Records) const {
   emitDefaultSourceFileHeader(OS);
   OS << "#include <capstone/platform.h>\n"
      << "#include \"../../cs_priv.h\"\n\n";
@@ -1582,7 +1594,9 @@ void PrinterCapstone::asmWriterEmitInstruction(
   for (unsigned I = 0, E = FirstInst.Operands.size(); I != E; ++I) {
     if (I != DifferingOperand) {
       // If the operand is the same for all instructions, just print it.
-      OS << "    " << translateToC(TargetName, FirstInst.Operands[I].getCode(PassSubtarget));
+      OS << "    "
+         << translateToC(TargetName,
+                         FirstInst.Operands[I].getCode(PassSubtarget));
     } else {
       // If this is the operand that varies between all of the instructions,
       // emit a switch for just this operand now.
@@ -1665,8 +1679,8 @@ void PrinterCapstone::asmWriterEmitAltIdxSwitch(
         OS << Namespace << "_";
       OS << AltName << ":\n";
       if (R->isValueUnset("FallbackRegAltNameIndex"))
-        OS << "    CS_ASSERT_RET_VAL(*(AsmStrs" << AltName << "+RegAsmOffset" << AltName
-           << "[RegNo-1]) &&\n"
+        OS << "    CS_ASSERT_RET_VAL(*(AsmStrs" << AltName << "+RegAsmOffset"
+           << AltName << "[RegNo-1]) &&\n"
            << "           \"Invalid alt name index for register!\", NULL);\n";
       else {
         OS << "    if (!*(AsmStrs" << AltName << "+RegAsmOffset" << AltName
@@ -1912,7 +1926,8 @@ void PrinterCapstone::asmWriterEmitPrintMC(
        << "                  unsigned PredicateIndex) {\n"
        << "  switch (PredicateIndex) {\n"
        << "  default:\n"
-       << "    CS_ASSERT_RET_VAL(0 && \"Unknown MCOperandPredicate kind\", false);\n"
+       << "    CS_ASSERT_RET_VAL(0 && \"Unknown MCOperandPredicate kind\", "
+          "false);\n"
        << "    return false;\n";
 
     for (unsigned I = 0; I < MCOpPredicates.size(); ++I) {
@@ -1933,9 +1948,9 @@ void PrinterCapstone::asmWriterEmitPrintMC(
 // Backend: Subtarget
 //-------------------------
 
-void PrinterCapstone::subtargetEmitGetMacroFusions(CodeGenTarget &TGT,
-            std::string Target,
-            const std::string &ClassName) const {
+void PrinterCapstone::subtargetEmitGetMacroFusions(
+    CodeGenTarget &TGT, std::string Target,
+    const std::string &ClassName) const {
   return;
 }
 
@@ -2196,8 +2211,8 @@ void PrinterCapstone::subtargetEmitMCSubtargetInfoImpl(
 void PrinterCapstone::subtargetEmitIncludeSTIDesc() const {}
 
 void PrinterCapstone::subtargetEmitDFAPacketizerClass(
-    CodeGenTarget &TGT,
-    std::string const &TargetName, std::string const &ClassName) const {}
+    CodeGenTarget &TGT, std::string const &TargetName,
+    std::string const &ClassName) const {}
 
 void PrinterCapstone::subtargetEmitDFAPacketizerClassEnd() const {}
 
@@ -2337,8 +2352,8 @@ void PrinterCapstone::instrInfoEmitMCInstrDescEnd() const {
 }
 
 void PrinterCapstone::instrInfoEmitMCInstrImplUses(
-  std::vector<std::vector<Record *>> ImplicitLists,
-  std::map<std::vector<Record*>, unsigned> &EmittedLists) const {
+    std::vector<std::vector<Record *>> ImplicitLists,
+    std::map<std::vector<Record *>, unsigned> &EmittedLists) const {
   for (auto &List : ImplicitLists) {
     OS << "    /* " << EmittedLists[List] << " */";
     for (auto &Reg : List)
@@ -2359,12 +2374,12 @@ void PrinterCapstone::instrInfoEmitTargetIndepFlags(
 void PrinterCapstone::instrInfoEmitTSFFlags(uint64_t Value) const {}
 
 void PrinterCapstone::instrInfoEmitUseDefsLists(
-    StringRef TargetName,
-    const CodeGenInstruction &Inst,
+    StringRef TargetName, const CodeGenInstruction &Inst,
     std::map<std::vector<Record *>, unsigned> &EmittedLists,
     std::vector<Record *> const &ImplicitOps) const {}
 
-void PrinterCapstone::instrInfoEmitOperandInfo(OperandInfoListTy &OperandInfoList) const {
+void PrinterCapstone::instrInfoEmitOperandInfo(
+    OperandInfoListTy &OperandInfoList) const {
   unsigned Offset = 0;
   for (auto &OperandInfo : OperandInfoList) {
     OS << "    /* " << Offset << " */";
@@ -2376,11 +2391,11 @@ void PrinterCapstone::instrInfoEmitOperandInfo(OperandInfoListTy &OperandInfoLis
 }
 
 void PrinterCapstone::instrInfoEmitOperandInfoOffset(
-    StringRef TargetName,
-    std::vector<std::string> const &OperandInfo,
+    StringRef TargetName, std::vector<std::string> const &OperandInfo,
     OperandInfoMapTy const &OperandInfoMap) const {
   // We emit the pointer to the MCOperandInfo entry within this array.
-  OS << "&" << TargetName << "Descs.OperandInfo[" << OperandInfoMap.find(OperandInfo)->second << "]";
+  OS << "&" << TargetName << "Descs.OperandInfo["
+     << OperandInfoMap.find(OperandInfo)->second << "]";
 }
 
 void PrinterCapstone::instrInfoEmitRecordEnd(
@@ -2389,9 +2404,8 @@ void PrinterCapstone::instrInfoEmitRecordEnd(
 }
 
 void PrinterCapstone::instrInfoEmitMCInstrDescDecl(
-  std::string const &TargetName,
-  unsigned NumberedInstructionsSize,
-  unsigned OperandInfoSize, unsigned ImplicitListSize) const {
+    std::string const &TargetName, unsigned NumberedInstructionsSize,
+    unsigned OperandInfoSize, unsigned ImplicitListSize) const {
   OS << "typedef struct " << TargetName << "InstrTable {\n";
   OS << "  MCInstrDesc Insts[" << NumberedInstructionsSize << "];\n";
   OS << "  MCOperandInfo OperandInfo[" << OperandInfoSize << "];\n";
@@ -2421,7 +2435,8 @@ void PrinterCapstone::instrInfoEmitMCInstrInfoInitRoutine(
     std::string const &TargetName, unsigned NumberedInstrSize,
     bool HasDeprecationFeatures, bool HasComplexDeprecationInfos) const {}
 
-void PrinterCapstone::instrInfoEmitHeader(std::string const &TargetName) const {}
+void PrinterCapstone::instrInfoEmitHeader(std::string const &TargetName) const {
+}
 
 void PrinterCapstone::instrInfoEmitClassStruct(
     std::string const &ClassName) const {}
@@ -2435,9 +2450,8 @@ void PrinterCapstone::instrInfoEmitExternArrays(
     bool HasComplexDeprecationInfos) const {}
 
 void PrinterCapstone::instrInfoEmitMCInstrInfoInit(
-    std::string const &TargetName,
-    unsigned NumberedInstrSize, bool HasDeprecationFeatures,
-    bool HasComplexDeprecationInfos) const {}
+    std::string const &TargetName, unsigned NumberedInstrSize,
+    bool HasDeprecationFeatures, bool HasComplexDeprecationInfos) const {}
 
 void PrinterCapstone::instrInfoEmitOperandEnum(
     std::map<std::string, unsigned> const &Operands) const {}
@@ -2553,7 +2567,8 @@ void PrinterCapstone::instrInfoEmitRequiredFeatureRefs(
 
 void PrinterCapstone::instrInfoEmitOpcodeChecker() const {}
 
-void PrinterCapstone::instrInfoEmitPredicateVerifier(StringRef const &TargetName) const {}
+void PrinterCapstone::instrInfoEmitPredicateVerifier(
+    StringRef const &TargetName) const {}
 
 void PrinterCapstone::instrInfoEmitEnums(
     CodeGenTarget const &Target, StringRef const &Namespace,
@@ -2726,10 +2741,9 @@ std::string getArchSupplInfoPPC(StringRef const &TargetName,
   return "{{ 0 }}";
 }
 
-
 std::string getArchSupplInfoSystemZ(StringRef const &TargetName,
-                                CodeGenInstruction const *CGI,
-                                raw_string_ostream &PPCFormatEnum) {
+                                    CodeGenInstruction const *CGI,
+                                    raw_string_ostream &PPCFormatEnum) {
   static std::set<std::string> Formats;
   // Get instruction format
   ArrayRef<std::pair<Record *, SMRange>> SCs = CGI->TheDef->getSuperClasses();
@@ -2760,8 +2774,8 @@ std::string getArchSupplInfoSystemZ(StringRef const &TargetName,
 }
 
 std::string getArchSupplInfoLoongArch(StringRef const &TargetName,
-                                CodeGenInstruction const *CGI,
-                                raw_string_ostream &LoongArchFormatEnum) {
+                                      CodeGenInstruction const *CGI,
+                                      raw_string_ostream &LoongArchFormatEnum) {
   static std::set<std::string> Formats;
   // Get instruction format
   ArrayRef<std::pair<Record *, SMRange>> SCs = CGI->TheDef->getSuperClasses();
@@ -2978,14 +2992,18 @@ std::string getCSOperandType(
     std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
   std::string OperandType = getPrimaryCSOperandType(OpRec);
 
-  if ((StringRef(TargetName).upper() == "AARCH64") && OperandType != "CS_OP_MEM") {
+  if ((StringRef(TargetName).upper() == "AARCH64") &&
+      OperandType != "CS_OP_MEM") {
     // The definitions of AArch64 are so flawed, when it comes to memory
-    // operands (they are not labeled as such), that we just search for the op name enclosed in [].
+    // operands (they are not labeled as such), that we just search for the op
+    // name enclosed in [].
     if (Regex("\\[[^]]*\\$" + OpName.str() + "[^[]*]").match(CGI->AsmString)) {
       // Memory operands are always preceded by a ' '.
       // Angle brackets not preceded by a ' ' mark offset operands
-      // of SME/SVE matrix operands. They are bound to the previous operand, so to say.
-      if (Regex("[\t ]\\[[^]]*\\$" + OpName.str() + "[^[]*]").match(CGI->AsmString)) {
+      // of SME/SVE matrix operands. They are bound to the previous operand, so
+      // to say.
+      if (Regex("[\t ]\\[[^]]*\\$" + OpName.str() + "[^[]*]")
+              .match(CGI->AsmString)) {
         return OperandType += " | CS_OP_MEM";
       }
       return OperandType += " | CS_OP_BOUND";
@@ -3271,7 +3289,8 @@ void printInsnOpMapEntry(
   InsnOpMap << "{\n";
   for (OpData const &OD : InsOps) {
     InsnOpMap.indent(2) << "{ " << OD.OpType << ", " << getCSAccess(OD.Access)
-                        << ", " << OD.DataTypes << " }, /* " << OD.OpAsm << " */\n";
+                        << ", " << OD.DataTypes << " }, /* " << OD.OpAsm
+                        << " */\n";
   }
   InsnOpMap.indent(2) << "{ 0 }\n";
   InsnOpMap << "}},\n";
@@ -3425,7 +3444,8 @@ void printInsnAliasEnum(CodeGenTarget const &Target,
     AliasMnemonicsSeen.emplace(NormAliasMnem);
 
     AliasEnum << "\t" + NormAliasMnem + ", // Real instr.: " +
-                     getLLVMInstEnumName(Target.getName().upper(), RealInst) + "\n";
+                     getLLVMInstEnumName(Target.getName().upper(), RealInst) +
+                     "\n";
 
     AliasMnemMap << "\t{ " + NormAliasMnem + ", \"" +
                         normalizedMnemonic(AliasMnemonic, false) + "\" },\n";
@@ -3533,6 +3553,8 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
 
   getInsnPatternMap(Target, InsnPatternMap);
 
+  std::string TargetNameUpper = Target.getName().upper();
+
   // The CS mapping tables, for instructions and their operands,
   // need an entry for every CodeGenInstruction.
   unsigned InsnNum = 0;
@@ -3548,8 +3570,9 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
       MI->Mnemonic = "invalid";
     } else
       MI->Mnemonic = MI->AsmOperands[0].Token;
-    printInsnNameMapEnumEntry(Target.getName().upper(), MI, InsnNameMap, InsnEnum);
-    printFeatureEnumEntry(Target.getName().upper(), Info, CGI, FeatureEnum,
+
+    printInsnNameMapEnumEntry(TargetNameUpper, MI, InsnNameMap, InsnEnum);
+    printFeatureEnumEntry(TargetNameUpper, Info, CGI, FeatureEnum,
                           FeatureNameArray);
     printOpPrintGroupEnum(Target.getName(), CGI, OpGroups);
 
@@ -3772,10 +3795,10 @@ raw_string_ostream &PrinterCapstone::searchableTablesGetOS(StreamType G) const {
 
 void PrinterCapstone::searchableTablesEmitGenericEnum(
     const GenericEnum &Enum) const {
-  // We do not emit enums here, but generate them when we print the mapping tables
-  // Because the table has the type information for its fields,
-  // we have a chance to distinguish between Sys regs, imms and other alias.
-  // The generated enums are written to <ARCH>GenCSSystemOperandsEnum.inc
+  // We do not emit enums here, but generate them when we print the mapping
+  // tables Because the table has the type information for its fields, we have a
+  // chance to distinguish between Sys regs, imms and other alias. The generated
+  // enums are written to <ARCH>GenCSSystemOperandsEnum.inc
 }
 
 void PrinterCapstone::searchableTablesEmitGenericTable(
@@ -3818,10 +3841,10 @@ std::string PrinterCapstone::searchableTablesSearchableFieldType(
       return "uint32_t";
     if (NumBits <= 64)
       return "uint64_t";
-    PrintFatalError(Index.Loc, Twine("In table '") + Table.Name + 
-                                    "' lookup method '" + Index.Name +
-                                    "', key field '" + Field.Name +
-                                    "' of type bits is too large");
+    PrintFatalError(Index.Loc, Twine("In table '") + Table.Name +
+                                   "' lookup method '" + Index.Name +
+                                   "', key field '" + Field.Name +
+                                   "' of type bits is too large");
   } else if (isa<BitRecTy>(Field.RecType)) {
     return "bool";
   } else if (Field.Enum || Field.IsIntrinsic || Field.IsInstruction)
@@ -4080,7 +4103,8 @@ void PrinterCapstone::searchableTablesEmitMapIII(const GenericTable &Table,
     std::string OpName = Repr;
     while (OpName.find("\"") != std::string::npos)
       OpName = Regex("\"").sub("", OpName);
-    EnumName = StringRef(TargetName).upper() + "_" + StringRef(Table.CppTypeName).upper() + "_" +
+    EnumName = StringRef(TargetName).upper() + "_" +
+               StringRef(Table.CppTypeName).upper() + "_" +
                StringRef(OpName).upper();
     Repr = "\"" + OpName + "\", { .raw_val = " + EnumName + " }";
     OutS << Repr;
