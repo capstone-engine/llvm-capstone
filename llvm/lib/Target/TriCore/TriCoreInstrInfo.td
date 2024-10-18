@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 include "TriCoreInstrFormats.td"
+include "TriCoreOperands.td"
 
 //===----------------------------------------------------------------------===//
 // TriCore specific DAG Nodes.
@@ -80,16 +81,6 @@ def TriCoreSelectCC: SDNode<"TriCoreISD::SELECT_CC", SDT_TriCoreSelectCC, []>;
 def load_sym : SDNode<"TriCoreISD::LOAD_SYM", SDTIntUnaryOp>;
 
 def movei32 : SDNode<"TriCoreISD::MOVEi32", SDT_TriCoreMovei32>;
-
-
-def jmptarget : Operand<OtherVT> {
-  let PrintMethod = "printPCRelImmOperand";
-}
-
-// Operand for printing out a condition code.
-def cc : Operand<i32> {
-  let PrintMethod = "printCCOperand";
-}
 
 def isPointer : Predicate<"isPointer() == true">;
 def isnotPointer : Predicate<"isPointer() == false">;
@@ -171,29 +162,6 @@ def imm0_31 : PatLeaf<(imm),
   return val > 0 && val < 32;
 }]>;
 
-//Operands
-def s4imm      : Operand<i32> { let PrintMethod = "printSExtImm<4>";  }
-def s6imm      : Operand<i32> { let PrintMethod = "printSExtImm<6>";  }
-def s8imm      : Operand<i32> { let PrintMethod = "printSExtImm<8>";  }
-def s9imm      : Operand<i32> { let PrintMethod = "printSExtImm<9>";  }
-def s10imm     : Operand<i32> { let PrintMethod = "printSExtImm<10>";  }
-def s16imm     : Operand<i32> { let PrintMethod = "printSExtImm<16>"; }
-def s24imm     : Operand<i32> { let PrintMethod = "printSExtImm<24>"; }
-def u8imm      : Operand<i32> { let PrintMethod = "printZExtImm<8>";  }
-def u4imm      : Operand<i32> { let PrintMethod = "printZExtImm<4>";  }
-def u2imm      : Operand<i32> { let PrintMethod = "printZExtImm<2>";  }
-def u9imm      : Operand<i32> { let PrintMethod = "printZExtImm<9>";  }
-def u16imm     : Operand<i32> { let PrintMethod = "printZExtImm<16>";  }
-
-def oext4imm: Operand<i32> { let PrintMethod = "printOExtImm<4>";  }
-
-def off18imm   : Operand<i32> { let PrintMethod = "printOff18Imm";  }
-
-def disp24imm  : Operand<i32> { let PrintMethod = "printDisp24Imm";  }
-def disp15imm   : Operand<i32> { let PrintMethod = "printDisp15Imm";  }
-def disp8imm   : Operand<i32> { let PrintMethod = "printDisp8Imm";  }
-def disp4imm   : Operand<i32> { let PrintMethod = "printDisp4Imm";  }
-
 def PairAddrRegsOp : RegisterOperand<PairAddrRegs, "printPairAddrRegsOperand">;
 
 //Nodes
@@ -220,6 +188,7 @@ class ISC_A10C<bits<8> op1, string asmstr, Operand TypeC=u8imm>
     : SC<op1, (outs), (ins TypeC:$const8),
       asmstr # " sp, $const8", []>;
 
+let Defs = [A15] in
 class ISC_A15A10C<bits<8> op1, string asmstr, Operand TypeC=u8imm> 
     : SC<op1, (outs), (ins TypeC:$const8),
       asmstr # " a15, [sp]$const8", []>;
@@ -644,11 +613,6 @@ defm CADDN_A: mI_CADDnA_CSUBnA_v110_<0x21, 0x01, 0xA1, 0x01, "caddn.a">;
 class IB<bits<8> op1, string asmstr>
     : B<op1, (outs), (ins disp24imm:$disp24),
         asmstr # " $disp24", []>;
-
-// The target of a 24-bit call instruction.
-def call_target : Operand<i32> {
-  let EncoderMethod = "encodeCallTarget";
-}
 
 class ISB<bits<8> op1, string asmstr>
     : SB<op1, (outs), (ins disp8imm:$disp8), asmstr # " $disp8", []>;
