@@ -2622,9 +2622,11 @@ std::string getImplicitDefs(StringRef const &TargetName,
 }
 
 static inline std::string normalizedMnemonic(StringRef const &Mn,
-                                             const bool Upper = true) {
+                                             const bool Upper = true,
+                                             const bool ReplaceDot = true) {
   auto Mnemonic = Upper ? Mn.upper() : Mn.str();
-  std::replace(Mnemonic.begin(), Mnemonic.end(), '.', '_');
+  if (ReplaceDot)
+    std::replace(Mnemonic.begin(), Mnemonic.end(), '.', '_');
   std::replace(Mnemonic.begin(), Mnemonic.end(), '|', '_');
   std::replace(Mnemonic.begin(), Mnemonic.end(), '+', 'p');
   std::replace(Mnemonic.begin(), Mnemonic.end(), '-', 'm');
@@ -3303,7 +3305,8 @@ void printInsnNameMapEnumEntry(StringRef const &TargetName,
   static std::set<std::string> MnemonicsSeen;
   static std::set<std::string> EnumsSeen;
 
-  std::string Mnemonic = normalizedMnemonic(MI->Mnemonic.str(), false);
+  const bool replace_dot = !TargetName.equals_insensitive("TriCore");
+  std::string Mnemonic = normalizedMnemonic(MI->Mnemonic, false, replace_dot);
   if (MnemonicsSeen.find(Mnemonic) != MnemonicsSeen.end())
     return;
 
