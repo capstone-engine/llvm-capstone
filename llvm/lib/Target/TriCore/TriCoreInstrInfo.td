@@ -188,10 +188,15 @@ class ISC_A10C<bits<8> op1, string asmstr, Operand TypeC=u8imm>
     : SC<op1, (outs), (ins TypeC:$const8),
       asmstr # " sp, $const8", []>;
 
-let Defs = [A15] in
-class ISC_A15A10C<bits<8> op1, string asmstr, Operand TypeC=u8imm> 
-    : SC<op1, (outs), (ins TypeC:$const8),
-      asmstr # " a15, [sp]$const8", []>;
+class ISC_A15A10C<bits<8> op1, string asmstr, Operand TypeC=u8imm, list<dag> pat>
+    : SC<op1, (outs RA:$dst), (ins RA:$r, TypeC:$const8),
+      asmstr # " $dst, [$r]$const8", pat>{
+  bits<4> dst;
+  bits<4> r;
+
+  let dst = 15;
+  let r = 10;
+}
 
 class ISC_D15A10C<bits<8> op1, string asmstr, Operand TypeC=u8imm> 
     : SC<op1, (outs), (ins TypeC:$const8),
@@ -1092,7 +1097,7 @@ defm LD_A: mI_LD_<0x85, 0x02, 0x09, 0x29, 0x26, 0x06, 0x16, "ld.a", RA>;
 defm LD_A: mI_LD_2_<0xB8, 0x64, 0x0C, 0x28, "ld.a", RA, "_v110">, NsRequires<[HasV110]>;
 defm LD_A: mI_LD_2_<0xD4, 0xC4, 0xC8, 0xCC, "ld.a", RA>, Requires<[HasV120_UP]>;
 def LD_A_bol : IBOL_RAaO<0x99, "ld.a", RA>;
-def LD_A_sc  : ISC_A15A10C<0xD8, "ld.a">, Requires<[HasV120_UP]>;
+def LD_A_sc  : ISC_A15A10C<0xD8, "ld.a", u8imm, [(set RA:$dst, (load (add RA:$r, u8imm:$const8)))]>, Requires<[HasV120_UP]>;
 
 defm LD_B: mI_LD_2_<0x98, 0x44, 0x34, 0x08, "ld.b", RD, "_v110">, NsRequires<[HasV110]>;
 defm LD_B: mI_LD_<0x05, 0x00, 0x09, 0x29, 0x20, 0x00, 0x10,"ld.b", RD>;
