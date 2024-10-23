@@ -181,12 +181,16 @@ def immZExt16 : ImmLeaf<i32, [{return Imm == (Imm & 0xffff);}]>;
 /// 16-Bit Opcode Formats
 
 class ISC_D15C<bits<8> op1, string asmstr, Operand TypeC=u8imm> 
-    : SC<op1, (outs), (ins TypeC:$const8),
-      asmstr # " d15, $const8", []>;
+    : SC<op1, (outs RD:$dst), (ins TypeC:$const8),
+      asmstr # " $dst, $const8", []> {
+  bits<4> dst = 15;
+}
 
 class ISC_A10C<bits<8> op1, string asmstr, Operand TypeC=u8imm> 
-    : SC<op1, (outs), (ins TypeC:$const8),
-      asmstr # " sp, $const8", []>;
+    : SC<op1, (outs RA:$dst), (ins TypeC:$const8),
+      asmstr # " $dst, $const8", []> {
+  bits<4> dst = 10;
+}
 
 class ISC_A15A10C<bits<8> op1, string asmstr, Operand TypeC=u8imm, list<dag> pat>
     : SC<op1, (outs RA:$dst), (ins RA:$r, TypeC:$const8),
@@ -199,46 +203,63 @@ class ISC_A15A10C<bits<8> op1, string asmstr, Operand TypeC=u8imm, list<dag> pat
 }
 
 class ISC_D15A10C<bits<8> op1, string asmstr, Operand TypeC=u8imm> 
-    : SC<op1, (outs), (ins TypeC:$const8),
-      asmstr # " d15, [sp]$const8", []>;
+    : SC<op1, (outs RD:$dst), (ins RA:$r, TypeC:$const8),
+      asmstr # " $dst, [$r]$const8", []> {
+      bits<4> dst = 15;
+      bits<4> r = 10;
+}
 
 class ISC_A10CA15<bits<8> op1, string asmstr, Operand TypeC=u8imm> 
-    : SC<op1, (outs), (ins TypeC:$const8),
-      asmstr # " [sp]$const8, a15", []>;
+    : SC<op1, (outs), (ins RA:$rd, TypeC:$const8, RA:$rr),
+      asmstr # " [$rd]$const8, $rr", []> {
+  bits<4> rd = 10;
+  bits<4> rr = 15;
+}
 
 class ISC_A10CD15<bits<8> op1, string asmstr, Operand TypeC=u8imm> 
-    : SC<op1, (outs), (ins TypeC:$const8),
-      asmstr # " [sp]$const8, d15", []>;
+    : SC<op1, (outs), (ins RA:$rd, TypeC:$const8, RD:$rr),
+      asmstr # " [$rd]$const8, $rr", []> {
+  bits<4> rd = 10;
+  bits<4> rr = 15;
+}
 
 class ISC_C<bits<8> op1, string asmstr, Operand TypeC=u8imm> 
     : SC<op1, (outs), (ins TypeC:$const8),
       asmstr # " $const8", []>;
 
-class ISRC_dC<bits<8> op1, string asmstr, RegisterClass RCd=RD, Operand TypeC=s4imm> 
+class ISRC_RC<bits<8> op1, string asmstr, RegisterClass RCd=RD, Operand TypeC=s4imm>
     : SRC<op1, (outs RCd:$d), (ins TypeC:$const4),
           asmstr # " $d, $const4", []>;
 
-class ISRC_dD15C<bits<8> op1, string asmstr, RegisterClass RCd=RD, Operand TypeC=s4imm> 
-    : SRC<op1, (outs RCd:$d), (ins TypeC:$const4),
-      asmstr # " $d, d15, $const4", []>;
+class ISRC_RxC<bits<8> op1, string asmstr, RegisterClass dC=RD, RegisterClass rC=RD, Operand TypeC=s4imm>
+    : SRC<op1, (outs dC:$d), (ins rC:$r, TypeC:$const4),
+      asmstr # " $d, $r, $const4", []> {
+  bits<4> r = 15;
+}
 
-class ISRC_D15dC<bits<8> op1, string asmstr, RegisterClass RCd=RD, Operand TypeC=s4imm> 
-    : SRC<op1, (outs RCd:$d), (ins TypeC:$const4),
-      asmstr # " d15, $d, $const4", []>;
+class ISRC_xRC<bits<8> op1, string asmstr, RegisterClass dC=RD, RegisterClass rC=RD, Operand TypeC=s4imm>
+    : SRC<op1, (outs dC:$dst), (ins rC:$r, TypeC:$const4),
+      asmstr # " $dst, $r, $const4", []> {
+  bits<4> dst = 15;
+}
 
 multiclass mISRR_SRC<bits<8> op_srr, bits<8> op_src, string asmstr,
                      RegisterClass RCd=RD, RegisterClass RC2=RD, Operand Oc=u4imm, string posfix="">{
-  def _srr#posfix: SRR<op_srr, (outs RCd:$d), (ins RC2:$s2),
-                asmstr # " d15, $d, $s2", []>;
-  def _src#posfix: SRC<op_src, (outs RCd:$d), (ins Oc:$const4),
-                asmstr # " d15, $d, $const4", []>;
+  def _srr#posfix: SRR<op_srr, (outs RD:$dst), (ins RCd:$r, RC2:$s2),
+                asmstr # " $dst, $r, $s2", []>{
+    bits<4> dst = 15;
+  }
+  def _src#posfix: SRC<op_src, (outs RD:$dst), (ins RCd:$r, Oc:$const4),
+                asmstr # " $dst, $r, $const4", []>{
+    bits<4> dst = 15;
+  }
 }
 
 multiclass mISRC_a15a<bits<8> op1, bits<8> op2, bits<8> op3,
                         string asmstr> {
-  def _src : ISRC_dC<op1, asmstr>;
-  def _src_a15 : ISRC_dD15C<op2, asmstr>, Requires<[HasV120_UP]>;
-  def _src_15a : ISRC_D15dC<op3, asmstr>;
+  def _src : ISRC_RC<op1, asmstr>;
+  def _src_a15 : ISRC_RxC<op2, asmstr>, Requires<[HasV120_UP]>;
+  def _src_15a : ISRC_xRC<op3, asmstr>;
 }
 
 /// 32-Bit Opcode Formats
@@ -308,13 +329,17 @@ class ISRR_db<bits<8> op1, string asmstr, RegisterClass RCd=RD, RegisterClass RC
     : SRR<op1, (outs RCd:$d), (ins RC2:$s2),
       asmstr # " $d, $s2", []>;
 
-class ISRR_dD15b<bits<8> op1, string asmstr, RegisterClass RCd=RD, RegisterClass RC2=RD>
-    : SRR<op1, (outs RCd:$d), (ins RC2:$s2),
-      asmstr # " $d, d15, $s2", []>;
+class ISRR_RxR<bits<8> op1, string asmstr, RegisterClass RCd=RD, RegisterClass rC=RD, RegisterClass RC2=RD>
+    : SRR<op1, (outs RCd:$d), (ins rC:$r, RC2:$s2),
+      asmstr # " $d, $r, $s2", []> {
+      bits<4> r = 15;
+}
 
-class ISRR_D15db<bits<8> op1, string asmstr, RegisterClass RCd=RD, RegisterClass RC2=RD>
-    : SRR<op1, (outs RCd:$d), (ins RC2:$s2),
-      asmstr # " d15, $d, $s2", []>;
+class ISRR_xRR<bits<8> op1, string asmstr, RegisterClass dC=RD, RegisterClass RCd=RD, RegisterClass RC2=RD>
+    : SRR<op1, (outs dC:$dst), (ins RCd:$r, RC2:$s2),
+      asmstr # " $dst, $r, $s2", []> {
+  bits<4> dst = 15;
+}
 
 
 multiclass mISRR_s<bits<8> op1, string asmstr>{
@@ -324,8 +349,8 @@ multiclass mISRR_s<bits<8> op1, string asmstr>{
 multiclass mISRR_a15a<bits<8> op1, bits<8> op2, bits<8> op3,
                     string asmstr>{
   def _srr     : ISRR_db<op1, asmstr>;
-  def _srr_a15 : ISRR_dD15b<op2, asmstr>, Requires<[HasV120_UP]>;
-  def _srr_15a : ISRR_D15db<op3, asmstr>;
+  def _srr_a15 : ISRR_RxR<op2, asmstr>, Requires<[HasV120_UP]>;
+  def _srr_15a : ISRR_xRR<op3, asmstr>;
 }
 
 class IBIT<bits<8> op1, bits<2> op2, string asmstr>
@@ -425,7 +450,7 @@ defm ADD : mIRR_RC<0x0B, 0x00, 0x8B, 0x00, "add">,
 multiclass mIRR_SRC_SRR__A<bits<8> rr1, bits<8> rr2, bits<8> src1, bits<8> srr1,
                         string asmstr> {
   def _rr : IRR_dab<rr1, rr2, asmstr, RA, RA, RA>;
-  def _src : ISRC_dC<src1, asmstr, RA>, Requires<[HasV120_UP]>;
+  def _src : ISRC_RC<src1, asmstr, RA>, Requires<[HasV120_UP]>;
   def _srr : ISRR_db<srr1, asmstr, RA, RA>, Requires<[HasV120_UP]>;
 }
 
@@ -458,9 +483,11 @@ def ADDS_B_rr : IRR_dab<0x0B, 0x42, "adds.b">, NsRequires<[HasV110]>;
 def ADDSC_A_srrs_v110 : SRRS<0x10, (outs RA:$d), (ins RD:$s2, u2imm:$n),
                             "addsc.a $d, $s2, $n", []>
                       , NsRequires<[HasV110]>;
-def ADDSC_A_srrs: SRRS<0x10, (outs RA:$d), (ins RA:$s2, u2imm:$n),
-                      "addsc.a $d, $s2, d15, $n", []>
-                , Requires<[HasV120_UP]>;
+def ADDSC_A_srrs: SRRS<0x10, (outs RA:$d), (ins RA:$s2, RD:$r, u2imm:$n),
+                      "addsc.a $d, $s2, $r, $n", []>
+                , Requires<[HasV120_UP]> {
+  bits<4> r = 15;
+}
 
 def ADDSC_A_rr_v110: IRR_dabn<0x01, 0x60, "addsc.a", RA, RA, RD>, NsRequires<[HasV110]>;
 def ADDSC_A_rr     : IRR_dban<0x01, 0x60, "addsc.a", RA, RD, RA>, Requires<[HasV120_UP]>;
@@ -587,11 +614,11 @@ multiclass mIRCR<bits<8>op1, bits<3> op2, bits<8>op3, bits<3> op4, string asmstr
 }
 
 /// CADD Instructions
-def CADD_srr_v110 : ISRR_dD15b<0x0A, "cadd">, NsRequires<[HasV110]>;
+def CADD_srr_v110 : ISRR_RxR<0x0A, "cadd">, NsRequires<[HasV110]>;
 
 def CADD_rcr : IRCR<0xAB, 0x00, "cadd">;
 def CADD_rrr : IRRR<0x2B, 0x00, "cadd">;
-def CADD_src : ISRC_dD15C<0x8A, "cadd">;
+def CADD_src : ISRC_RxC<0x8A, "cadd">;
 
 multiclass mI_CADDnA_CSUBnA_v110_<bits<8> rrr1, bits<4> rrr2, bits<8> rcr1, bits<3> rcr2, string asmstr>{
   def _rrr_v110: IRRR<rrr1, rrr2, asmstr, RA, RA, RA, RD>, NsRequires<[HasV110]>;
@@ -604,12 +631,12 @@ multiclass mI_CADDnA_CSUBnA_v110_<bits<8> rrr1, bits<4> rrr2, bits<8> rcr1, bits
 
 defm CADD_A: mI_CADDnA_CSUBnA_v110_<0x21, 0x00, 0xA1, 0x00, "cadd.a">;
 
-def CADDN_srr_v110  : ISRR_dD15b<0x4A, "caddn">
+def CADDN_srr_v110  : ISRR_RxR<0x4A, "caddn">
                     , NsRequires<[HasV110]>;
 
 def CADDN_rcr : IRCR<0xAB, 0x01, "caddn">;
 def CADDN_rrr : IRRR<0x2B, 0x01, "caddn">;
-def CADDN_src : ISRC_dD15C<0xCA, "caddn">;
+def CADDN_src : ISRC_RxC<0xCA, "caddn">;
 
 defm CADDN_A: mI_CADDnA_CSUBnA_v110_<0x21, 0x01, 0xA1, 0x01, "caddn.a">;
 
@@ -623,7 +650,9 @@ class ISB<bits<8> op1, string asmstr>
     : SB<op1, (outs), (ins disp8imm:$disp8), asmstr # " $disp8", []>;
 
 class ISB_D15D<bits<8> op1, string asmstr>
-    : SB<op1, (outs), (ins disp8imm:$disp8), asmstr # " d15, $disp8", []>;
+    : SB<op1, (outs RD:$dst), (ins disp8imm:$disp8), asmstr # " $dst, $disp8", []> {
+  bits<4> dst = 15;
+}
 
 let isCall = 1,
     Defs = [A11],
@@ -647,10 +676,10 @@ def CLS_B_rr_v110 : IRR_a<0x0F, 0x3E, "cls.b">, NsRequires<[HasV110]>;
 defm CLZ : mI_H<0x0F, 0x1B, 0x0F, 0x7C, "clz">;
 def CLZ_B_rr_v110 : IRR_a<0x0F, 0x3C, "clz.b">, NsRequires<[HasV110]>;
 
-def CMOV_src  : ISRC_dD15C<0xAA, "cmov">;
-def CMOV_srr  : ISRR_dD15b<0x2A, "cmov">;
-def CMOVN_src : ISRC_dD15C<0xEA, "cmovn">;
-def CMOVN_srr : ISRR_dD15b<0x6A, "cmovn">;
+def CMOV_src  : ISRC_RxC<0xAA, "cmov">;
+def CMOV_srr  : ISRR_RxR<0x2A, "cmov">;
+def CMOVN_src : ISRC_RxC<0xEA, "cmovn">;
+def CMOVN_srr : ISRR_RxR<0x6A, "cmovn">;
 
 // A[b], off10, E[a] (BO)(Base + Short Offset Addressing Mode)
 class IBO_bsoAbOEa<bits<8> op1, bits<6> op2, string asmstr> 
@@ -814,8 +843,8 @@ multiclass mIB_H_W<bits<8> brr1, bits<8> brr2,
 
 defm EQ    : mIRR_RC<0x0B, 0x10, 0x8B, 0x10, "eq">
            , mIB_H_W<0x0B, 0x50, 0x0B, 0x70, 0x0B, 0x90, "eq">;
-def EQ_src : ISRC_D15dC<0xBA, "eq">;
-def EQ_srr : ISRR_D15db<0x3A, "eq">;
+def EQ_src : ISRC_xRC<0xBA, "eq">;
+def EQ_srr : ISRR_xRR<0x3A, "eq">;
 def EQ_A_rr: IRR_dab<0x01, 0x40, "eq.a", RD, RA, RA>;
 
 defm EQANY_B : mIRR_RC<0x0B, 0x56, 0x8B, 0x56, "eqany.b">;
@@ -901,13 +930,17 @@ class IBRC<bits<8> op1, bits<1> op2, string asmstr, Operand TypeC=u4imm>
       !strconcat(asmstr, " $s1, $const4, $disp15"), []>;
 
 class ISBC<bits<8> op1, string asmstr>
-    : SBC<op1, (outs), (ins disp4imm:$disp4, s4imm:$const4),
-      !strconcat(asmstr, " d15, $const4, $disp4"), []>;
+    : SBC<op1, (outs RD:$dst), (ins disp4imm:$disp4, s4imm:$const4),
+      !strconcat(asmstr, " $dst, $const4, $disp4"), []> {
+  bits<4> dst = 15;
+}
 
 // D[15], D[b], disp4 (SBR)
 class ISBR_15b<bits<8> op1, string asmstr>
-    : SBR<op1, (outs), (ins RD:$s2, disp4imm:$disp4),
-      !strconcat(asmstr, " d15, $s2, $disp4"), []>;
+    : SBR<op1, (outs RD:$dst), (ins RD:$s2, disp4imm:$disp4),
+      !strconcat(asmstr, " $dst, $s2, $disp4"), []>{
+  bits<4> dst = 15;
+}
 // D[b], disp4 (SBR)
 class ISBR_b<bits<8> op1, string asmstr, RegisterClass RC2=RD>
     : SBR<op1, (outs), (ins RC2:$s2, disp4imm:$disp4),
@@ -987,16 +1020,20 @@ multiclass mI_JnZ_<bits<8> sb, bits<8> sbr,
                    string asmstr> {
   def _sb_v110  : ISB_D15D<sbv, asmstr>, NsRequires<[HasV110]>;
   def _sbr_v110 : ISBR_b<sbrv, asmstr>, NsRequires<[HasV110]>;
-  def _T_sbrn_v110: SBRN<sbrnv, (outs), (ins i32imm:$n, disp4imm:$disp4), asmstr # ".t d15, $n, $disp4", []>
-             , NsRequires<[HasV110]>;
+  def _T_sbrn_v110: SBRN<sbrnv, (outs RD:$dst), (ins i32imm:$n, disp4imm:$disp4), asmstr # ".t $dst, $n, $disp4", []>
+             , NsRequires<[HasV110]>{
+    bits<4> dst = 15;
+}
 
   def _sb  : ISB_D15D<sb, asmstr>, Requires<[HasV120_UP]>;
   def _sbr : ISBR_b<sbr, asmstr>, Requires<[HasV120_UP]>;
   def _A_brr : IBRR_1<abrr1, abrr2, asmstr # ".a">;
   def _A_sbr : ISBR_b<asbr, asmstr # ".a", RA>;
   def _T_brn : BRN<brn1, brn2, (outs), (ins RD:$s1, i32imm:$n, disp15imm:$disp15), asmstr # ".t $s1, $n, $disp15", []>;
-  def _T_sbrn: SBRN<sbrn, (outs), (ins i32imm:$n, disp4imm:$disp4), asmstr # ".t d15, $n, $disp4", []>
-             , Requires<[HasV120_UP]>;
+  def _T_sbrn: SBRN<sbrn, (outs RD:$dst), (ins i32imm:$n, disp4imm:$disp4), asmstr # ".t $dst, $n, $disp4", []>
+             , Requires<[HasV120_UP]>{
+    bits<4> dst = 15;
+  }
 }
 
 defm JNZ : mI_JnZ_<0xEE, 0xF6, 0xBD, 0x01, 0x7C, 0x6F, 0x01, 0xAE, 0xAE, 0xDE, 0x4E, "jnz">;
@@ -1029,24 +1066,22 @@ class ISLR_pos<bits<8> op1, string asmstr, RegisterClass dc>
       asmstr # " $d, [${s2}+]", []>;
 
 class ISLRO<bits<8> op1, string asmstr, RegisterClass dc>
-    : SLRO<op1, (outs dc:$d), (ins u4imm:$off4),
-      asmstr # " $d, [a15]$off4", []>;
+    : SLRO<op1, (outs dc:$d), (ins RA:$r, u4imm:$off4),
+      asmstr # " $d, [$r]$off4", []> {
+  bits<4> r = 15;
+}
 
-class ISRO_A15RO<bits<8> op1, string asmstr, RegisterClass s2c>
-    : SRO<op1, (outs), (ins s2c:$s2, u4imm:$off4),
-      asmstr # " a15, [$s2]$off4", []>;
+class ISRO_ROx<bits<8> op1, string asmstr, RegisterClass s2c, RegisterClass rClass>
+    : SRO<op1, (outs), (ins s2c:$s2, u4imm:$off4, rClass:$r),
+      asmstr # " [$s2]$off4, $r", []> {
+  bits<4> r = 15;
+}
 
-class ISRO_ROA15<bits<8> op1, string asmstr, RegisterClass s2c>
-    : SRO<op1, (outs), (ins s2c:$s2, u4imm:$off4),
-      asmstr # " [$s2]$off4, a15", []>;
-
-class ISRO_D15RO<bits<8> op1, string asmstr, RegisterClass s2c>
-    : SRO<op1, (outs), (ins s2c:$s2, u4imm:$off4),
-      asmstr # " d15, [$s2]$off4", []>;
-
-class ISRO_ROD15<bits<8> op1, string asmstr, RegisterClass s2c>
-    : SRO<op1, (outs), (ins s2c:$s2, u4imm:$off4),
-      asmstr # " [$s2]$off4, d15", []>;
+class ISRO_xRO<bits<8> op1, string asmstr, RegisterClass dstClass,RegisterClass s2c>
+    : SRO<op1, (outs dstClass:$dst), (ins s2c:$s2, u4imm:$off4),
+      asmstr # " $dst, [$s2]$off4", []> {
+  bits<4> dst = 15;
+}
 
 // A|D[a], A[b], off10 (BO) (Base + Short Offset Addressing Mode)
 class IBO_RAbso<bits<8> op1, bits<6> op2, string asmstr, RegisterClass dc> 
@@ -1089,8 +1124,7 @@ multiclass mI_LD_2_<bits<8> slr, bits<8> slrp, bits<8> slro, bits<8> sro,
   def _slr # posfix: ISLR<slr, asmstr, RC>;
   def _slr_post # posfix: ISLR_pos<slrp, asmstr, RC>;
   def _slro # posfix: ISLRO<slro, asmstr, RC>;
-  if !eq(RC, RD) then def _sro # posfix: ISRO_D15RO<sro, asmstr, RA>;
-  if !eq(RC, RA) then def _sro # posfix: ISRO_A15RO<sro, asmstr, RA>;
+  def _sro # posfix: ISRO_xRO<sro, asmstr, RC, RA>;
 }
 
 defm LD_A: mI_LD_<0x85, 0x02, 0x09, 0x29, 0x26, 0x06, 0x16, "ld.a", RA>;
@@ -1315,7 +1349,7 @@ def MOV_rr_eab : IRR_dab<0x0B, 0x81, "mov", RE>, Requires<[HasV160_UP]>;
 def MOV_sc_v110: ISC_D15C<0xC6, "mov">, NsRequires<[HasV110]>;
 def MOV_sc : ISC_D15C<0xDA, "mov">, Requires<[HasV120_UP]>;
 
-def MOV_src: ISRC_dC<0x82, "mov">;
+def MOV_src: ISRC_RC<0x82, "mov">;
 def MOV_src_e: ISRC_1<0xD2, "mov", RE>, Requires<[HasV160_UP]>;
 
 def MOV_srr  : ISRR_db<0x02, "mov">;
@@ -1327,7 +1361,7 @@ multiclass mI_MOV_srr<bits<8> srr110,bits<8> srr1, string asmstr, RegisterClass 
 
 multiclass mI_MOVA_<bits<8> rr1, bits<8> rr2, bits<8> src1, bits<8> srr110,bits<8> srr1, string asmstr> {
   def _rr : IRR_b<rr1, rr2, asmstr, RA>;
-  def _src: ISRC_dC<src1, asmstr, RA, u4imm>, Requires<[HasV120_UP]>;
+  def _src: ISRC_RC<src1, asmstr, RA, u4imm>, Requires<[HasV120_UP]>;
   defm "" : mI_MOV_srr<srr110, srr1, asmstr>;
 }
 
@@ -1657,22 +1691,19 @@ defm ST_Q  : mI_ST_<0x65, 0x00, 0x89, 0xA9, 0x28, 0x08, 0x18, "st.q", RD>;
 multiclass mI_ST_2_<bits<8> sro, bits<8> ssr, bits<8> ssrpos, bits<8> ssro,
                              bits<8> srov, bits<8> ssrv, bits<8> ssrposv, bits<8> ssrov,
                              string asmstr,  RegisterClass RC>{
-  if !eq(RC,RD) then {
-    def _sro_v110: ISRO_ROD15<srov, asmstr, RA>, NsRequires<[HasV110]>;
-    def _sro  : ISRO_ROD15<sro, asmstr, RA>, Requires<[HasV120_UP]>;
-  } else if !eq(RC,RA) then {
-    def _sro_v110: ISRO_ROA15<srov, asmstr, RA>, NsRequires<[HasV110]>;
-    def _sro  : ISRO_ROA15<sro, asmstr, RA>, Requires<[HasV120_UP]>;
-  }
+  def _sro_v110: ISRO_ROx<srov, asmstr, RA, RC>, NsRequires<[HasV110]>;
+  def _sro  : ISRO_ROx<sro, asmstr, RA, RC>, Requires<[HasV120_UP]>;
   def _ssr_v110    : SSR<ssrv, (outs RA:$d), (ins RC:$s1),
                         asmstr # " [$d], $s1", []>
                   , NsRequires<[HasV110]>;
   def _ssr_pos_v110: SSR<ssrposv, (outs RA:$d), (ins RC:$s1),
                         asmstr # " [${d}+], $s1", []>
                   , NsRequires<[HasV110]>;
-  def _ssro_v110: SSRO<ssrov, (outs), (ins RC:$s1, u4imm:$off4),
-                      asmstr # " [a15]$off4, $s1", []>
-                , NsRequires<[HasV110]>;
+  def _ssro_v110: SSRO<ssrov, (outs RA:$dst), (ins RC:$s1, u4imm:$off4),
+                      asmstr # " [$dst]$off4, $s1", []>
+                , NsRequires<[HasV110]> {
+  bits<4> dst = 15;
+}
 
   def _ssr     : SSR<ssr, (outs RA:$d), (ins RC:$s1),
                      asmstr # " [$d], $s1", []>
@@ -1680,9 +1711,11 @@ multiclass mI_ST_2_<bits<8> sro, bits<8> ssr, bits<8> ssrpos, bits<8> ssro,
   def _ssr_pos : SSR<ssrpos, (outs RA:$d), (ins RC:$s1),
                      asmstr # " [${d}+], $s1", []>
               , Requires<[HasV120_UP]>;
-  def _ssro    : SSRO<ssro, (outs), (ins RC:$s1, u4imm:$off4),
-                      asmstr # " [a15]$off4, $s1", []>
-              , Requires<[HasV120_UP]>;
+  def _ssro    : SSRO<ssro, (outs), (ins RA:$r, RC:$s1, u4imm:$off4),
+                      asmstr # " [$r]$off4, $s1", []>
+              , Requires<[HasV120_UP]> {
+    bits<4> r = 15;
+  }
 }
 
 def ST_A_bol : IBOL_AbOR<0xB5, "st.a", RA>, Requires<[HasV160_UP]>;
