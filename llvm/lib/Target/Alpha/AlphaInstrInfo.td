@@ -401,17 +401,17 @@ def : Pat<(setune GPRC:$X, GPRC:$Y), (CMPEQi (CMPEQ GPRC:$X, GPRC:$Y), 0)>;
 def : Pat<(setune GPRC:$X, immUExt8:$Y), (CMPEQi (CMPEQ GPRC:$X, immUExt8:$Y), 0)>;
 
 
-let isReturn = 1, isTerminator = 1, isBarrier = 1, Ra = 31, Rb = 26, disp = 1, Uses = [R26] in {
+let isReturn = 1, isTerminator = 1, isBarrier = 1, RA = 31, RB = 26, DISP = 1, Uses = [R26] in {
   def RETDAG : MbrForm< 0x1A, 0x02, (ins), "ret $$31,($$26),1", s_jsr>; //Return from subroutine
   let DecoderNamespace = "Ret" in
   def RETDAGp : MbrpForm< 0x1A, 0x02, (ins), "ret $$31,($$26),1", [(retflag)], s_jsr>; //Return from subroutine
 }
 
-let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1, Ra = 31, disp = 0 in
+let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1, RA = 31, DISP = 0 in
 def JMP : MbrpForm< 0x1A, 0x00, (ins GPRC:$RS), "jmp $$31,{$RS},0", 
           [(brind GPRC:$RS)], s_jsr>; //Jump
 
-let isCall = 1, Ra = 26,
+let isCall = 1, RA = 26,
     Defs = [R0, R1, R2, R3, R4, R5, R6, R7, R8, R16, R17, R18, R19,
             R20, R21, R22, R23, R24, R25, R26, R27, R28, R29,
             F0, F1,
@@ -419,7 +419,7 @@ let isCall = 1, Ra = 26,
             F20, F21, F22, F23, F24, F25, F26, F27, F28, F29, F30], Uses = [R29] in {
     def BSR : BFormD<0x34, "bsr $$26,$$$DISP ..ng", [], s_jsr>; //Branch to subroutine
 }
-let isCall = 1, Ra = 26, Rb = 27, disp = 0,
+let isCall = 1, RA = 26, RB = 27, DISP = 0,
     Defs = [R0, R1, R2, R3, R4, R5, R6, R7, R8, R16, R17, R18, R19,
             R20, R21, R22, R23, R24, R25, R26, R27, R28, R29,
             F0, F1,
@@ -428,7 +428,7 @@ let isCall = 1, Ra = 26, Rb = 27, disp = 0,
     def JSR : MbrForm< 0x1A, 0x01, (ins), "jsr $$26,($$27),0", s_jsr>; //Jump to subroutine
 }
 
-let isCall = 1, Ra = 23, Rb = 27, disp = 0,
+let isCall = 1, RA = 23, RB = 27, DISP = 0,
     Defs = [R23, R24, R25, R27, R28], Uses = [R24, R25, R27] in
   def JSRs : MbrForm< 0x1A, 0x01, (ins), "jsr $$23,($$27),0", s_jsr>; //Jump to div or rem
 
@@ -900,7 +900,7 @@ class br_fcc<bits<6> opc, string asmstr>
     !strconcat(asmstr, " $R,$dst"),  s_fbr>;
 
 let isBranch = 1, isTerminator = 1, hasCtrlDep = 1 in {
-let Ra = 31, isBarrier = 1 in
+let RA = 31, isBarrier = 1 in
 def BR : BFormD<0x30, "br $$31,$DISP", [(br bb:$DISP)], s_ubr>;
 
 def COND_BRANCH_I : BFormN<0, (ins u64imm:$opc, GPRC:$R, target:$dst), 
