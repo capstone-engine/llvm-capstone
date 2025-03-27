@@ -798,14 +798,21 @@ static void patchPrintOperandAddr(std::string &Decoder) {
   bool PrintOperand = Decoder.find("printOperand(") != std::string::npos;
   bool PrintAdrLabelOperand =
       Decoder.find("printAdrLabelOperand") != std::string::npos;
-  if (ContainsAddress) {
-    if (PrintOperand) {
-      Decoder = Regex("printOperand\\(").sub("printOperandAddr(", Decoder);
-    } else if (PrintAdrLabelOperand) {
-      Decoder = Regex("printAdrLabelOperand")
-                    .sub("printAdrLabelOperandAddr", Decoder);
-    }
+  if (!ContainsAddress) {
+    return;
   }
+  StringRef Find;
+  StringRef Replace;
+  if (PrintOperand) {
+    Find = "printOperand\\(([^\n]+Address.+)";
+    Replace = "printOperandAddr(\\1";
+  } else if (PrintAdrLabelOperand) {
+    Find = "printAdrLabelOperand([^\n]+Address.+)";
+    Replace = "printAdrLabelOperandAddr\\1";
+  } else {
+    llvm_unreachable("Unhandled printOperand function.");
+  }
+  Decoder = Regex(Find).sub(Replace, Decoder);
 }
 
 std::string PrinterCapstone::translateToC(std::string const &TargetName,
@@ -815,7 +822,7 @@ std::string PrinterCapstone::translateToC(std::string const &TargetName,
   patchNullptr(PatchedCode);
   patchIsGetImmReg(PatchedCode);
   patchTemplateArgs(TargetName, PatchedCode);
-  if (TargetName == "ARM") {
+  if (TargetName == "ARM" || TargetName == "Alpha") {
     patchPrintOperandAddr(PatchedCode);
   }
   return PatchedCode;
