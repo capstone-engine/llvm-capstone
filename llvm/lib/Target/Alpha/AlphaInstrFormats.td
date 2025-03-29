@@ -38,33 +38,33 @@ class MForm<bits<6> opcode, bit load, string asmstr, list<dag> pattern, InstrIti
   let canFoldAsLoad = load;
   let Defs = [R28]; //We may use this for frame index calculations, so reserve it here
 
-  bits<5> Ra;
-  bits<16> disp;
-  bits<5> Rb;
+  bits<5> RA;
+  bits<16> DISP;
+  bits<5> RB;
 
-  let Inst{25-21} = Ra;
-  let Inst{20-16} = Rb;
-  let Inst{15-0} = disp;
+  let Inst{25-21} = RA;
+  let Inst{20-16} = RB;
+  let Inst{15-0} = DISP;
 }
 class MfcForm<bits<6> opcode, bits<16> fc, string asmstr, InstrItinClass itin> 
         : I<opcode, asmstr, itin> {    
-  bits<5> Ra;
+  bits<5> RA;
 
   let OutOperandList = (outs GPRC:$RA);
   let InOperandList = (ins);
-  let Inst{25-21} = Ra;
+  let Inst{25-21} = RA;
   let Inst{20-16} = 0;
   let Inst{15-0} = fc;
 }
 class MfcForm2<bits<6> opcode, bits<16> fc, string asmstr, InstrItinClass itin> 
         : I<opcode, asmstr, itin> {    
-  bits<5> Ra;
-  bits<5> Rb;
+  bits<5> RA;
+  bits<5> RB;
 
   let OutOperandList = (outs GPRC:$RA);
   let InOperandList = (ins GPRC:$RB);
-  let Inst{25-21} = Ra;
-  let Inst{20-16} = Rb;
+  let Inst{25-21} = RA;
+  let Inst{20-16} = RB;
   let Inst{15-0} = fc;
 }
 class MfcPForm<bits<6> opcode, bits<16> fc, string asmstr, InstrItinClass itin> 
@@ -78,32 +78,32 @@ class MfcPForm<bits<6> opcode, bits<16> fc, string asmstr, InstrItinClass itin>
 
 class MbrForm<bits<6> opcode, bits<2> TB, dag OL, string asmstr, InstrItinClass itin>
     : I<opcode, asmstr, itin> {
-  bits<5> Ra;
-  bits<5> Rb;
-  bits<14> disp;
+  bits<5> RA;
+  bits<5> RB;
+  bits<14> DISP;
 
   let OutOperandList = (outs);
   let InOperandList = OL;
 
-  let Inst{25-21} = Ra;
-  let Inst{20-16} = Rb;
+  let Inst{25-21} = RA;
+  let Inst{20-16} = RB;
   let Inst{15-14} = TB;
-  let Inst{13-0} = disp;
+  let Inst{13-0} = DISP;
 }
 class MbrpForm<bits<6> opcode, bits<2> TB, dag OL, string asmstr, list<dag> pattern, InstrItinClass itin>
     : I<opcode, asmstr, itin> {
   let Pattern=pattern;
-  bits<5> Ra;
-  bits<5> Rb;
-  bits<14> disp;
+  bits<5> RA;
+  bits<5> RB;
+  bits<14> DISP;
 
   let OutOperandList = (outs);
   let InOperandList = OL;
 
-  let Inst{25-21} = Ra;
-  let Inst{20-16} = Rb;
+  let Inst{25-21} = RA;
+  let Inst{20-16} = RB;
   let Inst{15-14} = TB;
-  let Inst{13-0} = disp;
+  let Inst{13-0} = DISP;
 }
 
 
@@ -113,11 +113,11 @@ class BFormN<bits<6> opcode, dag OL, string asmstr, InstrItinClass itin>
   let OutOperandList = (outs);
   let InOperandList = OL;
   bits<64> Opc; //dummy
-  bits<5> Ra;
-  bits<21> disp;
+  bits<5> RA;
+  bits<21> dst;
 
-  let Inst{25-21} = Ra;
-  let Inst{20-0} = disp;
+  let Inst{25-21} = RA;
+  let Inst{20-0} = dst;
 }
 }
 
@@ -127,11 +127,11 @@ class BFormD<bits<6> opcode, string asmstr, list<dag> pattern, InstrItinClass it
   let Pattern = pattern;
   let OutOperandList = (outs);
   let InOperandList = (ins target:$DISP);
-  bits<5> Ra;
-  bits<21> disp;
+  bits<5> RA;
+  bits<21> DISP;
 
-  let Inst{25-21} = Ra;
-  let Inst{20-0} = disp;
+  let Inst{25-21} = RA;
+  let Inst{20-0} = DISP;
 }
 
 //3.3.3
@@ -141,17 +141,17 @@ class OForm<bits<6> opcode, bits<7> fun, string asmstr, list<dag> pattern, Instr
   let OutOperandList = (outs GPRC:$RC);
   let InOperandList = (ins GPRC:$RA, GPRC:$RB);
 
-  bits<5> Rc;
-  bits<5> Ra;
-  bits<5> Rb;
+  bits<5> RC;
+  bits<5> RA;
+  bits<5> RB;
   bits<7> Function = fun;
 
-  let Inst{25-21} = Ra;
-  let Inst{20-16} = Rb;
+  let Inst{25-21} = RA;
+  let Inst{20-16} = RB;
   let Inst{15-13} = 0;
   let Inst{12} = 0;
   let Inst{11-5} = Function;
-  let Inst{4-0} = Rc;
+  let Inst{4-0} = RC;
 }
 
 class OForm2<bits<6> opcode, bits<7> fun, string asmstr, list<dag> pattern, InstrItinClass itin> 
@@ -160,16 +160,16 @@ class OForm2<bits<6> opcode, bits<7> fun, string asmstr, list<dag> pattern, Inst
   let OutOperandList = (outs GPRC:$RC);
   let InOperandList = (ins GPRC:$RB);
 
-  bits<5> Rc;
-  bits<5> Rb;
+  bits<5> RC;
+  bits<5> RB;
   bits<7> Function = fun;
 
   let Inst{25-21} = 31;
-  let Inst{20-16} = Rb;
+  let Inst{20-16} = RB;
   let Inst{15-13} = 0;
   let Inst{12} = 0;
   let Inst{11-5} = Function;
-  let Inst{4-0} = Rc;
+  let Inst{4-0} = RC;
 }
 
 class OForm4<bits<6> opcode, bits<7> fun, string asmstr, list<dag> pattern, InstrItinClass itin> 
@@ -180,17 +180,17 @@ class OForm4<bits<6> opcode, bits<7> fun, string asmstr, list<dag> pattern, Inst
   let Constraints = "$RFALSE = $RDEST";
   let DisableEncoding = "$RFALSE";
 
-  bits<5> Rc;
-  bits<5> Ra;
-  bits<5> Rb;
+  bits<5> RC;
+  bits<5> RA;
+  bits<5> RB;
   bits<7> Function = fun;
 
-  let Inst{25-21} = Ra;
-  let Inst{20-16} = Rb;
+  let Inst{25-21} = RA;
+  let Inst{20-16} = RB;
   let Inst{15-13} = 0;
   let Inst{12} = 0;
   let Inst{11-5} = Function;
-  let Inst{4-0} = Rc;
+  let Inst{4-0} = RC;
 }
 
 
@@ -200,16 +200,16 @@ class OFormL<bits<6> opcode, bits<7> fun, string asmstr, list<dag> pattern, Inst
   let OutOperandList = (outs GPRC:$RC);
   let InOperandList = (ins GPRC:$RA, u8imm:$L);
 
-  bits<5> Rc;
-  bits<5> Ra;
-  bits<8> LIT;
+  bits<5> RC;
+  bits<5> RA;
+  bits<8> L;
   bits<7> Function = fun;
 
-  let Inst{25-21} = Ra;
-  let Inst{20-13} = LIT;
+  let Inst{25-21} = RA;
+  let Inst{20-13} = L;
   let Inst{12} = 1;
   let Inst{11-5} = Function;
-  let Inst{4-0} = Rc;
+  let Inst{4-0} = RC;
 }
 
 class OForm4L<bits<6> opcode, bits<7> fun, string asmstr, list<dag> pattern, InstrItinClass itin> 
@@ -220,16 +220,16 @@ class OForm4L<bits<6> opcode, bits<7> fun, string asmstr, list<dag> pattern, Ins
   let Constraints = "$RFALSE = $RDEST";
   let DisableEncoding = "$RFALSE";
 
-  bits<5> Rc;
-  bits<5> Ra;
-  bits<8> LIT;
+  bits<5> RC;
+  bits<5> RA;
+  bits<8> L;
   bits<7> Function = fun;
 
-  let Inst{25-21} = Ra;
-  let Inst{20-13} = LIT;
+  let Inst{25-21} = RA;
+  let Inst{20-13} = L;
   let Inst{12} = 1;
   let Inst{11-5} = Function;
-  let Inst{4-0} = Rc;
+  let Inst{4-0} = RC;
 }
 
 //3.3.4
