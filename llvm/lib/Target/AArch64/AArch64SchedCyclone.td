@@ -872,4 +872,19 @@ def : ReadAdvance<ReadIM, 0>;
 def : ReadAdvance<ReadIMA, 0>;
 def : ReadAdvance<ReadID, 0>;
 
+// Proprietary Apple instructions
+
+//
+// AMX extension
+//
+
+def : InstRW<[WriteVLD],
+             (instregex "LD[XYZ]I?$")>;
+def : InstRW<[WriteVST],
+             (instregex "ST[XYZ]I?$")>;
+def : InstRW<[WriteVST],
+             (instrs SET, CLR)>;
+def : InstRW<[WriteVLD, WriteVST],
+             (instrs FMA64, FMS64, FMA32, FMS32, FMA16, FMS16, VECFP, MAC16, MATFP, VECINT, MATINT, GENLUT, EXTRX, EXTRY)>;
+
 } // SchedModel = CycloneModel

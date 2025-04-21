@@ -1479,23 +1479,30 @@ def ProcessorFeatures {
   list<SubtargetFeature> AppleA13 = [HasV8_4aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureFullFP16,
                                      FeatureFP16FML, FeatureSHA3];
+
+  // Capstone addition AMX: The A14 onwards are variants (same generation)
+  // of the Apple M series processors.
+  // To my knowledge it is not documented if those processors actually support AMX,
+  // but we add it here as feature anyways. Simply because it is too much work
+  // adding a model for the Apple M series processors. Capstone currently
+  // doesn't care about the LLVM processor definitions.
   list<SubtargetFeature> AppleA14 = [HasV8_4aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureFRInt3264,
                                      FeatureSpecRestrict, FeatureSSBS, FeatureSB,
                                      FeaturePredRes, FeatureCacheDeepPersist,
                                      FeatureFullFP16, FeatureFP16FML, FeatureSHA3,
-                                     FeatureAltFPCmp];
+                                     FeatureAltFPCmp, FeatureAMX];
   list<SubtargetFeature> AppleA15 = [HasV8_6aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
-                                     FeatureFullFP16, FeatureFP16FML];
+                                     FeatureFullFP16, FeatureFP16FML, FeatureAMX];
   list<SubtargetFeature> AppleA16 = [HasV8_6aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML,
-                                     FeatureHCX];
+                                     FeatureHCX, FeatureAMX];
   list<SubtargetFeature> AppleA17 = [HasV8_6aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML,
-                                     FeatureHCX];
+                                     FeatureHCX, FeatureAMX];
   list<SubtargetFeature> ExynosM3 = [HasV8_0aOps, FeatureCRC, FeatureCrypto,
                                      FeaturePerfMon];
   list<SubtargetFeature> ExynosM4 = [HasV8_2aOps, FeatureCrypto, FeatureDotProd,
