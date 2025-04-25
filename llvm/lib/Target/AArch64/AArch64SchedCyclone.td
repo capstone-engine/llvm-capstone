@@ -887,4 +887,11 @@ def : InstRW<[WriteVST],
 def : InstRW<[WriteVLD, WriteVST],
              (instrs FMA64, FMS64, FMA32, FMS32, FMA16, FMS16, VECFP, MAC16, MATFP, VECINT, MATINT, GENLUT, EXTRX, EXTRY)>;
 
+//
+// MUL53 extension
+//
+
+def : InstRW<[WriteVq],
+             (instrs MUL53LO, MUL53HI)>;
+
 } // SchedModel = CycloneModel

@@ -11,11 +11,12 @@ def HasAMX : Predicate<"Subtarget->hasAMX()">,
                        AssemblerPredicate<(all_of FeatureAMX), "amx">;
 
 class ReservedI<dag oops, dag iops, string asm, string operands,
-                  list<dag> pattern = []>
+                  list<dag> pattern = [], string constraints = "">
     : I<oops, iops, asm, operands, "", pattern> {
   let Inst{31-29} = 0b000;
   let Inst{28-25} = 0b0000;
   let Inst{24-21} = 0b0001;
+  let Constraints = constraints;
 }
 
 //
@@ -117,3 +118,32 @@ let Uses = [X_LANE, Y_LANE], Defs = [Z_MATRIX] in {
 }
 
 def GENLUT : AppleAMX<22, (outs), (ins GPR64:$src), "genlut", "\t$src">;
+
+//
+// ====== MUL53 ======
+//
+// Reference: https://gist.github.com/TrungNguyen1909/5b323edda9a21550a1621af506e8ce5f
+
+def FeatureMUL53 : SubtargetFeature<"mul53", "HasMUL53", "true",
+  "Enable proprietary Apple AArch64 extension Mul53.">;
+
+def HasMUL53 : Predicate<"Subtarget->hasMUL53()">,
+                       AssemblerPredicate<(all_of FeatureMUL53), "mul53">;
+
+// It is an assumption that the mul53 opcode field is 5 bits. It might as well
+// is more norrow or wider.
+class AppleMUL53<bits<5> mul53_opcode, dag oops, dag iops, string asm, string operands,
+                  list<dag> pattern = [], string constraints = "">
+    : ReservedI<oops, iops, asm, operands, pattern, constraints> {
+  bits<5> Vn;
+  bits<5> Vm;
+  let Inst{20-15} = 0b000000;
+  let Inst{14-10} = mul53_opcode;
+  let Inst{9-5} = Vm;
+  let Inst{4-0} = Vn;
+
+  let Predicates = [HasMUL53];
+}
+
+def MUL53LO : AppleMUL53<0, (outs V128:$Vn_wb), (ins V128:$Vn, V128:$Vm), "mul53lo.2d", "\t$Vn, $Vm", [], "$Vn = $Vn_wb">;
+def MUL53HI : AppleMUL53<1, (outs V128:$Vn_wb), (ins V128:$Vn, V128:$Vm), "mul53hi.2d", "\t$Vn, $Vm", [], "$Vn = $Vn_wb">;
