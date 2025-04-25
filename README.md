@@ -123,4 +123,4 @@ You need to search for the instruction or operands with missing or incorrect val
   ```
 
 - If certain target features (e.g. architecture extensions) were removed from LLVM or you want to add your own,
-checkout [DeprecatedFeatures.md](DeprecatedFeatures.md).
+checkout [AddExtensions.md](AddExtensions.md).
