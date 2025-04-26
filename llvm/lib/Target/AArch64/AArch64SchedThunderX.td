@@ -28,7 +28,7 @@ def ThunderXT8XModel : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
                                                     PAUnsupported.F,
                                                     SMEUnsupported.F,
-                                                    [HasMTE, HasCSSC, HasAMX, HasMUL53]);
+                                                    [HasMTE, HasCSSC, HasAMX, HasMUL53, HasAppleSys]);
   // FIXME: Remove when all errors have been fixed.
   let FullInstRWOverlapCheck = 0;
 }

@@ -1395,6 +1395,7 @@ def TuneAmpere1B : SubtargetFeature<"ampere1b", "ARMProcFamily", "Ampere1B",
                                     FeatureLdpAlignedOnly,
                                     FeatureStpAlignedOnly]>;
 
+                                  
 def ProcessorFeatures {
   list<SubtargetFeature> A53  = [HasV8_0aOps, FeatureCRC, FeatureCrypto,
                                  FeatureFPARMv8, FeatureNEON, FeaturePerfMon];
@@ -1467,23 +1468,31 @@ def ProcessorFeatures {
                                      FeatureSVE, FeatureComplxNum];
   list<SubtargetFeature> Carmel   = [HasV8_2aOps, FeatureNEON, FeatureCrypto,
                                      FeatureFullFP16];
+
+  // Capstone addition:
+  // Proprietary system instructions are added to all Apple processors.
+  // Even if we don't know if they are actually supported.
+
   list<SubtargetFeature> AppleA7  = [HasV8_0aOps, FeatureCrypto, FeatureFPARMv8,
-                                     FeatureNEON,FeaturePerfMon, FeatureAppleA7SysReg];
+                                     FeatureNEON,FeaturePerfMon, FeatureAppleA7SysReg,
+                                     FeatureAppleSys];
   list<SubtargetFeature> AppleA10 = [HasV8_0aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureCRC,
-                                     FeatureRDM, FeaturePAN, FeatureLOR, FeatureVH];
-
+                                     FeatureRDM, FeaturePAN, FeatureLOR, FeatureVH,
+                                     FeatureAppleSys];
+                                  
+  // Capstone addition:
   // Note about the Mul53 extension. According to https://gist.github.com/TrungNguyen1909/5b323edda9a21550a1621af506e8ce5f
   // The mul53 instructions are use in Apple's H10 processor (part of AirPots according to apple.fandom.com).
   // This processor doesn't exist in LLVM. But the reference claims H10 is equivalent to A11.
   list<SubtargetFeature> AppleA11 = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureFullFP16,
-                                     FeatureMUL53];
+                                     FeatureMUL53, FeatureAppleSys];
   list<SubtargetFeature> AppleA12 = [HasV8_3aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureFullFP16];
   list<SubtargetFeature> AppleA13 = [HasV8_4aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureFullFP16,
-                                     FeatureFP16FML, FeatureSHA3];
+                                     FeatureFP16FML, FeatureSHA3, FeatureAppleSys];
 
   // Capstone addition AMX: The A14 onwards are variants (same generation)
   // of the Apple M series processors.
@@ -1496,18 +1505,19 @@ def ProcessorFeatures {
                                      FeatureSpecRestrict, FeatureSSBS, FeatureSB,
                                      FeaturePredRes, FeatureCacheDeepPersist,
                                      FeatureFullFP16, FeatureFP16FML, FeatureSHA3,
-                                     FeatureAltFPCmp, FeatureAMX];
+                                     FeatureAltFPCmp, FeatureAMX, FeatureAppleSys];
   list<SubtargetFeature> AppleA15 = [HasV8_6aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
-                                     FeatureFullFP16, FeatureFP16FML, FeatureAMX];
+                                     FeatureFullFP16, FeatureFP16FML, FeatureAMX,
+                                     FeatureAppleSys];
   list<SubtargetFeature> AppleA16 = [HasV8_6aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML,
-                                     FeatureHCX, FeatureAMX];
+                                     FeatureHCX, FeatureAMX, FeatureAppleSys];
   list<SubtargetFeature> AppleA17 = [HasV8_6aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML,
-                                     FeatureHCX, FeatureAMX];
+                                     FeatureHCX, FeatureAMX, FeatureAppleSys];
   list<SubtargetFeature> ExynosM3 = [HasV8_0aOps, FeatureCRC, FeatureCrypto,
                                      FeaturePerfMon];
   list<SubtargetFeature> ExynosM4 = [HasV8_2aOps, FeatureCrypto, FeatureDotProd,

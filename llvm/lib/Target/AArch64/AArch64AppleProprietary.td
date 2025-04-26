@@ -147,3 +147,53 @@ class AppleMUL53<bits<5> mul53_opcode, dag oops, dag iops, string asm, string op
 
 def MUL53LO : AppleMUL53<0, (outs V128:$Vn_wb), (ins V128:$Vn, V128:$Vm), "mul53lo.2d", "\t$Vn, $Vm", [], "$Vn = $Vn_wb">;
 def MUL53HI : AppleMUL53<1, (outs V128:$Vn_wb), (ins V128:$Vn, V128:$Vm), "mul53hi.2d", "\t$Vn, $Vm", [], "$Vn = $Vn_wb">;
+
+//
+// ====== System instructions ======
+//
+// Reference: https://github.com/AsahiLinux/docs/blob/main/docs/hw/cpu/apple-instructions.md
+
+
+def FeatureAppleSys : SubtargetFeature<"apple-sys", "HasAppleSys", "true",
+  "Enable proprietary Apple system instructions.">;
+
+def HasAppleSys : Predicate<"Subtarget->hasAppleSys()">,
+                       AssemblerPredicate<(all_of FeatureAppleSys), "apple-sys">;
+
+
+//
+// GL instructions
+//
+// See: https://github.com/AsahiLinux/docs/blob/main/docs/hw/cpu/sprr-gxf.md
+//
+
+def GEXIT : ReservedI<(outs), (ins), "gexit", "">, Sched<[WriteSys]> {
+  let Inst{20-0} = 0b000000001010000000000;
+  let Predicates = [HasAppleSys];
+}
+
+def GENTER : ReservedI<(outs), (ins simm5_32b:$perm), "genter", "\t$perm">, Sched<[WriteSys]> {
+  bits<5> perm;
+  let Inst{20-5} = 0b0000000010100001;
+  // The permission of the pages. See document 
+  let Inst{4-0} = perm;
+  let Predicates = [HasAppleSys];
+}
+
+def WKDMC : ReservedI<(outs GPR64:$src_wb), (ins GPR64:$dst, GPR64:$src), "wkdmc", "\t$dst, $src", [], "$src = $src_wb">, Sched<[WriteSys]> {
+  bits<5> src;
+  bits<5> dst;
+  let Inst{20-10} = 0b00000000010;
+  let Inst{9-5} = dst;
+  let Inst{4-0} = src;
+  let Predicates = [HasAppleSys];
+}
+
+def WKDMD : ReservedI<(outs GPR64:$src_wb), (ins GPR64:$dst, GPR64:$src), "wkdmd", "\t$dst, $src", [], "$src = $src_wb">, Sched<[WriteSys]> {
+  bits<5> src;
+  bits<5> dst;
+  let Inst{20-10} = 0b00000000011;
+  let Inst{9-5} = dst;
+  let Inst{4-0} = src;
+  let Predicates = [HasAppleSys];
+}

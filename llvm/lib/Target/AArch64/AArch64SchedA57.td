@@ -34,7 +34,7 @@ def CortexA57Model : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
                                                     PAUnsupported.F,
                                                     SMEUnsupported.F,
-                                                    [HasMTE, HasCSSC, HasAMX, HasMUL53]);
+                                                    [HasMTE, HasCSSC, HasAMX, HasMUL53, HasAppleSys]);
 }
 
 //===----------------------------------------------------------------------===//
