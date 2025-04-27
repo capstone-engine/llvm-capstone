@@ -180,6 +180,7 @@ def GENTER : ReservedI<(outs), (ins simm5_32b:$perm), "genter", "\t$perm">, Sche
   let Predicates = [HasAppleSys];
 }
 
+let mayLoad = 1, mayStore = 1 in {
 def WKDMC : ReservedI<(outs GPR64:$src_wb), (ins GPR64:$dst, GPR64:$src), "wkdmc", "\t$dst, $src", [], "$src = $src_wb">, Sched<[WriteSys]> {
   bits<5> src;
   bits<5> dst;
@@ -197,3 +198,22 @@ def WKDMD : ReservedI<(outs GPR64:$src_wb), (ins GPR64:$dst, GPR64:$src), "wkdmd
   let Inst{4-0} = src;
   let Predicates = [HasAppleSys];
 }
+}
+
+def AT_AS1ELX : ReservedI<(outs GPR64:$Ra_wb), (ins GPR64:$Ra), "at_as1elx", "\t$Ra", [], "$Ra = $Ra_wb">, Sched<[WriteSys]> {
+  bits<5> Ra;
+  let Inst{20-5} = 0b0000000010100010;
+  let Inst{4-0} = Ra;
+  let Predicates = [HasAppleSys];
+}
+
+def apple_sys_barrier_op : Operand<i32> {
+  let PrintMethod = "printAppleSysBarrierOption";
+}
+
+def SDSB : ReservedI<(outs), (ins apple_sys_barrier_op:$CRm), "sdsb", "\t$CRm">, Sched<[WriteBarrier]> {
+  bits<4> CRm;
+  let Inst{20-4} = 0b00000000101000110;
+  let Inst{3-0} = CRm;
+}
+
