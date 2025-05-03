@@ -13,29 +13,19 @@
 
 include "llvm/TableGen/SearchableTable.td"
 
-class ASITag<string name, string alt_name, bits<8> op> {
+// Capstone edit:
+// This is changed to a Searchable Table.
+// Simply because emitting generic tables with the PrinterCapstone class
+// is not implemented (and is annoying to do so).
+
+class ASITag<string name, string alt_name, bits<8> op> : SearchableTable {
   string Name = name;
   // A maximum of one alias is supported right now.
   string AltName = alt_name;
   bits<8> Encoding = op;
-}
+  let EnumValueField = "Encoding";
 
-def ASITagsList : GenericTable {
-  let FilterClass = "ASITag";
-  let Fields = ["Name", "AltName", "Encoding"];
-
-  let PrimaryKey = [ "Encoding" ];
-  let PrimaryKeyName = "lookupASITagByEncoding";
-}
-
-def lookupASITagByName : SearchIndex {
-  let Table = ASITagsList;
-  let Key = [ "Name" ];
-}
-
-def lookupASITagByAltName : SearchIndex {
-  let Table = ASITagsList;
-  let Key = [ "AltName" ];
+  let SearchableFields = ["Name", "AltName", "Encoding"];
 }
 
 def : ASITag<"ASI_N", "ASI_NUCLEUS", 0x4>;
