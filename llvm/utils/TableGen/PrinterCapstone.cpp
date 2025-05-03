@@ -1116,7 +1116,7 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
   std::set<std::string> InsnBytesAsUint24 = {"Xtensa"};
   std::set<std::string> InsnBytesAsUint32 = {"ARM",   "AArch64", "LoongArch",
                                              "Alpha", "Mips",    "TriCore",
-                                             "ARC"};
+                                             "ARC", "Sparc"};
   std::set<std::string> InsnBytesAsUint64 = {"SystemZ", "ARC"};
   bool MacroDefined = false;
   if (InsnBytesAsUint16.find(TargetName) != InsnBytesAsUint16.end()) {
@@ -2656,6 +2656,7 @@ normalizedMnemonic(StringRef const &Mn, const bool Upper = true,
   // Each tuple is: Regex Pattern : Replacement char
   static SmallVector<std::tuple<std::string, std::string>> Replacements = {
     {"[.]", "_"},
+    {"[,]", "_"},
     {"[|]", "_"},
     {"[+]", "p"},
     {"[-]", "m"},
