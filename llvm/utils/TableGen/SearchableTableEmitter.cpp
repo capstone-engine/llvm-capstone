@@ -633,12 +633,23 @@ void EmitSearchableTables(RecordKeeper &RK, raw_ostream &OS) {
     break;
   case PRINTER_LANG_CAPSTONE_C:
     Record *IDef = RK.getClass("I");
-    if (!IDef)
+    if (!IDef) {
+      // Sparc's lowest class is InstSP not I
+      IDef = RK.getClass("InstSP");
+    }
+    if (!IDef) {
       // If this is reached we need to implement the search for other classes which have Namespace set.
-      llvm_unreachable("Base instruction class \"I\" does not exist for this target.");
+      llvm_unreachable("Root instruction class \"I\" does not exist for this target.");
+    }
     if (!IDef->getValue("Namespace"))
       llvm_unreachable("Field \"Namespace\" does not exist.");
     std::string TName = IDef->getValueAsString("Namespace").str();
+    if (TName.empty()) {
+      llvm_unreachable("Field \"Namespace\" is empty, but should be the target name.");
+    } else if (TName == "SP") {
+      // Rename namespace nickname.
+      TName = "Sparc";
+    }
     PI = new PrinterCapstone(FOS, TName);
     break;
   }

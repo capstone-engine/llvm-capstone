@@ -3851,7 +3851,7 @@ void PrinterCapstone::asmMatcherEmitComputeAssemblerAvailableFeatures(
     AsmMatcherInfo &Info, StringRef const &ClassName) const {}
 
 void PrinterCapstone::searchableTablesWriteFiles() const {
-  std::string Filename = TargetName + "GenSystemRegister.inc";
+  std::string Filename = TargetName + "GenSystemOperands.inc";
   std::string HeaderStr;
   raw_string_ostream Header(HeaderStr);
   emitDefaultSourceFileHeader(Header);
@@ -4021,16 +4021,18 @@ std::string getTableNamespacePrefix(const GenericTable &Table,
       {"ARMSysReg", "MClassSysReg"},
       {"ARMBankedReg", "BankedReg"},
   };
+  std::set<std::pair<std::string, std::string>> SparcNSTypePairs = {
+      {"Sparc_ASITag", "ASITag"},
+  };
 
   std::set<std::pair<std::string, std::string>> *NSTable;
-
-  if (StringRef(TargetName).upper() != "AARCH64" && TargetName != "ARM")
-    return Table.CppTypeName + "_";
 
   if (StringRef(TargetName).upper() == "AARCH64")
     NSTable = &AArch64NSTypePairs;
   else if (TargetName == "ARM")
     NSTable = &ARMNSTypePairs;
+  else if (StringRef(TargetName).upper() == "SPARC")
+    NSTable = &SparcNSTypePairs;
   else
     PrintFatalNote("No Namespace Type table defined for target.");
 
