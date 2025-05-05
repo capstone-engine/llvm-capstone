@@ -12,23 +12,23 @@
 
 class SparcReg<bits<16> Enc, string n> : Register<n> {
   let HWEncoding = Enc;
-  let Namespace = "SP";
+  let Namespace = "Sparc";
 }
 
 class SparcCtrlReg<bits<16> Enc, string n,
                    list<string> altNames = []>: Register<n, altNames> {
   let HWEncoding = Enc;
-  let Namespace = "SP";
+  let Namespace = "Sparc";
 }
 
-let Namespace = "SP" in {
+let Namespace = "Sparc" in {
 def sub_even : SubRegIndex<32>;
 def sub_odd  : SubRegIndex<32, 32>;
 def sub_even64 : SubRegIndex<64>;
 def sub_odd64  : SubRegIndex<64, 64>;
 }
 
-let Namespace = "SP",
+let Namespace = "Sparc",
     FallbackRegAltNameIndex = NoRegAltName in {
   def RegNamesStateReg : RegAltNameIndex;
 }

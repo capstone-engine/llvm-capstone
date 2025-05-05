@@ -303,12 +303,12 @@ void PrinterCapstone::regInfoEmitRegUnitRoots(
 }
 
 static std::string getQualifiedNameCCS(const Record *R) {
-  std::string Namespace;
+  StringRef TargetName;
   if (R->getValue("Namespace"))
-    Namespace = std::string(R->getValueAsString("Namespace"));
-  if (Namespace.empty())
+    TargetName = R->getValueAsString("Namespace");
+  if (TargetName.empty())
     return std::string(R->getName());
-  return StringRef(Namespace).str() + "_" + R->getName().str();
+  return TargetName.str() + "_" + R->getName().str();
 }
 
 void PrinterCapstone::regInfoEmitRegClasses(
@@ -1695,6 +1695,7 @@ void PrinterCapstone::asmWriterEmitRegAsmOffsets(
 void PrinterCapstone::asmWriterEmitAltIdxSwitch(
     bool HasAltNames, std::vector<Record *> const &AltNameIndices,
     StringRef const &Namespace) const {
+  StringRef TargetName = Namespace;
   if (HasAltNames) {
     OS << "  switch(AltIdx) {\n"
        << "  default: CS_ASSERT_RET_VAL(0 && \"Invalid register alt name "
@@ -1702,8 +1703,8 @@ void PrinterCapstone::asmWriterEmitAltIdxSwitch(
     for (const Record *R : AltNameIndices) {
       StringRef const AltName = R->getName();
       OS << "  case ";
-      if (!Namespace.empty())
-        OS << Namespace << "_";
+      if (!TargetName.empty())
+        OS << TargetName << "_";
       OS << AltName << ":\n";
       if (R->isValueUnset("FallbackRegAltNameIndex"))
         OS << "    CS_ASSERT_RET_VAL(*(AsmStrs" << AltName << "+RegAsmOffset"
@@ -1713,8 +1714,8 @@ void PrinterCapstone::asmWriterEmitAltIdxSwitch(
         OS << "    if (!*(AsmStrs" << AltName << "+RegAsmOffset" << AltName
            << "[RegNo-1]))\n"
            << "      return getRegisterName(RegNo, ";
-        if (!Namespace.empty())
-          OS << Namespace << "_";
+        if (!TargetName.empty())
+          OS << TargetName << "_";
         OS << R->getValueAsDef("FallbackRegAltNameIndex")->getName() << ");\n";
       }
       OS << "    return AsmStrs" << AltName << "+RegAsmOffset" << AltName
@@ -2519,7 +2520,8 @@ void PrinterCapstone::instrInfoEmitGetOpMemSizeTbl(
 std::string
 PrinterCapstone::instrInfoGetInstMapEntry(StringRef const &Namespace,
                                           StringRef const &InstrName) const {
-  return Namespace.str() + "_" + InstrName.str();
+  StringRef TargetName = Namespace;
+  return TargetName.str() + "_" + InstrName.str();
 }
 
 void PrinterCapstone::instrInfoEmitGetLogicalOpSizeHdr() const {}
@@ -2601,11 +2603,12 @@ void PrinterCapstone::instrInfoEmitEnums(
     CodeGenTarget const &Target, StringRef const &Namespace,
     CodeGenSchedModels const &SchedModels) const {
   emitIncludeToggle("GET_INSTRINFO_ENUM", true);
+  StringRef TargetName = Namespace;
 
   unsigned Num = 0;
   OS << "  enum {\n";
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue())
-    OS << "    " << Namespace << "_" << Inst->TheDef->getName()
+    OS << "    " << TargetName << "_" << Inst->TheDef->getName()
        << "\t= " << Num++ << ",\n";
   OS << "    INSTRUCTION_LIST_END = " << Num << "\n";
   OS << "  };\n\n";
