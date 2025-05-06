@@ -4294,6 +4294,7 @@ class BaseLoadStoreUnscale<bits<2> sz, bit V, bits<2> opc, dag oops, dag iops,
 // Armv8.4 LDAPR & STLR with Immediate Offset instruction
 multiclass BaseLoadUnscaleV84<string asm, bits<2> sz, bits<2> opc,
                               DAGOperand regtype > {
+  let mayLoad = 1 in
   def i : BaseLoadStoreUnscale<sz, 0, opc, (outs regtype:$Rt),
                                (ins GPR64sp:$Rn, simm9:$offset), asm, []>,
           Sched<[WriteST]> {
@@ -4306,6 +4307,7 @@ multiclass BaseLoadUnscaleV84<string asm, bits<2> sz, bits<2> opc,
 
 multiclass BaseStoreUnscaleV84<string asm, bits<2> sz, bits<2> opc,
                                DAGOperand regtype > {
+  let mayStore = 1 in
   def i : BaseLoadStoreUnscale<sz, 0, opc, (outs),
                                (ins regtype:$Rt, GPR64sp:$Rn, simm9:$offset),
                                asm, []>,
@@ -4319,7 +4321,7 @@ multiclass BaseStoreUnscaleV84<string asm, bits<2> sz, bits<2> opc,
 
 multiclass LoadUnscaled<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
                    string asm, list<dag> pattern> {
-  let AddedComplexity = 1 in // try this before LoadUI
+  let AddedComplexity = 1, mayLoad = 1 in // try this before LoadUI
   def i : BaseLoadStoreUnscale<sz, V, opc, (outs regtype:$Rt),
                                (ins GPR64sp:$Rn, simm9:$offset), asm, pattern>,
           Sched<[WriteLD]>;
@@ -4330,7 +4332,7 @@ multiclass LoadUnscaled<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
 
 multiclass StoreUnscaled<bits<2> sz, bit V, bits<2> opc, DAGOperand regtype,
                          string asm, list<dag> pattern> {
-  let AddedComplexity = 1 in // try this before StoreUI
+  let AddedComplexity = 1, mayStore = 1 in // try this before StoreUI
   def i : BaseLoadStoreUnscale<sz, V, opc, (outs),
                                (ins regtype:$Rt, GPR64sp:$Rn, simm9:$offset),
                                asm, pattern>,

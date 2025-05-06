@@ -2690,8 +2690,13 @@ normalizedMnemonic(StringRef const &Mn, const bool Upper = true,
 static inline std::string
 getNormalMnemonic(StringRef TargetName, StringRef Mnemonic,
                   const bool Upper = true, const bool ReplaceDot = true) {
-  StringRef RemovePattern = TargetName.equals_insensitive("ARM") ? "[{}]" : "";
-  RemovePattern = TargetName.equals_insensitive("ARC") ? "[.]$" : "";
+
+  StringRef RemovePattern = "";
+  if (TargetName.equals_insensitive("ARM") || TargetName.equals_insensitive("AArch64")) {
+    RemovePattern = "[{}]";
+  } else if (TargetName.equals_insensitive("ARC")) {
+    RemovePattern = "[.]$";
+  }
   return normalizedMnemonic(Mnemonic, Upper, ReplaceDot, RemovePattern);
 }
 
