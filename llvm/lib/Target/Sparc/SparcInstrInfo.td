@@ -146,11 +146,13 @@ def MEMrr : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
   let MIOperandInfo = (ops ptr_rc, ptr_rc);
   let ParserMatchClass = SparcMEMrrAsmOperand;
+  let OperandType = "OPERAND_MEMORY";
 }
 def MEMri : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
   let MIOperandInfo = (ops ptr_rc, i32imm);
   let ParserMatchClass = SparcMEMriAsmOperand;
+  let OperandType = "OPERAND_MEMORY";
 }
 
 // Represents a tail relocation operand for instructions such as add, ld, call.
@@ -200,14 +202,17 @@ def ASITag : Operand<i32> {
 // Branch targets have OtherVT type.
 def brtarget : Operand<OtherVT> {
   let EncoderMethod = "getBranchTargetOpValue";
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def bprtarget : Operand<OtherVT> {
   let EncoderMethod = "getBranchPredTargetOpValue";
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def bprtarget16 : Operand<OtherVT> {
   let EncoderMethod = "getBranchOnRegTargetOpValue";
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def SparcCallTargetAsmOperand : AsmOperandClass {
@@ -419,6 +424,7 @@ multiclass F3_12np<string OpcStr, bits<6> Op3Val, InstrItinClass itin = IIC_iu_i
                  itin>;
 }
 
+let mayLoad = 1 in {
 // Load multiclass - Define both Reg+Reg/Reg+Imm patterns in one shot.
 multiclass Load<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
            RegisterClass RC, ValueType Ty, InstrItinClass itin = IIC_iu_instr> {
@@ -470,7 +476,9 @@ let Predicates = [HasV9], Uses = [ASR3] in
 def LDSTUBAri : F3_2<3, 0b011101, (outs IntRegs:$rd),
                          (ins (MEMri $rs1, $simm13):$addr),
                          "ldstuba [$addr] %asi, $rd", []>;
+}
 
+let mayStore = 1 in {
 // Store multiclass - Define both Reg+Reg/Reg+Imm patterns in one shot.
 multiclass Store<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
            RegisterClass RC, ValueType Ty, InstrItinClass itin = IIC_st> {
@@ -506,6 +514,7 @@ multiclass StoreA<string OpcStr, bits<6> Op3Val, bits<6> StoreAOp3Val,
                   SDPatternOperator OpNode, RegisterClass RC, ValueType Ty> :
              Store<OpcStr, Op3Val, OpNode, RC, Ty> {
   defm A   : StoreASI<OpcStr, StoreAOp3Val, RC>;
+}
 }
 
 //===----------------------------------------------------------------------===//

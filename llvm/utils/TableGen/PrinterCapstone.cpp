@@ -2805,6 +2805,41 @@ std::string getArchSupplInfoPPC(StringRef const &TargetName,
   return "{{ 0 }}";
 }
 
+std::string getArchSupplInfoSparc(StringRef const &TargetName,
+                                CodeGenInstruction const *CGI,
+                                raw_string_ostream &SparcFormatEnum) {
+  static std::set<std::string> Formats;
+  // Get instruction format
+  ArrayRef<std::pair<Record *, SMRange>> SCs = CGI->TheDef->getSuperClasses();
+  if (SCs.empty()) {
+    llvm_unreachable("A CGI without superclass should not exist.");
+  }
+
+  // Get base instruction format class "I"
+  const Record *PrevSC = nullptr;
+  // Superclasses are in post-order. So we go through them backwards.
+  // The class before the "I" class is the format class.
+  for (int I = SCs.size() - 1; I >= 0; --I) {
+    const Record *SC = SCs[I].first;
+    if (SC->getName() == "InstSP" || SC->getName() == "F2" || SC->getName() == "F3" || SC->getName() == "F4") {
+      // In this case of !PrevSC the instruction inherits directly from InstSP.
+      // In code they document this is a FOMRAT 1 instruction.
+      //
+      // If SC->getName() == "F2...4" we emit the format as well. Because there are many
+      // F2/F3/F4 encodings, not just one. F2/F3/F4 are the base.
+      std::string Format = "SPARC_INSN_FORM_" + (!PrevSC ? "F1" : PrevSC->getName().upper());
+      if (Formats.find(Format) == Formats.end()) {
+        SparcFormatEnum << Format + ",\n";
+      }
+      Formats.emplace(Format);
+      return "{ .sparc = { " + Format + " }}";
+    }
+    PrevSC = SC;
+  }
+  // Pseudo instructions
+  return "{{ 0 }}";
+}
+
 std::string getArchSupplInfoSystemZ(StringRef const &TargetName,
                                     CodeGenInstruction const *CGI,
                                     raw_string_ostream &PPCFormatEnum) {
@@ -2933,6 +2968,8 @@ std::string getArchSupplInfo(StringRef const &TargetName,
     return getArchSupplInfoSystemZ(TargetName, CGI, FormatEnum);
   } else if (StringRef(TargetName).upper() == "XTENSA") {
     return getArchSupplInfoXtensa(TargetName, CGI, FormatEnum);
+  } else if (StringRef(TargetName).upper() == "SPARC") {
+    return getArchSupplInfoSparc(TargetName, CGI, FormatEnum);
   }
   return "{{ 0 }}";
 }
@@ -3709,7 +3746,7 @@ void PrinterCapstone::asmMatcherEmitMatchTable(CodeGenTarget const &Target,
   InsnMapFilename = TName + "GenCSAliasMnemMap.inc";
   writeFile(InsnMapFilename, AliasMnemMapStr);
   if (TName == "PPC" || TName == "LoongArch" || TName == "SystemZ" ||
-      TName == "Xtensa") {
+      TName == "Xtensa" || TName == "Sparc") {
     InsnMapFilename = TName + "GenCSInsnFormatsEnum.inc";
     writeFile(InsnMapFilename, FormatEnumStr);
   }
