@@ -3126,9 +3126,9 @@ std::string getCSOperandType(
     std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
   std::string OperandType = getPrimaryCSOperandType(OpRec);
 
-  if ((StringRef(TargetName).upper() == "AARCH64") &&
+  if ((StringRef(TargetName).upper() == "AARCH64" || StringRef(TargetName).upper() == "SPARC") &&
       OperandType != "CS_OP_MEM") {
-    // The definitions of AArch64 are so flawed, when it comes to memory
+    // The definitions of AArch64/Sparc are so flawed, when it comes to memory
     // operands (they are not labeled as such), that we just search for the op
     // name enclosed in [].
     if (Regex("\\[[^]]*\\$" + OpName.str() + "[^[]*]").match(CGI->AsmString)) {
