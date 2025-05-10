@@ -202,16 +202,19 @@ def ASITag : Operand<i32> {
 // Branch targets have OtherVT type.
 def brtarget : Operand<OtherVT> {
   let EncoderMethod = "getBranchTargetOpValue";
+  let DecoderMethod = "DecodeDisp22";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def bprtarget : Operand<OtherVT> {
   let EncoderMethod = "getBranchPredTargetOpValue";
+  let DecoderMethod = "DecodeDisp19";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def bprtarget16 : Operand<OtherVT> {
   let EncoderMethod = "getBranchOnRegTargetOpValue";
+  let DecoderMethod = "DecodeDisp16";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
