@@ -3120,6 +3120,11 @@ bool opIsPartOfiPTRPattern(Record const *OpRec, StringRef const &OpName,
   return false;
 }
 
+/// Some operands are wrongly defined as iPTR or other markers we use to identify memory operands.
+static inline bool wrongMemClassification(StringRef const &TargetName, StringRef const &OpName) {
+  return (TargetName.compare_insensitive("Sparc") == 0 && OpName.compare_insensitive("simm13") == 0);
+}
+
 std::string getCSOperandType(
     StringRef const &TargetName, CodeGenInstruction const *CGI,
     Record const *OpRec, StringRef const &OpName,
@@ -3142,6 +3147,9 @@ std::string getCSOperandType(
       }
       return OperandType += " | CS_OP_BOUND";
     }
+  }
+  if (wrongMemClassification(TargetName, OpName)) {
+    return OperandType;
   }
 
   DagInit *PatternDag = nullptr;
