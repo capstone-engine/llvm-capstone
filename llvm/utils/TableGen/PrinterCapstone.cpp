@@ -3029,8 +3029,6 @@ bool compareTypeSuperClasses(ArrayRef<std::pair<Record *, SMRange>> OpTypeSC,
 /// @param PatternDag The pattern DAG to search in.
 /// @param PartOfPTRPattern True, if the given pattern is of type iPTR. False
 /// otherwise.
-/// @param MatchByTypeName If true, the same type names are treated as a valid
-/// match.
 /// @param MatchByTypeSuperClasses If true, a valid match is also if any type
 /// super classes are the same.
 /// @return True, if the pattern contains a node with the same name (and
@@ -3038,7 +3036,6 @@ bool compareTypeSuperClasses(ArrayRef<std::pair<Record *, SMRange>> OpTypeSC,
 /// operand. False otherwise.
 bool opIsPartOfiPTRPattern(Record const *OpRec, StringRef const &OpName,
                            DagInit *PatternDag, bool PartOfPTRPattern,
-                           bool MatchByTypeName = false,
                            bool MatchByTypeSuperClasses = false) {
   for (unsigned I = 0; I < PatternDag->getNumArgs(); ++I) {
     DagInit *DagArg = dyn_cast<DagInit>(PatternDag->getArg(I));
@@ -3054,7 +3051,7 @@ bool opIsPartOfiPTRPattern(Record const *OpRec, StringRef const &OpName,
                                         MVT::SimpleValueType::iPTR)
         PartOfPTRPattern = true;
       if (opIsPartOfiPTRPattern(OpRec, OpName, DagArg, PartOfPTRPattern,
-                                MatchByTypeName, MatchByTypeSuperClasses))
+                                MatchByTypeSuperClasses))
         return true;
       continue;
     }
@@ -3065,11 +3062,6 @@ bool opIsPartOfiPTRPattern(Record const *OpRec, StringRef const &OpName,
     bool Matches;
     StringRef const &PatOpName = PatternDag->getArgNameStr(I);
     Matches = OpName.equals(PatOpName);
-    if (MatchByTypeName) {
-      std::string OpInitType = OpRec->getNameInitAsString();
-      std::string PatOpType = PatternDag->getArg(I)->getAsString();
-      Matches |= OpInitType == PatOpType;
-    }
     if (MatchByTypeSuperClasses) {
       std::string OpInitType = OpRec->getNameInitAsString();
       std::string PatOpType = PatternDag->getArg(I)->getAsString();
@@ -3137,8 +3129,7 @@ std::string getCSOperandType(
     bool OpTypeIsPartOfAnyPattern =
         any_of(InsnPatternMap.at(CGIName), [&](Record *PatternDag) {
           return opIsPartOfiPTRPattern(
-              OpRec, OpName, PatternDag->getValueAsDag("PatternToMatch"), false,
-              true);
+              OpRec, OpName, PatternDag->getValueAsDag("PatternToMatch"), false);
         });
     if (OpTypeIsPartOfAnyPattern)
       OperandType += " | CS_OP_MEM";
