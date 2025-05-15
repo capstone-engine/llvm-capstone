@@ -2666,11 +2666,10 @@ normalizedMnemonic(StringRef const &Mn, const bool Upper = true,
   };
 
   auto Mnemonic = Upper ? Mn.upper() : Mn.str();
-  auto MnemRef = StringRef(Mnemonic);
 
   if (RemovePattern != "") {
-    while (Regex(RemovePattern).match(MnemRef)) {
-      MnemRef = StringRef(Regex(RemovePattern).sub("", MnemRef));
+    while (Regex(RemovePattern).match(Mnemonic)) {
+      Mnemonic = Regex(RemovePattern).sub("", Mnemonic);
     }
   }
 
@@ -2680,11 +2679,11 @@ normalizedMnemonic(StringRef const &Mn, const bool Upper = true,
     if (!ReplaceDot && SearchPat == "[.]") {
       continue;
     }
-    while (Regex(SearchPat).match(MnemRef)) {
-      MnemRef = StringRef(Regex(SearchPat).sub(ReplaceStr, MnemRef));
+    while (Regex(SearchPat).match(Mnemonic)) {
+      Mnemonic = Regex(SearchPat).sub(ReplaceStr, Mnemonic);
     }
   }
-  return MnemRef.str();
+  return Mnemonic;
 }
 
 static inline std::string
