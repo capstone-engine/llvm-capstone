@@ -894,8 +894,7 @@ class BranchPredictAlways<dag ins, string asmstr, list<dag> pattern>
   : F2_3<0b001, 0, 1, (outs), ins, asmstr, pattern>;
 }
 
-let cond = 8 in
-  def BA : BranchAlways<(ins brtarget:$imm22), "ba $imm22", [(br bb:$imm22)]>;
+// Capstone: Remove BA which is already correctly defined as Alias.
 
 let isBranch = 1, isTerminator = 1, hasDelaySlot = 1 in {
 
