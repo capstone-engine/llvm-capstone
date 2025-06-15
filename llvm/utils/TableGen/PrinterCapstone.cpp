@@ -1378,9 +1378,8 @@ void PrinterCapstone::decoderEmitterEmitPredicateFunction(
     }
     OS.indent(Indentation) << "}\n";
   } else {
-    // No case statement to emit
-    OS.indent(Indentation)
-        << "CS_ASSERT_RET_VAL(0 && \"Invalid index!\", false);\n";
+    // This architecture has no predicates.
+    OS.indent(Indentation) << "return false;\n";
   }
   Indentation -= 2;
   OS.indent(Indentation) << "}\n\n";
