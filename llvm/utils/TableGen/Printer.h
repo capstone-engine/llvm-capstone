@@ -25,6 +25,8 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <regex>
+
 typedef enum {
   ST_NONE,
   ST_DECL_OS,
