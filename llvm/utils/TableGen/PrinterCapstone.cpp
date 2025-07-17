@@ -1116,7 +1116,7 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
   std::set<std::string> InsnBytesAsUint24 = {"Xtensa"};
   std::set<std::string> InsnBytesAsUint32 = {"ARM",   "AArch64", "LoongArch",
                                              "Alpha", "Mips",    "TriCore",
-                                             "ARC", "Sparc"};
+                                             "ARC", "Sparc", "RISCV"};
   std::set<std::string> InsnBytesAsUint64 = {"SystemZ", "ARC"};
   bool MacroDefined = false;
   if (InsnBytesAsUint16.find(TargetName) != InsnBytesAsUint16.end()) {
@@ -2983,6 +2983,15 @@ Record *argInitOpToRecord(Init *ArgInit) {
   return Rec;
 }
 
+// diagram
+// https://regexper.com/#OPERAND_%5BUS%5DIMM%5B0-9%5D%7B1%2C2%7D%28_%5BA-Z0-9%5D%2B%29*%7COPERAND_ZERO%7COPERAND_RVKRNUM%7COPERAND_VTYPEI%5B0-9%5D%7B1%2C2%7D%7COPERAND_UIMMLOG2XLEN%28_NONZERO%29%3F%7COPERAND_CLUI_IMM
+static const std::regex RiscvImmOperandsPattern(
+  "OPERAND_[US]IMM[0-9]{1,2}(_[A-Z0-9]+)*" // e.g. OPERAND_UIMM12_NONZERO_BLAHBLAH42
+  "|" "OPERAND_ZERO" "|" "OPERAND_RVKRNUM"
+  "|" "OPERAND_VTYPEI[0-9]{1,2}"              // e.g. OPERAND_VTYPEI10
+  "|" "OPERAND_UIMMLOG2XLEN(_NONZERO)?"
+  "|" "OPERAND_CLUI_IMM");
+
 std::string getPrimaryCSOperandType(Record const *OpRec) {
   std::string OperandType;
   if (OpRec->isSubClassOf("PredicateOperand"))
@@ -3026,6 +3035,10 @@ std::string getPrimaryCSOperandType(Record const *OpRec) {
     return "CS_OP_REG";
   else if (OperandType == "OPERAND_NM_GPREL21")
     return "CS_OP_REG";
+  // RISCV (keep this as the last check because it matches a lot of strings, 
+  //        so it might shadow another architecture's operand names if it's moved up)
+  else if (std::regex_match(OperandType, RiscvImmOperandsPattern))
+    return "CS_OP_IMM";
   else if (OperandType == "OPERAND_NM_SAVE_REGLIST")
     return "CS_OP_INVALID";
   else
