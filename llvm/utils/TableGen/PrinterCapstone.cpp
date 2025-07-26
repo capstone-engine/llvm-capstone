@@ -1112,7 +1112,7 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
      << "  /* Bogisity detected in disassembler state machine! */ \\\n"
      << "}\n\n";
 
-  std::set<std::string> InsnBytesAsUint16 = {"ARM", "TriCore", "ARC"};
+  std::set<std::string> InsnBytesAsUint16 = {"ARM", "TriCore", "ARC", "RISCV"};
   std::set<std::string> InsnBytesAsUint24 = {"Xtensa"};
   std::set<std::string> InsnBytesAsUint32 = {"ARM",   "AArch64", "LoongArch",
                                              "Alpha", "Mips",    "TriCore",
@@ -4094,6 +4094,8 @@ std::string getTableNamespacePrefix(const GenericTable &Table,
     NSTable = &ARMNSTypePairs;
   else if (StringRef(TargetName).upper() == "SPARC")
     NSTable = &SparcNSTypePairs;
+  else if (StringRef(TargetName).upper() == "RISCV") 
+    return "RISCV_"; // don't bother with a table
   else
     PrintFatalNote("No Namespace Type table defined for target.");
 
@@ -4179,9 +4181,70 @@ void PrinterCapstone::searchableTablesEmitIfFieldCase(
 void PrinterCapstone::searchableTablesEmitKeyTypeStruct(
     const GenericTable &Table, const SearchIndex &Index) const {}
 
+uint64_t BitsInitToUInt(const BitsInit *BI) {
+  uint64_t Value = 0;
+  for (unsigned I = 0, Ie = BI->getNumBits(); I != Ie; ++I) {
+    if (BitInit *B = dyn_cast<BitInit>(BI->getBit(I)))
+      Value |= (uint64_t)B->getValue() << I;
+  }
+  return Value;
+}
+
 void PrinterCapstone::searchableTablesEmitKeyArray(const GenericTable &Table,
                                                    const SearchIndex &Index,
-                                                   bool IsPrimary) const {}
+                                                   bool IsPrimary) const {
+  if (!IsPrimary) 
+    return;
+  if (Index.Fields.size() != 1)
+    return;
+
+  GenericField IndexField = Index.Fields[0];
+  if (IndexField.RecType == nullptr)
+    return;
+
+  RecTy::RecTyKind Kind = IndexField.RecType->getRecTyKind();
+  // only numerical or string fields are searchable
+  if (Kind != RecTy::BitRecTyKind && Kind != RecTy::BitsRecTyKind
+    && Kind != RecTy::IntRecTyKind && Kind != RecTy::StringRecTyKind)
+    return;
+  
+  raw_string_ostream &OS = searchableTablesGetOS(ST_IMPL_OS);
+  OS << "static const struct ";
+
+  bool IsNumericIndex = Kind != RecTy::StringRecTyKind;
+  // which struct to emit to represent the index type ?
+  if (IsNumericIndex) 
+    OS << "IndexType";
+  else 
+    OS << "IndexTypeStr";
+  
+  ListSeparator LS;
+  OS << " Index[] = {\n" << LS;
+  
+  int64_t idx = 0;
+  for (auto & entry :  Table.Entries) {
+      OS << "{"; 
+      switch (Kind) {
+        case RecTy::BitRecTyKind:
+          OS << ((entry->getValueAsBit(IndexField.Name))? "true" : "false");
+          break;
+        case RecTy::BitsRecTyKind:
+          OS << BitsInitToUInt(entry->getValueAsBitsInit(IndexField.Name));
+          break;
+        case RecTy::IntRecTyKind:
+          OS << entry->getValueAsInt(IndexField.Name);
+          break;
+        case RecTy::StringRecTyKind:
+          OS << entry->getValueAsString(IndexField.Name);
+          break;
+        default:
+          llvm_unreachable("Kind of Index MUST be Bit, Bits, Int, or String");
+      }
+      OS << "," << idx << "}" << LS << "\n";
+      idx++;
+  }
+  OS << "};\n";
+}
 
 void PrinterCapstone::searchableTablesEmitIndexLamda(
     const SearchIndex &Index, StringRef const &IndexName,
@@ -4224,14 +4287,6 @@ void PrinterCapstone::searchableTablesEmitMapII() const {
   OutS << "  { ";
 }
 
-uint64_t BitsInitToUInt(const BitsInit *BI) {
-  uint64_t Value = 0;
-  for (unsigned I = 0, Ie = BI->getNumBits(); I != Ie; ++I) {
-    if (BitInit *B = dyn_cast<BitInit>(BI->getBit(I)))
-      Value |= (uint64_t)B->getValue() << I;
-  }
-  return Value;
-}
 
 unsigned getEnumValue(Record *Entry) {
   if (!Entry->getValue("EnumValueField") ||
@@ -4241,8 +4296,19 @@ unsigned getEnumValue(Record *Entry) {
       BitsInit *BI = Entry->getValueAsBitsInit("Encoding");
       return BitsInitToUInt(BI);
     }
+    // RISCV fields
+    if (Entry->getValue("Inst")) {
+      BitsInit *BI = Entry->getValueAsBitsInit("Inst");
+      return BitsInitToUInt(BI);
+    }
+    if (Entry->getValue("Value")) {
+      BitsInit *BI = Entry->getValueAsBitsInit("Value");
+      return BitsInitToUInt(BI);
+    }
+    PrintWarning("Couldn't find an enum value for the following entry, returning a dummy 0 value");
     Entry->dump();
-    PrintFatalNote("Which of those fields above are the encoding/enum value?");
+    PrintWarning("Which of those fields above are the encoding/enum value?");
+    return 0;
   }
   StringRef EnumValField = Entry->getValueAsString("EnumValueField");
   return BitsInitToUInt(Entry->getValueAsBitsInit(EnumValField));
