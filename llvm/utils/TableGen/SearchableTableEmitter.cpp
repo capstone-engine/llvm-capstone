@@ -466,6 +466,9 @@ void SearchableTableEmitter::run() {
   }
 
   for (auto *TableRec : Records.getAllDerivedDefinitions("GenericTable")) {
+    if (TableRec->getName().str() == "RISCVVIntrinsicsTable")
+      continue; // special case because this table has invalid characters that always fails compilation
+
     auto Table = std::make_unique<GenericTable>();
     Table->Name = std::string(TableRec->getName());
     Table->Locs = TableRec->getLoc();
@@ -636,6 +639,10 @@ void EmitSearchableTables(RecordKeeper &RK, raw_ostream &OS) {
     if (!IDef) {
       // Sparc's lowest class is InstSP not I
       IDef = RK.getClass("InstSP");
+    }
+    if (!IDef) {
+      // try RISCV's root class which is RVInstCommon not I
+      IDef = RK.getClass("RVInstCommon");
     }
     if (!IDef) {
       // If this is reached we need to implement the search for other classes which have Namespace set.
