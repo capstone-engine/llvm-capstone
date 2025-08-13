@@ -148,7 +148,11 @@ def SHUTDOWN    : VISInst0<0b010000000, "shutdown">;
 let Predicates = [HasVIS2] in {
 
 def BMASK     : VISInst<0b000011001, "bmask", I64Regs>;
-def BSHUFFLE  : VISInst<0b000011100, "bshuffle">;
+// Capstone NOTE:
+// BSHUFFLE was silently fixed with
+// https://github.com/llvm/llvm-project/commit/ebacd46996a7f041be73cf31b5776503e8061e8b
+// On rebase this can be reverted.
+def BSHUFFLE  : VISInst<0b001001100, "bshuffle">;
 
 def SIAM      : VISInst0<0b010000001, "siam">;
 
