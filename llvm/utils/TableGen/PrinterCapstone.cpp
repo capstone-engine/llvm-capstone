@@ -873,7 +873,7 @@ static void patchAddOperandGetOperand(std::string Target, std::string& Code) {
                                   "([a-zA-Z_][a-zA-Z0-9_]*)\\." // whose argument is another method call on another variable
                                   "getOperand\\(" "([^)]*)" "\\)" // of method getOperand and its argument
                                   "\\)";
-  std::string ReplaceAddGetOperand = "McInst_addOperand2($1, McInst_getOperand($2, $3))";
+  std::string ReplaceAddGetOperand = "MCInst_addOperand2($1, MCInst_getOperand($2, $3))";
   Code = std::regex_replace(Code, std::regex(FindAddGetOperand), ReplaceAddGetOperand); 
 }
 
@@ -882,14 +882,14 @@ static void patchAddOperandCreateOperand(std::string Target, std::string &Code) 
                                  "\\.addOperand\\(" // in method call addOperand
                                  "MCOperand_createReg\\(([a-zA-Z_][a-zA-Z0-9_]*)\\)" // on a createReg call
                                  "\\)";
-  std::string ReplaceAddCreateReg = "MCInst_CreateReg0($1, $2)";
+  std::string ReplaceAddCreateReg = "MCOperand_CreateReg0($1, $2)";
   Code = std::regex_replace(Code, std::regex(FindAddCreateReg), ReplaceAddCreateReg);
 
   std::string FindAddCreateImm = "([a-zA-Z_][a-zA-Z0-9_]*)" // any variable
                                  "\\.addOperand\\(" // in method call addOperand
-                                 "MCOperand_createImm\\(([0-9]+)\\)" // on a createImm call
+                                 "MCOperand_createImm\\((-?[0-9]+)\\)" // on a createImm call
                                  "\\)";
-  std::string ReplaceAddCreateImm = "MCInst_CreateImm0($1, $2)";
+  std::string ReplaceAddCreateImm = "MCOperand_CreateImm0($1, $2)";
   Code = std::regex_replace(Code, std::regex(FindAddCreateImm), ReplaceAddCreateImm);
 }
 
@@ -921,6 +921,21 @@ static void patchRISCVValidateCompressedInst(std::string &Code) {
   // modify calls to pass the argument
   std::string start = "(^|\\r?\\n)";
   Code = std::regex_replace(Code, std::regex(start + "(\\s*RISCVValidate[^(]*)\\(" "(.*)" "\\)"),"$1$2(MI,$3)");
+
+  // patch CreateImm calls to CreateImm1 calls, the equivalent Capstone api
+  std::string FindCreateImmCalls = "(\\s*RISCVValidate[^(]*)\\(" "(.*)MCOperand_createImm\\((-?[0-9]+)\\)(.*)";
+  std::string ReplaceCreateImmCalls = "$1($2MCOperand_CreateImm1(MI, $3)$4";
+  Code = std::regex_replace(Code, std::regex(FindCreateImmCalls), ReplaceCreateImmCalls);
+
+  // replace type names that don't exist in Capstone with their equivalents
+  Code = std::regex_replace(Code, std::regex("MachineInstr \\*"), "MCInst *");
+  Code = std::regex_replace(Code, std::regex("MachineOperand \\*"),"MCOperand *");
+
+  // replace llvm_unreachable because it doesn't exist in Capstone 
+  Code = std::regex_replace(Code, std::regex("llvm_unreachable.*"), "CS_ASSERT_RET_VAL(0,false); \n\t return false;");
+
+  // add a return at the end of the functions so a strict warnings-as-errors compiler won't complain
+  Code = std::regex_replace(Code, std::regex("bool RISCVValidate([\\s\\S]*?)\\}(\\s*)\\}(\\s*)\\}"), "bool RISCVValidate$1}$2}$3\treturn false;\n}");
 }
 
 static void patchEvaluateAsConstantImm(std::string Target, std::string& Code) {
