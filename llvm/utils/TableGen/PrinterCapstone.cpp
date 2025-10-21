@@ -13,6 +13,7 @@
 #include "Printer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -821,19 +822,19 @@ static void patchPrintOperandAddr(std::string &Decoder) {
 
 static void patchSTIObject(std::string Target, std::string &Code) {
   // searching for a subtarget arg in a function def or use
-  std::string FindSubtargetArg = ",?\\s*(const\\s+)?(MCSubtargetInfo|" + Target + "Subtarget)" // subtarget object type 
-                               + "\\s*[&*]\\s*" // as a reference or pointer 
-                               + "[a-zA-Z_][a-zA-Z0-9_]*"; // named anthing, optionally followed by comma (but not if it's the last arg)  
+  std::string FindSubtargetArg = ",?\\s*(const\\s+)?(MCSubtargetInfo|" + Target + "Subtarget)" // subtarget object type
+                               + "\\s*[&*]\\s*" // as a reference or pointer
+                               + "[a-zA-Z_][a-zA-Z0-9_]*"; // named anthing, optionally followed by comma (but not if it's the last arg)
   Code = std::regex_replace(Code, std::regex(FindSubtargetArg), ""); // replace with nothing
 
   std::string FindGetFeatureBitsCall = "([a-zA-Z_][a-zA-Z0-9_]*\\.getFeatureBits\\(\\))" // a call of the form <identifer>.getFeatureBits()
                                        "\\[([a-zA-Z_][a-zA-Z0-9_]*)\\]";
-  std::string ReplaceGetFeatureBitsCall = Target + "_getFeatureBits(MI->csh->mode, $2)";  
+  std::string ReplaceGetFeatureBitsCall = Target + "_getFeatureBits(MI->csh->mode, $2)";
   Code = std::regex_replace(Code, std::regex(FindGetFeatureBitsCall), ReplaceGetFeatureBitsCall);
 
   std::string FindLeftOverUsesOfSTI = ",?\\s*[&*]?\\s*STI";
   Code = std::regex_replace(Code, std::regex(FindLeftOverUsesOfSTI), "");
-  
+
   // target-specific replacements
   if (Target == "RISCV") {
     std::string Find64BitChecks = "([a-zA-Z_][a-zA-Z0-9_]*)->is64Bit\\(\\)" "|"
@@ -854,8 +855,8 @@ static void patchIsGetOperand(std::string Target, std::string& Code) {
                                  "(isReg|getReg" // isReg or getReg
                                  "|isImm|getImm)\\(\\)"; // or isImm or getImm (as $4)
   std::string ReplaceIsGetImmOrReg = "MCOperand_$4(MCInst_getOperand($1, $3))";
-  Code = std::regex_replace(Code, std::regex(FindIsGetImmOrReg), ReplaceIsGetImmOrReg); 
-  
+  Code = std::regex_replace(Code, std::regex(FindIsGetImmOrReg), ReplaceIsGetImmOrReg);
+
   // patch individual getOperand calls
   std::string ReplaceGetOperand = "MCInst_getOperand($1, $3)";
   Code = std::regex_replace(Code, std::regex(FindGetOperand), ReplaceGetOperand);
@@ -874,7 +875,7 @@ static void patchAddOperandGetOperand(std::string Target, std::string& Code) {
                                   "getOperand\\(" "([^)]*)" "\\)" // of method getOperand and its argument
                                   "\\)";
   std::string ReplaceAddGetOperand = "MCInst_addOperand2($1, MCInst_getOperand($2, $3))";
-  Code = std::regex_replace(Code, std::regex(FindAddGetOperand), ReplaceAddGetOperand); 
+  Code = std::regex_replace(Code, std::regex(FindAddGetOperand), ReplaceAddGetOperand);
 }
 
 static void patchAddOperandCreateOperand(std::string Target, std::string &Code) {
@@ -905,7 +906,7 @@ static void patchRegClassContains(std::string Target, std::string& Code) {
 static void patchSetLoc(std::string Target, std::string& Code) {
   // there is no loc property in McInst struct in capstone
   std::string FindSetLocCalls = ".*\\.setLoc.*;";
-  Code = std::regex_replace(Code, std::regex(FindSetLocCalls), ""); 
+  Code = std::regex_replace(Code, std::regex(FindSetLocCalls), "");
 }
 
 static void patchRISCVValidateCompressedInst(std::string &Code) {
@@ -931,7 +932,7 @@ static void patchRISCVValidateCompressedInst(std::string &Code) {
   Code = std::regex_replace(Code, std::regex("MachineInstr \\*"), "MCInst *");
   Code = std::regex_replace(Code, std::regex("MachineOperand \\*"),"MCOperand *");
 
-  // replace llvm_unreachable because it doesn't exist in Capstone 
+  // replace llvm_unreachable because it doesn't exist in Capstone
   Code = std::regex_replace(Code, std::regex("llvm_unreachable.*"), "CS_ASSERT_RET_VAL(0,false); \n\t return false;");
 
   // add a return at the end of the functions so a strict warnings-as-errors compiler won't complain
@@ -982,10 +983,10 @@ std::string PrinterCapstone::translateToC(std::string const &TargetName,
   patchAddOperandCreateOperand(TargetName, PatchedCode);
 
   patchRegClassContains(TargetName, PatchedCode);
-  
+
   patchSetLoc(TargetName, PatchedCode);
   patchEvaluateAsConstantImm(TargetName, PatchedCode);
-  
+
   patchSetOpcode(TargetName, PatchedCode);
   patchGetOpcode(TargetName, PatchedCode);
   patchIsBareSymbolRef(TargetName, PatchedCode);
@@ -2872,6 +2873,9 @@ getNormalMnemonic(StringRef TargetName, StringRef Mnemonic,
   return normalizedMnemonic(Mnemonic, Upper, ReplaceDot, RemovePattern);
 }
 
+std::string getLLVMInstEnumName(StringRef const &TargetName,
+                                CodeGenInstruction const *CGI);
+
 std::string getReqFeatures(StringRef const &TargetName, AsmMatcherInfo &AMI,
                            std::unique_ptr<MatchableInfo> const &MI, bool UseMI,
                            CodeGenInstruction const *CGI) {
@@ -3205,7 +3209,7 @@ std::string getPrimaryCSOperandType(Record const *OpRec) {
     return "CS_OP_REG";
   else if (OperandType == "OPERAND_NM_GPREL21")
     return "CS_OP_REG";
-  // RISCV (keep this as the last check because it matches a lot of strings, 
+  // RISCV (keep this as the last check because it matches a lot of strings,
   //        so it might shadow another architecture's operand names if it's moved up)
   else if (std::regex_match(OperandType, RiscvImmOperandsPattern))
     return "CS_OP_IMM";
@@ -3279,6 +3283,7 @@ bool opIsPartOfiPTRPattern(Record const *OpRec, StringRef const &OpName,
     }
 
     DefInit *LeaveDef = dyn_cast<DefInit>(PatternDag->getArg(I));
+
     if (!LeaveDef)
       return false;
     bool Matches;
@@ -3331,17 +3336,42 @@ std::string getCSOperandType(
       return OperandType += " | CS_OP_BOUND";
     }
   }
+  bool RISCVInstrMayAccessMemory = TargetName == "RISCV" && (CGI->mayLoad || CGI->mayStore);
+  // some RISCV reg operands that hold addresses are not correctly classified by
+  // the above logic as MEM operands, this fixes the issue by an ugly asm string wrangling
+  if (RISCVInstrMayAccessMemory && OperandType == "CS_OP_REG") {
+      // if the reg name appears inside (${...}), it's an addressing register
+      if (Regex("\\(\\$\\{" + OpName.str() + "\\}\\)").match(CGI->AsmString)) {
+          OperandType += " | CS_OP_MEM";
+          return OperandType;
+      }
+  }
+  // same as above but for immediate literals used as address offsets
+  if (RISCVInstrMayAccessMemory && OperandType == "CS_OP_IMM") {
+      // if the literal name appears in ${...}(___), it's an address offset
+      if (Regex("\\$\\{" + OpName.str() + "\\}\\(.*\\)").match(CGI->AsmString)) {
+          OperandType += " | CS_OP_MEM";
+          return OperandType;
+      }
+  }
+
   if (wrongMemClassification(TargetName, OpName)) {
     return OperandType;
   }
 
+  // some RISCV instructions have an extra MEM where it shouldn't be
+  // this flag will correct the problem with no effect for other archs
+  bool InstrMayAccessMemory = TargetName != "RISCV" || RISCVInstrMayAccessMemory;
   DagInit *PatternDag = nullptr;
   if (OperandType == "CS_OP_MEM")
-    // It is only marked as mem, we treat it as immediate.
-    OperandType += " | CS_OP_IMM";
+    if (OpRec->getValue("RegClass") != nullptr)
+      OperandType += " | CS_OP_REG";
+    else // It is only marked as mem, we treat it as immediate.
+      OperandType += " | CS_OP_IMM";
   else if (OpRec->getValue("Type") &&
            getValueType(OpRec->getValueAsDef("Type")) ==
-               MVT::SimpleValueType::iPTR)
+               MVT::SimpleValueType::iPTR &&
+           InstrMayAccessMemory)
     OperandType += " | CS_OP_MEM";
   else if (!CGI->TheDef->isValueUnset("Pattern") &&
            !CGI->TheDef->getValueAsListInit("Pattern")->empty()) {
@@ -3361,11 +3391,11 @@ std::string getCSOperandType(
           return opIsPartOfiPTRPattern(
               OpRec, OpName, PatternDag->getValueAsDag("PatternToMatch"), false);
         });
-    if (OpTypeIsPartOfAnyPattern)
+    if (OpTypeIsPartOfAnyPattern && InstrMayAccessMemory)
       OperandType += " | CS_OP_MEM";
     return OperandType;
   }
-  if (PatternDag && opIsPartOfiPTRPattern(OpRec, OpName, PatternDag, false))
+  if (PatternDag && opIsPartOfiPTRPattern(OpRec, OpName, PatternDag, false) && InstrMayAccessMemory)
     OperandType += " | CS_OP_MEM";
   return OperandType;
 }
@@ -4264,7 +4294,7 @@ std::string getTableNamespacePrefix(const GenericTable &Table,
     NSTable = &ARMNSTypePairs;
   else if (StringRef(TargetName).upper() == "SPARC")
     NSTable = &SparcNSTypePairs;
-  else if (StringRef(TargetName).upper() == "RISCV") 
+  else if (StringRef(TargetName).upper() == "RISCV")
     return "RISCV_"; // don't bother with a table
   else
     PrintFatalNote("No Namespace Type table defined for target.");
@@ -4363,7 +4393,7 @@ uint64_t BitsInitToUInt(const BitsInit *BI) {
 void PrinterCapstone::searchableTablesEmitKeyArray(const GenericTable &Table,
                                                    const SearchIndex &Index,
                                                    bool IsPrimary) const {
-  if (!IsPrimary) 
+  if (!IsPrimary)
     return;
   if (Index.Fields.size() != 1)
     return;
@@ -4377,23 +4407,23 @@ void PrinterCapstone::searchableTablesEmitKeyArray(const GenericTable &Table,
   if (Kind != RecTy::BitRecTyKind && Kind != RecTy::BitsRecTyKind
     && Kind != RecTy::IntRecTyKind && Kind != RecTy::StringRecTyKind)
     return;
-  
+
   raw_string_ostream &OS = searchableTablesGetOS(ST_IMPL_OS);
   OS << "static const struct ";
 
   bool IsNumericIndex = Kind != RecTy::StringRecTyKind;
   // which struct to emit to represent the index type ?
-  if (IsNumericIndex) 
+  if (IsNumericIndex)
     OS << "IndexType";
-  else 
+  else
     OS << "IndexTypeStr";
-  
+
   ListSeparator LS;
   OS << " Index[] = {\n" << LS;
-  
+
   int64_t idx = 0;
   for (auto & entry :  Table.Entries) {
-      OS << "{"; 
+      OS << "{";
       switch (Kind) {
         case RecTy::BitRecTyKind:
           OS << ((entry->getValueAsBit(IndexField.Name))? "true" : "false");
