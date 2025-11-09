@@ -3028,6 +3028,47 @@ std::string getPrimaryCSOperandType(Record const *OpRec) {
     return "CS_OP_REG";
   else if (OperandType == "OPERAND_NM_SAVE_REGLIST")
     return "CS_OP_INVALID";
+  // WebAssembly
+  else if (OperandType == "OPERAND_BASIC_BLOCK")
+    return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_LOCAL")
+    return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_GLOBAL")
+    return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_I32IMM")
+    return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_I64IMM")
+    return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_F32IMM")
+    return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_F64IMM")
+    return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_VEC_I8IMM")
+    return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_VEC_I16IMM")
+    return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_VEC_I32IMM")
+    return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_VEC_I64IMM")
+    return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_FUNCTION32")
+    return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_OFFSET32")
+    return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_OFFSET64")
+    return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_P2ALIGN")
+    return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_SIGNATURE")
+    return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_TYPEINDEX")
+    return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_TAG")
+    return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_BRLIST")
+    return "CS_OP_IMM";
+  else if (OperandType == "OPERAND_TABLE")
+    return "CS_OP_IMM";
   else
     PrintFatalNote("Unhandled OperandType: " + OperandType);
   return OperandType;
@@ -3413,7 +3454,7 @@ void printInsnOpMapEntry(
                             std::move(OpDataTypes), AccessFlag});
   }
 
-  if (InsOps.size() > 15) {
+  if (InsOps.size() > 16) {
     for (OpData const &OD : InsOps) {
       PrintNote(OD.str());
       OD.Rec->dump();
