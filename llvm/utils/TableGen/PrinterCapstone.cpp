@@ -24,6 +24,7 @@
 #include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
 #include <bitset>
+#include <string>
 #include <unordered_map>
 
 static void emitDefaultSourceFileHeader(raw_ostream &OS) {
@@ -774,6 +775,9 @@ static void patchTemplateArgs(const std::string &TargetName,
     std::string const &DecName = Code.substr(0, B);
     std::string Args = Code.substr(B + 1, E - B - 1);
     // HACK! Remove on proper fix
+    // TODO: fix infinite looping when ran on RISCV target to generate
+    // CompressedInstructionsInfo See
+    // https://github.com/capstone-engine/llvm-capstone/issues/86
     if (!(B < E)) {
       return;
     }
@@ -822,151 +826,291 @@ static void patchPrintOperandAddr(std::string &Decoder) {
 
 static void patchSTIObject(std::string Target, std::string &Code) {
   // searching for a subtarget arg in a function def or use
-  std::string FindSubtargetArg = ",?\\s*(const\\s+)?(MCSubtargetInfo|" + Target + "Subtarget)" // subtarget object type
-                               + "\\s*[&*]\\s*" // as a reference or pointer
-                               + "[a-zA-Z_][a-zA-Z0-9_]*"; // named anthing, optionally followed by comma (but not if it's the last arg)
-  Code = std::regex_replace(Code, std::regex(FindSubtargetArg), ""); // replace with nothing
+  std::string FindSubtargetArg =
+      ",?[[:space:]]*(const[[:space:]]+)?(MCSubtargetInfo|" + Target +
+      "Subtarget)"                     // subtarget object type
+      + "[[:space:]]*[&*][[:space:]]*" // as a reference or pointer
+      + "[a-zA-Z_][a-zA-Z0-9_]*";      // named anything
+  Regex FindSubtargetArgR = Regex(FindSubtargetArg);
+  while (FindSubtargetArgR.match(Code)) {
+    Code = FindSubtargetArgR.sub("", Code);
+  }
 
-  std::string FindGetFeatureBitsCall = "([a-zA-Z_][a-zA-Z0-9_]*\\.getFeatureBits\\(\\))" // a call of the form <identifer>.getFeatureBits()
-                                       "\\[([a-zA-Z_][a-zA-Z0-9_]*)\\]";
-  std::string ReplaceGetFeatureBitsCall = Target + "_getFeatureBits(MI->csh->mode, $2)";
-  Code = std::regex_replace(Code, std::regex(FindGetFeatureBitsCall), ReplaceGetFeatureBitsCall);
+  std::string FindGetFeatureBitsCall =
+      "([a-zA-Z_][a-zA-Z0-9_]*\\.getFeatureBits\\("
+      "\\))" // a call of the form
+             // <identifer>.getFeatureBits()
+      "\\[([a-zA-Z_][a-zA-Z0-9_]*)\\]";
+  std::string ReplaceGetFeatureBitsCall =
+      Target + "_getFeatureBits(MI->csh->mode, \\2)";
+  Regex FindGetFeatureBitsCallR = Regex(FindGetFeatureBitsCall);
+  while (FindGetFeatureBitsCallR.match(Code)) {
+    Code = FindGetFeatureBitsCallR.sub(ReplaceGetFeatureBitsCall, Code);
+  }
 
-  std::string FindLeftOverUsesOfSTI = ",?\\s*[&*]?\\s*STI";
-  Code = std::regex_replace(Code, std::regex(FindLeftOverUsesOfSTI), "");
+  std::string FindLeftOverUsesOfSTI = ",?[[:space:]]*[&*]?[[:space:]]*STI";
+  Regex FindLeftOverUsesOfSTIR = Regex(FindLeftOverUsesOfSTI);
+  while (FindLeftOverUsesOfSTIR.match(Code)) {
+    Code = FindLeftOverUsesOfSTIR.sub("", Code);
+  }
 
   // target-specific replacements
   if (Target == "RISCV") {
-    std::string Find64BitChecks = "([a-zA-Z_][a-zA-Z0-9_]*)->is64Bit\\(\\)" "|"
-                                  "([a-zA-Z_][a-zA-Z0-9_]*)?\\.getTargetTriple\\(\\)\\.isArch64Bit\\(\\)";
-    Code = std::regex_replace(Code, std::regex(Find64BitChecks), Target + "_getFeatureBits(MI->csh->mode," + Target + "_Feature64Bit)");
+    std::string Find64BitChecks =
+        "([a-zA-Z_][a-zA-Z0-9_]*)->is64Bit\\(\\)"
+        "|"
+        "([a-zA-Z_][a-zA-Z0-9_]*)?\\.getTargetTriple\\(\\)\\.isArch64Bit\\(\\)";
+    Regex Find64BitChecksR = Regex(Find64BitChecks);
+    while (Find64BitChecksR.match(Code)) {
+      Code = Find64BitChecksR.sub(Target + "_getFeatureBits(MI->csh->mode," +
+                                      Target + "_Feature64Bit)",
+                                  Code);
+    }
   }
 }
 
-static void patchIsGetOperand(std::string Target, std::string& Code) {
-  // will patch MI.getOperand(1).isReg() into MCOperand_isReg(MCInst_getOperand(MI, 1))
-  std::string FindGetOperand = "([a-zA-Z_][a-zA-Z0-9_]*)" // any object/pointer (as $1)
-                               "(\\.|->)getOperand\\(" // in method call expression getOperand ($2, ignored)
-                               "([^)]*)" // having any arguments (as $3)
-                               "\\)";
+static void patchIsGetOperand(std::string Target, std::string &Code) {
+  // will patch MI.getOperand(1).isReg() into
+  // MCOperand_isReg(MCInst_getOperand(MI, 1))
+  std::string FindGetOperand =
+      "([a-zA-Z_][a-zA-Z0-9_]*)" // any object/pointer (as $1)
+      "(\\.|->)getOperand\\("    // in method call expression getOperand ($2,
+                                 // ignored)
+      "([^)]*)"                  // having any arguments (as $3)
+      "\\)";
 
-  std::string FindIsGetImmOrReg = FindGetOperand +
-                                 "\\."  // then one of the following chained method calls:
-                                 "(isReg|getReg" // isReg or getReg
-                                 "|isImm|getImm)\\(\\)"; // or isImm or getImm (as $4)
-  std::string ReplaceIsGetImmOrReg = "MCOperand_$4(MCInst_getOperand($1, $3))";
-  Code = std::regex_replace(Code, std::regex(FindIsGetImmOrReg), ReplaceIsGetImmOrReg);
+  std::string FindIsGetImmOrReg =
+      FindGetOperand + "\\." // then one of the following chained method calls:
+                       "(isReg|getReg"         // isReg or getReg
+                       "|isImm|getImm)\\(\\)"; // or isImm or getImm (as $4)
+  std::string ReplaceIsGetImmOrReg =
+      "MCOperand_\\4(MCInst_getOperand(\\1, \\3))";
+  Regex FindIsGetImmOrRegR = Regex(FindIsGetImmOrReg);
+  while (FindIsGetImmOrRegR.match(Code)) {
+    Code = FindIsGetImmOrRegR.sub(ReplaceIsGetImmOrReg, Code);
+  }
 
   // patch individual getOperand calls
-  std::string ReplaceGetOperand = "MCInst_getOperand($1, $3)";
-  Code = std::regex_replace(Code, std::regex(FindGetOperand), ReplaceGetOperand);
+  std::string ReplaceGetOperand = "MCInst_getOperand(\\1, \\3)";
+  Regex FindGetOperandR = Regex(FindGetOperand);
+  while (FindGetOperandR.match(Code)) {
+    Code = FindGetOperandR.sub(ReplaceGetOperand, Code);
+  }
 }
 
-static void patchGetOpcode(std::string Target, std::string& Code) {
+static void patchGetOpcode(std::string Target, std::string &Code) {
   std::string FindGetOpcode = "([a-zA-Z_][a-zA-Z0-9_]*)\\.getOpcode\\(\\)";
-  std::string ReplaceGetOpcode = "MCInst_getOpcode($1)";
-  Code = std::regex_replace(Code, std::regex(FindGetOpcode), ReplaceGetOpcode);
+  std::string ReplaceGetOpcode = "MCInst_getOpcode(\\1)";
+  Regex FindGetOpcodeR = Regex(FindGetOpcode);
+  while (FindGetOpcodeR.match(Code)) {
+    Code = FindGetOpcodeR.sub(ReplaceGetOpcode, Code);
+  }
 }
 
-static void patchAddOperandGetOperand(std::string Target, std::string& Code) {
-  std::string FindAddGetOperand = "([a-zA-Z_][a-zA-Z0-9_]*)" // any variable
-                                  "\\.addOperand\\(" // in method call addOperand
-                                  "([a-zA-Z_][a-zA-Z0-9_]*)\\." // whose argument is another method call on another variable
-                                  "getOperand\\(" "([^)]*)" "\\)" // of method getOperand and its argument
-                                  "\\)";
-  std::string ReplaceAddGetOperand = "MCInst_addOperand2($1, MCInst_getOperand($2, $3))";
-  Code = std::regex_replace(Code, std::regex(FindAddGetOperand), ReplaceAddGetOperand);
+static void patchAddOperandGetOperand(std::string Target, std::string &Code) {
+  std::string FindAddGetOperand =
+      "([a-zA-Z_][a-zA-Z0-9_]*)"    // any variable
+      "\\.addOperand\\("            // in method call addOperand
+      "([a-zA-Z_][a-zA-Z0-9_]*)\\." // whose argument is another method call on
+                                    // another variable
+      "getOperand\\("
+      "([^)]*)"
+      "\\)" // of method getOperand and its argument
+      "\\)";
+  std::string ReplaceAddGetOperand =
+      "MCInst_addOperand2(\\1, MCInst_getOperand(\\2, \\3))";
+  Regex FindAddGetOperandR = Regex(FindAddGetOperand);
+  while (FindAddGetOperandR.match(Code)) {
+    Code = FindAddGetOperandR.sub(ReplaceAddGetOperand, Code);
+  }
 }
 
-static void patchAddOperandCreateOperand(std::string Target, std::string &Code) {
-  std::string FindAddCreateReg = "([a-zA-Z_][a-zA-Z0-9_]*)" // any variable
-                                 "\\.addOperand\\(" // in method call addOperand
-                                 "MCOperand_createReg\\(([a-zA-Z_][a-zA-Z0-9_]*)\\)" // on a createReg call
-                                 "\\)";
-  std::string ReplaceAddCreateReg = "MCOperand_CreateReg0($1, $2)";
-  Code = std::regex_replace(Code, std::regex(FindAddCreateReg), ReplaceAddCreateReg);
+static void patchAddOperandCreateOperand(std::string Target,
+                                         std::string &Code) {
+  std::string FindAddCreateReg =
+      "([a-zA-Z_][a-zA-Z0-9_]*)" // any variable
+      "\\.addOperand\\("         // in method call addOperand
+      "MCOperand_createReg\\(([a-zA-Z_][a-zA-Z0-9_]*)\\)" // on a createReg call
+      "\\)";
+  std::string ReplaceAddCreateReg = "MCOperand_CreateReg0(\\1, \\2)";
+  Regex FindAddCreateRegR = Regex(FindAddCreateReg);
+  while (FindAddCreateRegR.match(Code)) {
+    Code = FindAddCreateRegR.sub(ReplaceAddCreateReg, Code);
+  }
 
-  std::string FindAddCreateImm = "([a-zA-Z_][a-zA-Z0-9_]*)" // any variable
-                                 "\\.addOperand\\(" // in method call addOperand
-                                 "MCOperand_createImm\\((-?[0-9]+)\\)" // on a createImm call
-                                 "\\)";
-  std::string ReplaceAddCreateImm = "MCOperand_CreateImm0($1, $2)";
-  Code = std::regex_replace(Code, std::regex(FindAddCreateImm), ReplaceAddCreateImm);
+  std::string FindAddCreateImm =
+      "([a-zA-Z_][a-zA-Z0-9_]*)"            // any variable
+      "\\.addOperand\\("                    // in method call addOperand
+      "MCOperand_createImm\\((-?[0-9]+)\\)" // on a createImm call
+      "\\)";
+  std::string ReplaceAddCreateImm = "MCOperand_CreateImm0(\\1, \\2)";
+  Regex FindAddCreateImmR = Regex(FindAddCreateImm);
+  while (FindAddCreateImmR.match(Code)) {
+    Code = FindAddCreateImmR.sub(ReplaceAddCreateImm, Code);
+  }
 }
 
-static void patchRegClassContains(std::string Target, std::string& Code) {
-  std::string FindRegClassContainsExpression = "([a-zA-Z_][a-zA-Z0-9_]*)" // any variable
-                                               "\\[" "([a-zA-Z_][a-zA-Z0-9_]*RegClassID)" "\\]" // indexed with a regclass ID enum
-                                               "\\.contains\\("; // followed by the start of a .contains check
+static void patchRegClassContains(std::string Target, std::string &Code) {
+  std::string FindRegClassContainsExpression =
+      "([a-zA-Z_][a-zA-Z0-9_]*)" // any variable
+      "\\["
+      "([a-zA-Z_][a-zA-Z0-9_]*RegClassID)"
+      "\\]"             // indexed with a regclass ID enum
+      "\\.contains\\("; // followed by the start of a .contains check
 
-  std::string ReplaceRegClassContainsExpression = "MCRegisterClass_contains(MCRegisterInfo_getRegClass(MI->MRI, $2),";
-  Code = std::regex_replace(Code, std::regex(FindRegClassContainsExpression), ReplaceRegClassContainsExpression);
+  std::string ReplaceRegClassContainsExpression =
+      "MCRegisterClass_contains(MCRegisterInfo_getRegClass(MI->MRI, \\2),";
+  Regex FindRegClassContainsExpressionR = Regex(FindRegClassContainsExpression);
+  while (FindRegClassContainsExpressionR.match(Code)) {
+    Code = FindRegClassContainsExpressionR.sub(
+        ReplaceRegClassContainsExpression, Code);
+  }
 }
 
-static void patchSetLoc(std::string Target, std::string& Code) {
+static void patchSetLoc(std::string Target, std::string &Code) {
   // there is no loc property in McInst struct in capstone
-  std::string FindSetLocCalls = ".*\\.setLoc.*;";
-  Code = std::regex_replace(Code, std::regex(FindSetLocCalls), "");
+  std::string FindSetLocCalls = "[^\n.]*\\.setLoc[^;]*;";
+  Regex FindSetLocCallsR = Regex(FindSetLocCalls);
+  while (FindSetLocCallsR.match(Code)) {
+    Code = FindSetLocCallsR.sub("", Code);
+  }
 }
 
 static void patchRISCVValidateCompressedInst(std::string &Code) {
-  // replace the reference types with pointer types, remove const qualifiers for simplicity
-  // any identifier followed by '&' followed by any identifier, followed by comma or closed paren
-  // technically this could match a usage of the bitwise and operator in a comma expression, but this is unlikely
-  std::string FindReferenceTypes = "(const)?\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*&\\s*([a-zA-Z_][a-zA-Z0-9_]*)(,|\\))";
-  std::string ReplaceReferenceTypes = "$2 *$3$4";
-  Code = std::regex_replace(Code, std::regex(FindReferenceTypes), ReplaceReferenceTypes);
+  // replace the reference types with pointer types, remove const qualifiers for
+  // simplicity any identifier followed by '&' followed by any identifier,
+  // followed by comma or closed paren technically this could match a usage of
+  // the bitwise and operator in a comma expression, but this is unlikely
+  std::string FindReferenceTypes =
+      "(const)?[[:space:]]*([a-zA-Z_][a-zA-Z0-9_]*)[[:space:]]*&"
+      "[[:space:]]*([a-zA-Z_][a-zA-Z0-9_]*)(,|\\))";
+  std::string ReplaceReferenceTypes = "\\2 *\\3\\4";
+  Regex FindReferenceTypesR = Regex(FindReferenceTypes);
+  while (FindReferenceTypesR.match(Code)) {
+    Code = FindReferenceTypesR.sub(ReplaceReferenceTypes, Code);
+  }
 
   // also add a McInst argument to any function that doesn't contain it
-  Code = std::regex_replace(Code, std::regex("bool (RISCVValidate.*)\\("), "bool $1(MCInst *MI,");
+  Regex FindAddMcInstFunArgumentR = Regex("bool (RISCVValidate[^(]*)\\(");
+  // create a very unlikely synonym for bool, something like
+  // "_123456789_BOOL_112233445566_"
+  std::string BoolMarker =
+      "_" + std::to_string((long long)(&FindAddMcInstFunArgumentR)) + "_BOOL_" +
+      std::to_string((long long)(&patchRISCVValidateCompressedInst)) + "_";
+  while (FindAddMcInstFunArgumentR.match(Code)) {
+    Code = FindAddMcInstFunArgumentR.sub(BoolMarker + " \\1(MCInst *MI,", Code);
+  }
+  // then remove the synonym and replace it with bool again
+  Regex BoolMarkerR = Regex(BoolMarker);
+  while (BoolMarkerR.match(Code)) {
+    Code = BoolMarkerR.sub("bool", Code);
+  }
   // modify calls to pass the argument
-  std::string start = "(^|\\r?\\n)";
-  Code = std::regex_replace(Code, std::regex(start + "(\\s*RISCVValidate[^(]*)\\(" "(.*)" "\\)"),"$1$2(MI,$3)");
+  std::string FindAddMcInstArgument = "\n([ \t]*)"
+                                      "(RISCVValidate[^(]*)\\(";
+  Regex FindAddMcInstArgumentR = Regex(FindAddMcInstArgument);
+  std::string DummyMarker =
+      "_" + std::to_string((long long)&FindAddMcInstArgumentR) + "_DUMMY_" +
+      std::to_string((long long)&patchRISCVValidateCompressedInst) + "_";
+  while (FindAddMcInstArgumentR.match(Code)) {
+    Code = FindAddMcInstArgumentR.sub("\\n" + DummyMarker + "\\1\\2(MI,", Code);
+  }
+  Regex DummyMarkerR = Regex(DummyMarker);
+  while (DummyMarkerR.match(Code)) {
+    Code = DummyMarkerR.sub("", Code);
+  }
 
   // patch CreateImm calls to CreateImm1 calls, the equivalent Capstone api
-  std::string FindCreateImmCalls = "(\\s*RISCVValidate[^(]*)\\(" "(.*)MCOperand_createImm\\((-?[0-9]+)\\)(.*)";
-  std::string ReplaceCreateImmCalls = "$1($2MCOperand_CreateImm1(MI, $3)$4";
-  Code = std::regex_replace(Code, std::regex(FindCreateImmCalls), ReplaceCreateImmCalls);
+  std::string FindCreateImmCalls =
+      "([[:space:]]*RISCVValidate[^(]*)\\("
+      "(.*)MCOperand_createImm\\((-?[0-9]+)\\)(.*)";
+  std::string ReplaceCreateImmCalls = "\\1(\\2MCOperand_CreateImm1(MI, \\3)\\4";
+  Regex FindCreateImmCallsR = Regex(FindCreateImmCalls);
+  while (FindCreateImmCallsR.match(Code)) {
+    Code = FindCreateImmCallsR.sub(ReplaceCreateImmCalls, Code);
+  }
 
   // replace type names that don't exist in Capstone with their equivalents
-  Code = std::regex_replace(Code, std::regex("MachineInstr \\*"), "MCInst *");
-  Code = std::regex_replace(Code, std::regex("MachineOperand \\*"),"MCOperand *");
-
+  Regex FindMachineInstrStarR = Regex("MachineInstr \\*");
+  while (FindMachineInstrStarR.match(Code)) {
+    Code = FindMachineInstrStarR.sub("MCInst *", Code);
+  }
+  Regex FindMachineOperandStarR = Regex("MachineOperand \\*");
+  while (FindMachineOperandStarR.match(Code)) {
+    Code = FindMachineOperandStarR.sub("MCOperand *", Code);
+  }
   // replace llvm_unreachable because it doesn't exist in Capstone
-  Code = std::regex_replace(Code, std::regex("llvm_unreachable.*"), "CS_ASSERT_RET_VAL(0,false); \n\t return false;");
+  Regex FindLlvmUnreachableR = Regex("llvm_unreachable[^;]*;");
+  while (FindLlvmUnreachableR.match(Code)) {
+    Code = FindLlvmUnreachableR.sub(
+        "CS_ASSERT_RET_VAL(0,false); \n\t return false;", Code);
+  }
 
-  // add a return at the end of the functions so a strict warnings-as-errors compiler won't complain
-  Code = std::regex_replace(Code, std::regex("bool RISCVValidate([\\s\\S]*?)\\}(\\s*)\\}(\\s*)\\}"), "bool RISCVValidate$1}$2}$3\treturn false;\n}");
+  // add a return at the end of the functions so a strict warnings-as-errors
+  // compiler won't complain
+  /*
+  Regex FindAddReturnR = Regex(
+      "bool RISCVValidate([\\s\\S]*?)\\}([[:space:]]*)\\}([[:space:]]*)\\}");
+  while (FindAddReturnR.match(Code)) {
+    Code = FindAddReturnR.sub("bool RISCVValidate\\1}\\2}\\3\treturn false;\n}",
+                              Code);
+  }
+  */
 }
 
-static void patchEvaluateAsConstantImm(std::string Target, std::string& Code) {
+static void patchEvaluateAsConstantImm(std::string Target, std::string &Code) {
   std::string FindEvaluateAsConstantImm = "([a-zA-Z_][a-zA-Z0-9_]*)\\."
-                                          "evaluateAsConstantImm\\(" "([a-zA-Z_][a-zA-Z0-9_]*)" "\\)";
+                                          "evaluateAsConstantImm\\("
+                                          "([a-zA-Z_][a-zA-Z0-9_]*)"
+                                          "\\)";
   // use comma operator to chain an assignment and a boolean value
-  std::string ReplaceEvaluateAsConstantImm = "($2 = MCOperand_getImm($1), MCOperand_isImm($1))";
-  Code = std::regex_replace(Code, std::regex(FindEvaluateAsConstantImm), ReplaceEvaluateAsConstantImm);
+  std::string ReplaceEvaluateAsConstantImm =
+      "(\\2 = MCOperand_getImm(\\1), MCOperand_isImm(\\1))";
+  Regex FindEvaluateAsConstantImmR = Regex(FindEvaluateAsConstantImm);
+  while (FindEvaluateAsConstantImmR.match(Code)) {
+    Code = FindEvaluateAsConstantImmR.sub(ReplaceEvaluateAsConstantImm, Code);
+  }
 }
 
-static void patchSetOpcode(std::string TargetName, std::string& Code) {
-  std::string FindSetOpcode = "([a-zA-Z_][a-zA-Z0-9_]*)\\.setOpcode\\(([a-zA-Z_][a-zA-Z0-9_]*)\\)";
-  std::string ReplaceSetOpcode = "MCInst_setOpcode($1, $2)";
-  Code = std::regex_replace(Code, std::regex(FindSetOpcode), ReplaceSetOpcode);
+static void patchSetOpcode(std::string TargetName, std::string &Code) {
+  std::string FindSetOpcode =
+      "([a-zA-Z_][a-zA-Z0-9_]*)\\.setOpcode\\(([a-zA-Z_][a-zA-Z0-9_]*)\\)";
+  std::string ReplaceSetOpcode = "MCInst_setOpcode(\\1, \\2)";
+  Regex FindSetOpcodeR = Regex(FindSetOpcode);
+  while (FindSetOpcodeR.match(Code)) {
+    Code = FindSetOpcodeR.sub(ReplaceSetOpcode, Code);
+  }
 }
 
-static void patchIsBareSymbolRef(std::string TargetName, std::string& Code) {
-  std::string FindIsBareSymbolRef = "([a-zA-Z_][a-zA-Z0-9_]*)\\.isBareSymbolRef\\(\\)";
-  std::string ReplaceIsBareSymbolRef = "MCOperand_isExpr($1)";
-  Code = std::regex_replace(Code, std::regex(FindIsBareSymbolRef), ReplaceIsBareSymbolRef);
+static void patchIsBareSymbolRef(std::string TargetName, std::string &Code) {
+  std::string FindIsBareSymbolRef =
+      "([a-zA-Z_][a-zA-Z0-9_]*)\\.isBareSymbolRef\\(\\)";
+  std::string ReplaceIsBareSymbolRef = "MCOperand_isExpr(\\1)";
+  Regex FindIsBareSymbolRefR = Regex(FindIsBareSymbolRef);
+  while (FindIsBareSymbolRefR.match(Code)) {
+    Code = FindIsBareSymbolRefR.sub(ReplaceIsBareSymbolRef, Code);
+  }
 }
 
-static void patchIsUintIsShiftedUInt(std::string TargetName, std::string& Code) {
-  std::string FindIsUint = "is(U)?Int_([0-9]+)\\(" "([^)]+)" "\\)";
-  std::string ReplaceIsUint = "is$1IntN($2, $3)";
-  Code = std::regex_replace(Code, std::regex(FindIsUint), ReplaceIsUint);
+static void patchIsUintIsShiftedUInt(std::string TargetName,
+                                     std::string &Code) {
+  std::string FindIsUint = "is(U)?Int_([0-9]+)\\("
+                           "([^)]+)"
+                           "\\)";
+  std::string ReplaceIsUint = "is\\1IntN(\\2, \\3)";
+  Regex FindIsUintR = Regex(FindIsUint);
+  while (FindIsUintR.match(Code)) {
+    Code = FindIsUintR.sub(ReplaceIsUint, Code);
+  }
 
-  std::string FindIsShiftedUint = "isShifted(U)?Int_([0-9]+)_([0-9]+)\\(" "([^)]+)" "\\)";
-  std::string ReplaceIsShiftedUint = "isShifted$1IntN($2, $3, $4)";
-  Code = std::regex_replace(Code, std::regex(FindIsShiftedUint), ReplaceIsShiftedUint);
+  std::string FindIsShiftedUint = "isShifted(U)?Int_([0-9]+)_([0-9]+)\\("
+                                  "([^)]+)"
+                                  "\\)";
+  std::string ReplaceIsShiftedUint = "isShifted\\1IntN(\\2, \\3, \\4)";
+  Regex FindIsShiftedUintR = Regex(FindIsShiftedUint);
+  while (FindIsShiftedUintR.match(Code)) {
+    Code = FindIsShiftedUintR.sub(ReplaceIsShiftedUint, Code);
+  }
 }
 
 std::string PrinterCapstone::translateToC(std::string const &TargetName,
@@ -976,26 +1120,30 @@ std::string PrinterCapstone::translateToC(std::string const &TargetName,
   patchNullptr(PatchedCode);
   patchIsGetImmReg(PatchedCode);
   patchTemplateArgs(TargetName, PatchedCode);
-  patchSTIObject(TargetName, PatchedCode);
 
-  patchAddOperandGetOperand(TargetName, PatchedCode);
-  patchIsGetOperand(TargetName, PatchedCode); // must be after patchAddOperandGetOperand
-  patchAddOperandCreateOperand(TargetName, PatchedCode);
+  if (TargetName == "RISCV") {
+    patchSTIObject(TargetName, PatchedCode);
 
-  patchRegClassContains(TargetName, PatchedCode);
+    patchAddOperandGetOperand(TargetName, PatchedCode);
+    // must be after patchAddOperandGetOperand
+    patchIsGetOperand(TargetName, PatchedCode);
+    patchAddOperandCreateOperand(TargetName, PatchedCode);
+    patchRegClassContains(TargetName, PatchedCode);
 
-  patchSetLoc(TargetName, PatchedCode);
-  patchEvaluateAsConstantImm(TargetName, PatchedCode);
+    patchSetLoc(TargetName, PatchedCode);
+    patchEvaluateAsConstantImm(TargetName, PatchedCode);
 
-  patchSetOpcode(TargetName, PatchedCode);
-  patchGetOpcode(TargetName, PatchedCode);
-  patchIsBareSymbolRef(TargetName, PatchedCode);
-  patchIsUintIsShiftedUInt(TargetName, PatchedCode);
-  if (TargetName == "ARM" || TargetName == "Alpha") {
-    patchPrintOperandAddr(PatchedCode);
-  } else if (TargetName == "RISCV") {
+    patchSetOpcode(TargetName, PatchedCode);
+    patchGetOpcode(TargetName, PatchedCode);
+    patchIsBareSymbolRef(TargetName, PatchedCode);
+    patchIsUintIsShiftedUInt(TargetName, PatchedCode);
     patchRISCVValidateCompressedInst(PatchedCode);
   }
+
+  if (TargetName == "ARM" || TargetName == "Alpha") {
+    patchPrintOperandAddr(PatchedCode);
+  }
+
   return PatchedCode;
 }
 
@@ -1287,7 +1435,7 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
   std::set<std::string> InsnBytesAsUint24 = {"Xtensa"};
   std::set<std::string> InsnBytesAsUint32 = {"ARM",   "AArch64", "LoongArch",
                                              "Alpha", "Mips",    "TriCore",
-                                             "ARC", "Sparc", "RISCV"};
+                                             "ARC",   "Sparc",   "RISCV"};
   std::set<std::string> InsnBytesAsUint64 = {"SystemZ", "ARC"};
   bool MacroDefined = false;
   if (InsnBytesAsUint16.find(TargetName) != InsnBytesAsUint16.end()) {
@@ -2829,14 +2977,8 @@ normalizedMnemonic(StringRef const &Mn, const bool Upper = true,
 
   // Each tuple is: Regex Pattern : Replacement char
   static SmallVector<std::tuple<std::string, std::string>> Replacements = {
-    {"[.]", "_"},
-    {"[,]", "_"},
-    {"[|]", "_"},
-    {"[+]", "p"},
-    {"[-]", "m"},
-    {"[/]", "s"},
-    {"[{}]", "_"},
-    {"[#]", "h"},
+      {"[.]", "_"}, {"[,]", "_"}, {"[|]", "_"},  {"[+]", "p"},
+      {"[-]", "m"}, {"[/]", "s"}, {"[{}]", "_"}, {"[#]", "h"},
   };
 
   auto Mnemonic = Upper ? Mn.upper() : Mn.str();
@@ -2860,12 +3002,14 @@ normalizedMnemonic(StringRef const &Mn, const bool Upper = true,
   return Mnemonic;
 }
 
-static inline std::string
-getNormalMnemonic(StringRef TargetName, StringRef Mnemonic,
-                  const bool Upper = true, const bool ReplaceDot = true) {
+static inline std::string getNormalMnemonic(StringRef TargetName,
+                                            StringRef Mnemonic,
+                                            const bool Upper = true,
+                                            const bool ReplaceDot = true) {
 
   StringRef RemovePattern = "";
-  if (TargetName.equals_insensitive("ARM") || TargetName.equals_insensitive("AArch64")) {
+  if (TargetName.equals_insensitive("ARM") ||
+      TargetName.equals_insensitive("AArch64")) {
     RemovePattern = "[{}]";
   } else if (TargetName.equals_insensitive("ARC")) {
     RemovePattern = "[.]$";
@@ -2980,8 +3124,8 @@ std::string getArchSupplInfoPPC(StringRef const &TargetName,
 }
 
 std::string getArchSupplInfoSparc(StringRef const &TargetName,
-                                CodeGenInstruction const *CGI,
-                                raw_string_ostream &SparcFormatEnum) {
+                                  CodeGenInstruction const *CGI,
+                                  raw_string_ostream &SparcFormatEnum) {
   static std::set<std::string> Formats;
   // Get instruction format
   ArrayRef<std::pair<Record *, SMRange>> SCs = CGI->TheDef->getSuperClasses();
@@ -2995,13 +3139,15 @@ std::string getArchSupplInfoSparc(StringRef const &TargetName,
   // The class before the "I" class is the format class.
   for (int I = SCs.size() - 1; I >= 0; --I) {
     const Record *SC = SCs[I].first;
-    if (SC->getName() == "InstSP" || SC->getName() == "F2" || SC->getName() == "F3" || SC->getName() == "F4") {
+    if (SC->getName() == "InstSP" || SC->getName() == "F2" ||
+        SC->getName() == "F3" || SC->getName() == "F4") {
       // In this case of !PrevSC the instruction inherits directly from InstSP.
       // In code they document this is a FOMRAT 1 instruction.
       //
-      // If SC->getName() == "F2...4" we emit the format as well. Because there are many
-      // F2/F3/F4 encodings, not just one. F2/F3/F4 are the base.
-      std::string Format = "SPARC_INSN_FORM_" + (!PrevSC ? "F1" : PrevSC->getName().upper());
+      // If SC->getName() == "F2...4" we emit the format as well. Because there
+      // are many F2/F3/F4 encodings, not just one. F2/F3/F4 are the base.
+      std::string Format =
+          "SPARC_INSN_FORM_" + (!PrevSC ? "F1" : PrevSC->getName().upper());
       if (Formats.find(Format) == Formats.end()) {
         SparcFormatEnum << Format + ",\n";
       }
@@ -3159,12 +3305,19 @@ Record *argInitOpToRecord(Init *ArgInit) {
 
 // diagram
 // https://regexper.com/#OPERAND_%5BUS%5DIMM%5B0-9%5D%7B1%2C2%7D%28_%5BA-Z0-9%5D%2B%29*%7COPERAND_ZERO%7COPERAND_RVKRNUM%7COPERAND_VTYPEI%5B0-9%5D%7B1%2C2%7D%7COPERAND_UIMMLOG2XLEN%28_NONZERO%29%3F%7COPERAND_CLUI_IMM
-static const std::regex RiscvImmOperandsPattern(
-  "OPERAND_[US]IMM[0-9]{1,2}(_[A-Z0-9]+)*" // e.g. OPERAND_UIMM12_NONZERO_BLAHBLAH42
-  "|" "OPERAND_ZERO" "|" "OPERAND_RVKRNUM"
-  "|" "OPERAND_VTYPEI[0-9]{1,2}"              // e.g. OPERAND_VTYPEI10
-  "|" "OPERAND_UIMMLOG2XLEN(_NONZERO)?"
-  "|" "OPERAND_CLUI_IMM");
+static const Regex RiscvImmOperandsPattern(
+    "OPERAND_[US]IMM[0-9]{1,2}(_[A-Z0-9]+)*" // e.g.
+                                             // OPERAND_UIMM12_NONZERO_BLAHBLAH42
+    "|"
+    "OPERAND_ZERO"
+    "|"
+    "OPERAND_RVKRNUM"
+    "|"
+    "OPERAND_VTYPEI[0-9]{1,2}" // e.g. OPERAND_VTYPEI10
+    "|"
+    "OPERAND_UIMMLOG2XLEN(_NONZERO)?"
+    "|"
+    "OPERAND_CLUI_IMM");
 
 std::string getPrimaryCSOperandType(Record const *OpRec) {
   std::string OperandType;
@@ -3210,8 +3363,9 @@ std::string getPrimaryCSOperandType(Record const *OpRec) {
   else if (OperandType == "OPERAND_NM_GPREL21")
     return "CS_OP_REG";
   // RISCV (keep this as the last check because it matches a lot of strings,
-  //        so it might shadow another architecture's operand names if it's moved up)
-  else if (std::regex_match(OperandType, RiscvImmOperandsPattern))
+  //        so it might shadow another architecture's operand names if it's
+  //        moved up)
+  else if (RiscvImmOperandsPattern.match(OperandType))
     return "CS_OP_IMM";
   else if (OperandType == "OPERAND_NM_SAVE_REGLIST")
     return "CS_OP_INVALID";
@@ -3308,9 +3462,12 @@ bool opIsPartOfiPTRPattern(Record const *OpRec, StringRef const &OpName,
   return false;
 }
 
-/// Some operands are wrongly defined as iPTR or other markers we use to identify memory operands.
-static inline bool wrongMemClassification(StringRef const &TargetName, StringRef const &OpName) {
-  return (TargetName.compare_insensitive("Sparc") == 0 && OpName.compare_insensitive("simm13") == 0);
+/// Some operands are wrongly defined as iPTR or other markers we use to
+/// identify memory operands.
+static inline bool wrongMemClassification(StringRef const &TargetName,
+                                          StringRef const &OpName) {
+  return (TargetName.compare_insensitive("Sparc") == 0 &&
+          OpName.compare_insensitive("simm13") == 0);
 }
 
 std::string getCSOperandType(
@@ -3319,7 +3476,8 @@ std::string getCSOperandType(
     std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
   std::string OperandType = getPrimaryCSOperandType(OpRec);
 
-  if ((StringRef(TargetName).upper() == "AARCH64" || StringRef(TargetName).upper() == "SPARC") &&
+  if ((StringRef(TargetName).upper() == "AARCH64" ||
+       StringRef(TargetName).upper() == "SPARC") &&
       OperandType != "CS_OP_MEM") {
     // The definitions of AArch64/Sparc are so flawed, when it comes to memory
     // operands (they are not labeled as such), that we just search for the op
@@ -3336,23 +3494,25 @@ std::string getCSOperandType(
       return OperandType += " | CS_OP_BOUND";
     }
   }
-  bool RISCVInstrMayAccessMemory = TargetName == "RISCV" && (CGI->mayLoad || CGI->mayStore);
+  bool RISCVInstrMayAccessMemory =
+      TargetName == "RISCV" && (CGI->mayLoad || CGI->mayStore);
   // some RISCV reg operands that hold addresses are not correctly classified by
-  // the above logic as MEM operands, this fixes the issue by an ugly asm string wrangling
+  // the above logic as MEM operands, this fixes the issue by an ugly asm string
+  // wrangling
   if (RISCVInstrMayAccessMemory && OperandType == "CS_OP_REG") {
-      // if the reg name appears inside (${...}), it's an addressing register
-      if (Regex("\\(\\$\\{" + OpName.str() + "\\}\\)").match(CGI->AsmString)) {
-          OperandType += " | CS_OP_MEM";
-          return OperandType;
-      }
+    // if the reg name appears inside (${...}), it's an addressing register
+    if (Regex("\\(\\$\\{" + OpName.str() + "\\}\\)").match(CGI->AsmString)) {
+      OperandType += " | CS_OP_MEM";
+      return OperandType;
+    }
   }
   // same as above but for immediate literals used as address offsets
   if (RISCVInstrMayAccessMemory && OperandType == "CS_OP_IMM") {
-      // if the literal name appears in ${...}(___), it's an address offset
-      if (Regex("\\$\\{" + OpName.str() + "\\}\\(.*\\)").match(CGI->AsmString)) {
-          OperandType += " | CS_OP_MEM";
-          return OperandType;
-      }
+    // if the literal name appears in ${...}(___), it's an address offset
+    if (Regex("\\$\\{" + OpName.str() + "\\}\\(.*\\)").match(CGI->AsmString)) {
+      OperandType += " | CS_OP_MEM";
+      return OperandType;
+    }
   }
 
   if (wrongMemClassification(TargetName, OpName)) {
@@ -3361,7 +3521,8 @@ std::string getCSOperandType(
 
   // some RISCV instructions have an extra MEM where it shouldn't be
   // this flag will correct the problem with no effect for other archs
-  bool InstrMayAccessMemory = TargetName != "RISCV" || RISCVInstrMayAccessMemory;
+  bool InstrMayAccessMemory =
+      TargetName != "RISCV" || RISCVInstrMayAccessMemory;
   DagInit *PatternDag = nullptr;
   if (OperandType == "CS_OP_MEM")
     if (OpRec->getValue("RegClass") != nullptr)
@@ -3389,13 +3550,15 @@ std::string getCSOperandType(
     bool OpTypeIsPartOfAnyPattern =
         any_of(InsnPatternMap.at(CGIName), [&](Record *PatternDag) {
           return opIsPartOfiPTRPattern(
-              OpRec, OpName, PatternDag->getValueAsDag("PatternToMatch"), false);
+              OpRec, OpName, PatternDag->getValueAsDag("PatternToMatch"),
+              false);
         });
     if (OpTypeIsPartOfAnyPattern && InstrMayAccessMemory)
       OperandType += " | CS_OP_MEM";
     return OperandType;
   }
-  if (PatternDag && opIsPartOfiPTRPattern(OpRec, OpName, PatternDag, false) && InstrMayAccessMemory)
+  if (PatternDag && opIsPartOfiPTRPattern(OpRec, OpName, PatternDag, false) &&
+      InstrMayAccessMemory)
     OperandType += " | CS_OP_MEM";
   return OperandType;
 }
@@ -3414,7 +3577,8 @@ void printInsnMapEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
   InsnMap.indent(2) << getLLVMInstEnumName(TargetName, CGI) << " /* " << InsnNum
                     << " */";
   InsnMap << ", " << TargetName.upper() << "_INS_"
-          << (UseMI ? getNormalMnemonic(TargetName, MI->Mnemonic) : "INVALID") << ",\n";
+          << (UseMI ? getNormalMnemonic(TargetName, MI->Mnemonic) : "INVALID")
+          << ",\n";
   // no diet only
   InsnMap.indent(2) << "#ifndef CAPSTONE_DIET\n";
   if (UseMI) {
@@ -3573,8 +3737,9 @@ void printInsnOpMapEntry(
     // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53119
     InsnOpMap << "{{{ /* " + LLVMEnum + " (" << InsnNum
               << ") - " + TargetName + "_INS_" +
-                     (UseMI ? getNormalMnemonic(TargetName, MI->Mnemonic) : "INVALID") + " - " +
-                     CGI->AsmString + " */\n";
+                     (UseMI ? getNormalMnemonic(TargetName, MI->Mnemonic)
+                            : "INVALID") +
+                     " - " + CGI->AsmString + " */\n";
     InsnOpMap << " 0\n";
     InsnOpMap << "}}},\n";
     return;
@@ -3638,8 +3803,9 @@ void printInsnOpMapEntry(
   // Write the C struct of the Instruction operands.
   InsnOpMap << "{ /* " + LLVMEnum + " (" << InsnNum
             << ") - " + TargetName + "_INS_" +
-                   (UseMI ? getNormalMnemonic(TargetName, MI->Mnemonic) : "INVALID") + " - " +
-                   CGI->AsmString + " */\n";
+                   (UseMI ? getNormalMnemonic(TargetName, MI->Mnemonic)
+                          : "INVALID") +
+                   " - " + CGI->AsmString + " */\n";
   InsnOpMap << "{\n";
   for (OpData const &OD : InsOps) {
     InsnOpMap.indent(2) << "{ " << OD.OpType << ", " << getCSAccess(OD.Access)
@@ -3658,7 +3824,8 @@ void printInsnNameMapEnumEntry(StringRef const &TargetName,
   static std::set<std::string> EnumsSeen;
 
   const bool ReplaceDot = !TargetName.equals_insensitive("TriCore");
-  std::string Mnemonic = getNormalMnemonic(TargetName, MI->Mnemonic, false, ReplaceDot);
+  std::string Mnemonic =
+      getNormalMnemonic(TargetName, MI->Mnemonic, false, ReplaceDot);
   if (MnemonicsSeen.find(Mnemonic) != MnemonicsSeen.end())
     return;
 
@@ -3795,8 +3962,9 @@ void printInsnAliasEnum(CodeGenTarget const &Target,
     }
 
     StringRef &AliasMnemonic = Matches[0];
-    std::string NormAliasMnem = Target.getName().upper() + "_INS_ALIAS_" +
-                                getNormalMnemonic(Target.getName(), AliasMnemonic);
+    std::string NormAliasMnem =
+        Target.getName().upper() + "_INS_ALIAS_" +
+        getNormalMnemonic(Target.getName(), AliasMnemonic);
     if (AliasMnemonicsSeen.find(NormAliasMnem) != AliasMnemonicsSeen.end())
       continue;
 
@@ -3806,10 +3974,11 @@ void printInsnAliasEnum(CodeGenTarget const &Target,
                      getLLVMInstEnumName(Target.getName().upper(), RealInst) +
                      "\n";
 
-    bool ReplaceDotInMnemonic = Target.getName().equals_insensitive("PPC") ? false : true;
+    bool ReplaceDotInMnemonic =
+        Target.getName().equals_insensitive("PPC") ? false : true;
     AliasMnemMap << "\t{ " + NormAliasMnem + ", \"" +
-                        getNormalMnemonic(Target.getName(), AliasMnemonic, false,
-                                           ReplaceDotInMnemonic) +
+                        getNormalMnemonic(Target.getName(), AliasMnemonic,
+                                          false, ReplaceDotInMnemonic) +
                         "\" },\n";
   }
 }
@@ -4404,8 +4573,8 @@ void PrinterCapstone::searchableTablesEmitKeyArray(const GenericTable &Table,
 
   RecTy::RecTyKind Kind = IndexField.RecType->getRecTyKind();
   // only numerical or string fields are searchable
-  if (Kind != RecTy::BitRecTyKind && Kind != RecTy::BitsRecTyKind
-    && Kind != RecTy::IntRecTyKind && Kind != RecTy::StringRecTyKind)
+  if (Kind != RecTy::BitRecTyKind && Kind != RecTy::BitsRecTyKind &&
+      Kind != RecTy::IntRecTyKind && Kind != RecTy::StringRecTyKind)
     return;
 
   raw_string_ostream &OS = searchableTablesGetOS(ST_IMPL_OS);
@@ -4422,26 +4591,26 @@ void PrinterCapstone::searchableTablesEmitKeyArray(const GenericTable &Table,
   OS << " Index[] = {\n" << LS;
 
   int64_t idx = 0;
-  for (auto & entry :  Table.Entries) {
-      OS << "{";
-      switch (Kind) {
-        case RecTy::BitRecTyKind:
-          OS << ((entry->getValueAsBit(IndexField.Name))? "true" : "false");
-          break;
-        case RecTy::BitsRecTyKind:
-          OS << BitsInitToUInt(entry->getValueAsBitsInit(IndexField.Name));
-          break;
-        case RecTy::IntRecTyKind:
-          OS << entry->getValueAsInt(IndexField.Name);
-          break;
-        case RecTy::StringRecTyKind:
-          OS << entry->getValueAsString(IndexField.Name);
-          break;
-        default:
-          llvm_unreachable("Kind of Index MUST be Bit, Bits, Int, or String");
-      }
-      OS << "," << idx << "}" << LS << "\n";
-      idx++;
+  for (auto &entry : Table.Entries) {
+    OS << "{";
+    switch (Kind) {
+    case RecTy::BitRecTyKind:
+      OS << ((entry->getValueAsBit(IndexField.Name)) ? "true" : "false");
+      break;
+    case RecTy::BitsRecTyKind:
+      OS << BitsInitToUInt(entry->getValueAsBitsInit(IndexField.Name));
+      break;
+    case RecTy::IntRecTyKind:
+      OS << entry->getValueAsInt(IndexField.Name);
+      break;
+    case RecTy::StringRecTyKind:
+      OS << entry->getValueAsString(IndexField.Name);
+      break;
+    default:
+      llvm_unreachable("Kind of Index MUST be Bit, Bits, Int, or String");
+    }
+    OS << "," << idx << "}" << LS << "\n";
+    idx++;
   }
   OS << "};\n";
 }
@@ -4487,7 +4656,6 @@ void PrinterCapstone::searchableTablesEmitMapII() const {
   OutS << "  { ";
 }
 
-
 unsigned getEnumValue(Record *Entry) {
   if (!Entry->getValue("EnumValueField") ||
       Entry->isValueUnset("EnumValueField")) {
@@ -4505,7 +4673,8 @@ unsigned getEnumValue(Record *Entry) {
       BitsInit *BI = Entry->getValueAsBitsInit("Value");
       return BitsInitToUInt(BI);
     }
-    PrintWarning("Couldn't find an enum value for the following entry, returning a dummy 0 value");
+    PrintWarning("Couldn't find an enum value for the following entry, "
+                 "returning a dummy 0 value");
     Entry->dump();
     PrintWarning("Which of those fields above are the encoding/enum value?");
     return 0;
@@ -4565,16 +4734,19 @@ void PrinterCapstone::searchableTablesEmitMapV() {
   EnumOS << "#endif\n\n";
 }
 
-void PrinterCapstone::compressInstEmitterEmitCompressInstEmitter(raw_ostream &OS, EmitterType EType,
-     CodeGenTarget &Target, SmallVector<CompressPat, 4> &CompressPatterns) {
-      std::string CppOutput;
-      raw_string_ostream CppOutputStream(CppOutput);
-      // call the PrinterLLVM implementation to avoid duplicating the massive piece of logic there
-      PrinterLLVM::compressInstEmitterEmitCompressInstEmitter(CppOutputStream, EType, Target, CompressPatterns);
+void PrinterCapstone::compressInstEmitterEmitCompressInstEmitter(
+    raw_ostream &OS, EmitterType EType, CodeGenTarget &Target,
+    SmallVector<CompressPat, 4> &CompressPatterns) {
+  std::string CppOutput;
+  raw_string_ostream CppOutputStream(CppOutput);
+  // call the PrinterLLVM implementation to avoid duplicating the massive piece
+  // of logic there
+  PrinterLLVM::compressInstEmitterEmitCompressInstEmitter(
+      CppOutputStream, EType, Target, CompressPatterns);
 
-      // try to patch C++-isms in the output till it's valid C
-      std::string COutput = translateToC(Target.getName().str(), CppOutput);
-      OS << COutput;
+  // try to patch C++-isms in the output till it's valid C
+  std::string COutput = translateToC(Target.getName().str(), CppOutput);
+  OS << COutput;
 }
 
 } // end namespace llvm
