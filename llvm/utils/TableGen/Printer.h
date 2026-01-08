@@ -25,8 +25,6 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <regex>
-
 #include "llvm/ADT/IndexedMap.h"
 typedef enum {
   ST_NONE,
@@ -35,42 +33,42 @@ typedef enum {
   ST_ENUM_SYSOPS_OS,
 } StreamType;
 
-// standalone type definitions 
-// Backend: CompressInstEmitter 
+// standalone type definitions
+// Backend: CompressInstEmitter
 struct OpData {
-    enum MapKind { Operand, Imm, Reg };
-    MapKind Kind;
-    union {
-        // Operand number mapped to.
-        unsigned Operand;
-        // Integer immediate value.
-        int64_t Imm;
-        // Physical register.
-        Record *Reg;
-    } Data;
-    // Tied operand index within the instruction.
-    int TiedOpIdx = -1;
+  enum MapKind { Operand, Imm, Reg };
+  MapKind Kind;
+  union {
+    // Operand number mapped to.
+    unsigned Operand;
+    // Integer immediate value.
+    int64_t Imm;
+    // Physical register.
+    Record *Reg;
+  } Data;
+  // Tied operand index within the instruction.
+  int TiedOpIdx = -1;
 };
 struct CompressPat {
-    // The source instruction definition.
-    CodeGenInstruction Source;
-    // The destination instruction to transform to.
-    CodeGenInstruction Dest;
-    // Required target features to enable pattern.
-    std::vector<Record *> PatReqFeatures;
-    // Maps operands in the Source Instruction to
-    // the corresponding Dest instruction operand.
-    IndexedMap<OpData> SourceOperandMap;
-    // Maps operands in the Dest Instruction
-    // to the corresponding Source instruction operand.
-    IndexedMap<OpData> DestOperandMap;
+  // The source instruction definition.
+  CodeGenInstruction Source;
+  // The destination instruction to transform to.
+  CodeGenInstruction Dest;
+  // Required target features to enable pattern.
+  std::vector<Record *> PatReqFeatures;
+  // Maps operands in the Source Instruction to
+  // the corresponding Dest instruction operand.
+  IndexedMap<OpData> SourceOperandMap;
+  // Maps operands in the Dest Instruction
+  // to the corresponding Source instruction operand.
+  IndexedMap<OpData> DestOperandMap;
 
-    bool IsCompressOnly;
-    CompressPat(CodeGenInstruction &S, CodeGenInstruction &D,
-                std::vector<Record *> RF, IndexedMap<OpData> &SourceMap,
-                IndexedMap<OpData> &DestMap, bool IsCompressOnly)
-        : Source(S), Dest(D), PatReqFeatures(RF), SourceOperandMap(SourceMap),
-            DestOperandMap(DestMap), IsCompressOnly(IsCompressOnly) {}
+  bool IsCompressOnly;
+  CompressPat(CodeGenInstruction &S, CodeGenInstruction &D,
+              std::vector<Record *> RF, IndexedMap<OpData> &SourceMap,
+              IndexedMap<OpData> &DestMap, bool IsCompressOnly)
+      : Source(S), Dest(D), PatReqFeatures(RF), SourceOperandMap(SourceMap),
+        DestOperandMap(DestMap), IsCompressOnly(IsCompressOnly) {}
 };
 
 enum EmitterType { Compress, Uncompress, CheckCompress };
@@ -1039,21 +1037,26 @@ public:
   //---------------------------
   // Backend: CompressInstEmitter
   //---------------------------
-  virtual void compressInstEmitterEmitCompressInstEmitter(raw_ostream &OS, EmitterType EType,
-     // CompressInstEmitter members (not necessarily all of them, just the needed ones)
-     CodeGenTarget &Target, SmallVector<CompressPat, 4> &CompressPatterns);
+  virtual void compressInstEmitterEmitCompressInstEmitter(
+      raw_ostream &OS, EmitterType EType,
+      // CompressInstEmitter members (not necessarily all of them, just the
+      // needed ones)
+      CodeGenTarget &Target, SmallVector<CompressPat, 4> &CompressPatterns);
 
   // static helpers
-  static void compressInstEmitterPrintPredicates(const std::vector<const Record *> &Predicates,
-                                                 StringRef Name, raw_ostream &OS);
-  static void compressInstEmitterMergeCondAndCode(raw_ostream &CombinedStream, StringRef CondStr,
+  static void compressInstEmitterPrintPredicates(
+      const std::vector<const Record *> &Predicates, StringRef Name,
+      raw_ostream &OS);
+  static void compressInstEmitterMergeCondAndCode(raw_ostream &CombinedStream,
+                                                  StringRef CondStr,
                                                   StringRef CodeStr);
-  static unsigned compressInstEmitterGetPredicates(DenseMap<const Record *, unsigned> &PredicateMap,
-                              std::vector<const Record *> &Predicates,
-                              Record *Rec, StringRef Name);
-  static void compressInstEmitterGetReqFeatures(std::set<std::pair<bool, StringRef>> &FeaturesSet,
-               std::set<std::set<std::pair<bool, StringRef>>> &AnyOfFeatureSets,
-               const std::vector<Record *> &ReqFeatures);
+  static unsigned compressInstEmitterGetPredicates(
+      DenseMap<const Record *, unsigned> &PredicateMap,
+      std::vector<const Record *> &Predicates, Record *Rec, StringRef Name);
+  static void compressInstEmitterGetReqFeatures(
+      std::set<std::pair<bool, StringRef>> &FeaturesSet,
+      std::set<std::set<std::pair<bool, StringRef>>> &AnyOfFeatureSets,
+      const std::vector<Record *> &ReqFeatures);
 };
 
 //==============================
@@ -1919,10 +1922,13 @@ public:
   void searchableTablesEmitMapIV(unsigned i) const override;
   void searchableTablesEmitMapV() override;
 
-   // Backend: CompressInstEmitter 
-   virtual void compressInstEmitterEmitCompressInstEmitter(raw_ostream &OS, EmitterType EType,
-     // CompressInstEmitter members (not necessarily all of them, just the needed ones)
-     CodeGenTarget &Target, SmallVector<CompressPat, 4> &CompressPatterns) override;
+  // Backend: CompressInstEmitter
+  virtual void compressInstEmitterEmitCompressInstEmitter(
+      raw_ostream &OS, EmitterType EType,
+      // CompressInstEmitter members (not necessarily all of them, just the
+      // needed ones)
+      CodeGenTarget &Target,
+      SmallVector<CompressPat, 4> &CompressPatterns) override;
 };
 
 } // end namespace llvm
