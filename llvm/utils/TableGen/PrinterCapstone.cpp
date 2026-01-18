@@ -1143,7 +1143,6 @@ std::string PrinterCapstone::translateToC(std::string const &TargetName,
   if (TargetName == "ARM" || TargetName == "Alpha") {
     patchPrintOperandAddr(PatchedCode);
   }
-
   return PatchedCode;
 }
 
@@ -1435,7 +1434,7 @@ void PrinterCapstone::decoderEmitterEmitDecodeInstruction(
   std::set<std::string> InsnBytesAsUint24 = {"Xtensa"};
   std::set<std::string> InsnBytesAsUint32 = {"ARM",   "AArch64", "LoongArch",
                                              "Alpha", "Mips",    "TriCore",
-                                             "ARC",   "Sparc",   "RISCV"};
+                                             "ARC", "Sparc", "RISCV"};
   std::set<std::string> InsnBytesAsUint64 = {"SystemZ", "ARC"};
   bool MacroDefined = false;
   if (InsnBytesAsUint16.find(TargetName) != InsnBytesAsUint16.end()) {
@@ -2977,8 +2976,14 @@ normalizedMnemonic(StringRef const &Mn, const bool Upper = true,
 
   // Each tuple is: Regex Pattern : Replacement char
   static SmallVector<std::tuple<std::string, std::string>> Replacements = {
-      {"[.]", "_"}, {"[,]", "_"}, {"[|]", "_"},  {"[+]", "p"},
-      {"[-]", "m"}, {"[/]", "s"}, {"[{}]", "_"}, {"[#]", "h"},
+    {"[.]", "_"},
+    {"[,]", "_"},
+    {"[|]", "_"},
+    {"[+]", "p"},
+    {"[-]", "m"},
+    {"[/]", "s"},
+    {"[{}]", "_"},
+    {"[#]", "h"},
   };
 
   auto Mnemonic = Upper ? Mn.upper() : Mn.str();
@@ -3002,14 +3007,12 @@ normalizedMnemonic(StringRef const &Mn, const bool Upper = true,
   return Mnemonic;
 }
 
-static inline std::string getNormalMnemonic(StringRef TargetName,
-                                            StringRef Mnemonic,
-                                            const bool Upper = true,
-                                            const bool ReplaceDot = true) {
+static inline std::string
+getNormalMnemonic(StringRef TargetName, StringRef Mnemonic,
+                  const bool Upper = true, const bool ReplaceDot = true) {
 
   StringRef RemovePattern = "";
-  if (TargetName.equals_insensitive("ARM") ||
-      TargetName.equals_insensitive("AArch64")) {
+  if (TargetName.equals_insensitive("ARM") || TargetName.equals_insensitive("AArch64")) {
     RemovePattern = "[{}]";
   } else if (TargetName.equals_insensitive("ARC")) {
     RemovePattern = "[.]$";
@@ -3124,8 +3127,8 @@ std::string getArchSupplInfoPPC(StringRef const &TargetName,
 }
 
 std::string getArchSupplInfoSparc(StringRef const &TargetName,
-                                  CodeGenInstruction const *CGI,
-                                  raw_string_ostream &SparcFormatEnum) {
+                                CodeGenInstruction const *CGI,
+                                raw_string_ostream &SparcFormatEnum) {
   static std::set<std::string> Formats;
   // Get instruction format
   ArrayRef<std::pair<Record *, SMRange>> SCs = CGI->TheDef->getSuperClasses();
@@ -3139,15 +3142,13 @@ std::string getArchSupplInfoSparc(StringRef const &TargetName,
   // The class before the "I" class is the format class.
   for (int I = SCs.size() - 1; I >= 0; --I) {
     const Record *SC = SCs[I].first;
-    if (SC->getName() == "InstSP" || SC->getName() == "F2" ||
-        SC->getName() == "F3" || SC->getName() == "F4") {
+    if (SC->getName() == "InstSP" || SC->getName() == "F2" || SC->getName() == "F3" || SC->getName() == "F4") {
       // In this case of !PrevSC the instruction inherits directly from InstSP.
       // In code they document this is a FOMRAT 1 instruction.
       //
-      // If SC->getName() == "F2...4" we emit the format as well. Because there
-      // are many F2/F3/F4 encodings, not just one. F2/F3/F4 are the base.
-      std::string Format =
-          "SPARC_INSN_FORM_" + (!PrevSC ? "F1" : PrevSC->getName().upper());
+      // If SC->getName() == "F2...4" we emit the format as well. Because there are many
+      // F2/F3/F4 encodings, not just one. F2/F3/F4 are the base.
+      std::string Format = "SPARC_INSN_FORM_" + (!PrevSC ? "F1" : PrevSC->getName().upper());
       if (Formats.find(Format) == Formats.end()) {
         SparcFormatEnum << Format + ",\n";
       }
@@ -3306,18 +3307,11 @@ Record *argInitOpToRecord(Init *ArgInit) {
 // diagram
 // https://regexper.com/#OPERAND_%5BUS%5DIMM%5B0-9%5D%7B1%2C2%7D%28_%5BA-Z0-9%5D%2B%29*%7COPERAND_ZERO%7COPERAND_RVKRNUM%7COPERAND_VTYPEI%5B0-9%5D%7B1%2C2%7D%7COPERAND_UIMMLOG2XLEN%28_NONZERO%29%3F%7COPERAND_CLUI_IMM
 static const Regex RiscvImmOperandsPattern(
-    "OPERAND_[US]IMM[0-9]{1,2}(_[A-Z0-9]+)*" // e.g.
-                                             // OPERAND_UIMM12_NONZERO_BLAHBLAH42
-    "|"
-    "OPERAND_ZERO"
-    "|"
-    "OPERAND_RVKRNUM"
-    "|"
-    "OPERAND_VTYPEI[0-9]{1,2}" // e.g. OPERAND_VTYPEI10
-    "|"
-    "OPERAND_UIMMLOG2XLEN(_NONZERO)?"
-    "|"
-    "OPERAND_CLUI_IMM");
+  "OPERAND_[US]IMM[0-9]{1,2}(_[A-Z0-9]+)*" // e.g. OPERAND_UIMM12_NONZERO_BLAHBLAH42
+  "|" "OPERAND_ZERO" "|" "OPERAND_RVKRNUM"
+  "|" "OPERAND_VTYPEI[0-9]{1,2}"              // e.g. OPERAND_VTYPEI10
+  "|" "OPERAND_UIMMLOG2XLEN(_NONZERO)?"
+  "|" "OPERAND_CLUI_IMM");
 
 std::string getPrimaryCSOperandType(Record const *OpRec) {
   std::string OperandType;
@@ -3363,8 +3357,7 @@ std::string getPrimaryCSOperandType(Record const *OpRec) {
   else if (OperandType == "OPERAND_NM_GPREL21")
     return "CS_OP_REG";
   // RISCV (keep this as the last check because it matches a lot of strings,
-  //        so it might shadow another architecture's operand names if it's
-  //        moved up)
+  //        so it might shadow another architecture's operand names if it's moved up)
   else if (RiscvImmOperandsPattern.match(OperandType))
     return "CS_OP_IMM";
   else if (OperandType == "OPERAND_NM_SAVE_REGLIST")
@@ -3462,12 +3455,9 @@ bool opIsPartOfiPTRPattern(Record const *OpRec, StringRef const &OpName,
   return false;
 }
 
-/// Some operands are wrongly defined as iPTR or other markers we use to
-/// identify memory operands.
-static inline bool wrongMemClassification(StringRef const &TargetName,
-                                          StringRef const &OpName) {
-  return (TargetName.compare_insensitive("Sparc") == 0 &&
-          OpName.compare_insensitive("simm13") == 0);
+/// Some operands are wrongly defined as iPTR or other markers we use to identify memory operands.
+static inline bool wrongMemClassification(StringRef const &TargetName, StringRef const &OpName) {
+  return (TargetName.compare_insensitive("Sparc") == 0 && OpName.compare_insensitive("simm13") == 0);
 }
 
 std::string getCSOperandType(
@@ -3476,8 +3466,7 @@ std::string getCSOperandType(
     std::map<std::string, std::vector<Record *>> const InsnPatternMap) {
   std::string OperandType = getPrimaryCSOperandType(OpRec);
 
-  if ((StringRef(TargetName).upper() == "AARCH64" ||
-       StringRef(TargetName).upper() == "SPARC") &&
+  if ((StringRef(TargetName).upper() == "AARCH64" || StringRef(TargetName).upper() == "SPARC") &&
       OperandType != "CS_OP_MEM") {
     // The definitions of AArch64/Sparc are so flawed, when it comes to memory
     // operands (they are not labeled as such), that we just search for the op
@@ -3494,25 +3483,23 @@ std::string getCSOperandType(
       return OperandType += " | CS_OP_BOUND";
     }
   }
-  bool RISCVInstrMayAccessMemory =
-      TargetName == "RISCV" && (CGI->mayLoad || CGI->mayStore);
+  bool RISCVInstrMayAccessMemory = TargetName == "RISCV" && (CGI->mayLoad || CGI->mayStore);
   // some RISCV reg operands that hold addresses are not correctly classified by
-  // the above logic as MEM operands, this fixes the issue by an ugly asm string
-  // wrangling
+  // the above logic as MEM operands, this fixes the issue by an ugly asm string wrangling
   if (RISCVInstrMayAccessMemory && OperandType == "CS_OP_REG") {
-    // if the reg name appears inside (${...}), it's an addressing register
-    if (Regex("\\(\\$\\{" + OpName.str() + "\\}\\)").match(CGI->AsmString)) {
-      OperandType += " | CS_OP_MEM";
-      return OperandType;
-    }
+      // if the reg name appears inside (${...}), it's an addressing register
+      if (Regex("\\(\\$\\{" + OpName.str() + "\\}\\)").match(CGI->AsmString)) {
+          OperandType += " | CS_OP_MEM";
+          return OperandType;
+      }
   }
   // same as above but for immediate literals used as address offsets
   if (RISCVInstrMayAccessMemory && OperandType == "CS_OP_IMM") {
-    // if the literal name appears in ${...}(___), it's an address offset
-    if (Regex("\\$\\{" + OpName.str() + "\\}\\(.*\\)").match(CGI->AsmString)) {
-      OperandType += " | CS_OP_MEM";
-      return OperandType;
-    }
+      // if the literal name appears in ${...}(___), it's an address offset
+      if (Regex("\\$\\{" + OpName.str() + "\\}\\(.*\\)").match(CGI->AsmString)) {
+          OperandType += " | CS_OP_MEM";
+          return OperandType;
+      }
   }
 
   if (wrongMemClassification(TargetName, OpName)) {
@@ -3521,8 +3508,7 @@ std::string getCSOperandType(
 
   // some RISCV instructions have an extra MEM where it shouldn't be
   // this flag will correct the problem with no effect for other archs
-  bool InstrMayAccessMemory =
-      TargetName != "RISCV" || RISCVInstrMayAccessMemory;
+  bool InstrMayAccessMemory = TargetName != "RISCV" || RISCVInstrMayAccessMemory;
   DagInit *PatternDag = nullptr;
   if (OperandType == "CS_OP_MEM")
     if (OpRec->getValue("RegClass") != nullptr)
@@ -3550,15 +3536,13 @@ std::string getCSOperandType(
     bool OpTypeIsPartOfAnyPattern =
         any_of(InsnPatternMap.at(CGIName), [&](Record *PatternDag) {
           return opIsPartOfiPTRPattern(
-              OpRec, OpName, PatternDag->getValueAsDag("PatternToMatch"),
-              false);
+              OpRec, OpName, PatternDag->getValueAsDag("PatternToMatch"), false);
         });
     if (OpTypeIsPartOfAnyPattern && InstrMayAccessMemory)
       OperandType += " | CS_OP_MEM";
     return OperandType;
   }
-  if (PatternDag && opIsPartOfiPTRPattern(OpRec, OpName, PatternDag, false) &&
-      InstrMayAccessMemory)
+  if (PatternDag && opIsPartOfiPTRPattern(OpRec, OpName, PatternDag, false) && InstrMayAccessMemory)
     OperandType += " | CS_OP_MEM";
   return OperandType;
 }
@@ -3577,8 +3561,7 @@ void printInsnMapEntry(StringRef const &TargetName, AsmMatcherInfo &AMI,
   InsnMap.indent(2) << getLLVMInstEnumName(TargetName, CGI) << " /* " << InsnNum
                     << " */";
   InsnMap << ", " << TargetName.upper() << "_INS_"
-          << (UseMI ? getNormalMnemonic(TargetName, MI->Mnemonic) : "INVALID")
-          << ",\n";
+          << (UseMI ? getNormalMnemonic(TargetName, MI->Mnemonic) : "INVALID") << ",\n";
   // no diet only
   InsnMap.indent(2) << "#ifndef CAPSTONE_DIET\n";
   if (UseMI) {
@@ -3737,9 +3720,8 @@ void printInsnOpMapEntry(
     // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53119
     InsnOpMap << "{{{ /* " + LLVMEnum + " (" << InsnNum
               << ") - " + TargetName + "_INS_" +
-                     (UseMI ? getNormalMnemonic(TargetName, MI->Mnemonic)
-                            : "INVALID") +
-                     " - " + CGI->AsmString + " */\n";
+                     (UseMI ? getNormalMnemonic(TargetName, MI->Mnemonic) : "INVALID") + " - " +
+                     CGI->AsmString + " */\n";
     InsnOpMap << " 0\n";
     InsnOpMap << "}}},\n";
     return;
@@ -3803,9 +3785,8 @@ void printInsnOpMapEntry(
   // Write the C struct of the Instruction operands.
   InsnOpMap << "{ /* " + LLVMEnum + " (" << InsnNum
             << ") - " + TargetName + "_INS_" +
-                   (UseMI ? getNormalMnemonic(TargetName, MI->Mnemonic)
-                          : "INVALID") +
-                   " - " + CGI->AsmString + " */\n";
+                   (UseMI ? getNormalMnemonic(TargetName, MI->Mnemonic) : "INVALID") + " - " +
+                   CGI->AsmString + " */\n";
   InsnOpMap << "{\n";
   for (OpData const &OD : InsOps) {
     InsnOpMap.indent(2) << "{ " << OD.OpType << ", " << getCSAccess(OD.Access)
@@ -3824,8 +3805,7 @@ void printInsnNameMapEnumEntry(StringRef const &TargetName,
   static std::set<std::string> EnumsSeen;
 
   const bool ReplaceDot = !TargetName.equals_insensitive("TriCore");
-  std::string Mnemonic =
-      getNormalMnemonic(TargetName, MI->Mnemonic, false, ReplaceDot);
+  std::string Mnemonic = getNormalMnemonic(TargetName, MI->Mnemonic, false, ReplaceDot);
   if (MnemonicsSeen.find(Mnemonic) != MnemonicsSeen.end())
     return;
 
@@ -3962,9 +3942,8 @@ void printInsnAliasEnum(CodeGenTarget const &Target,
     }
 
     StringRef &AliasMnemonic = Matches[0];
-    std::string NormAliasMnem =
-        Target.getName().upper() + "_INS_ALIAS_" +
-        getNormalMnemonic(Target.getName(), AliasMnemonic);
+    std::string NormAliasMnem = Target.getName().upper() + "_INS_ALIAS_" +
+                                getNormalMnemonic(Target.getName(), AliasMnemonic);
     if (AliasMnemonicsSeen.find(NormAliasMnem) != AliasMnemonicsSeen.end())
       continue;
 
@@ -3974,11 +3953,10 @@ void printInsnAliasEnum(CodeGenTarget const &Target,
                      getLLVMInstEnumName(Target.getName().upper(), RealInst) +
                      "\n";
 
-    bool ReplaceDotInMnemonic =
-        Target.getName().equals_insensitive("PPC") ? false : true;
+    bool ReplaceDotInMnemonic = Target.getName().equals_insensitive("PPC") ? false : true;
     AliasMnemMap << "\t{ " + NormAliasMnem + ", \"" +
-                        getNormalMnemonic(Target.getName(), AliasMnemonic,
-                                          false, ReplaceDotInMnemonic) +
+                        getNormalMnemonic(Target.getName(), AliasMnemonic, false,
+                                           ReplaceDotInMnemonic) +
                         "\" },\n";
   }
 }
@@ -4573,8 +4551,8 @@ void PrinterCapstone::searchableTablesEmitKeyArray(const GenericTable &Table,
 
   RecTy::RecTyKind Kind = IndexField.RecType->getRecTyKind();
   // only numerical or string fields are searchable
-  if (Kind != RecTy::BitRecTyKind && Kind != RecTy::BitsRecTyKind &&
-      Kind != RecTy::IntRecTyKind && Kind != RecTy::StringRecTyKind)
+  if (Kind != RecTy::BitRecTyKind && Kind != RecTy::BitsRecTyKind
+    && Kind != RecTy::IntRecTyKind && Kind != RecTy::StringRecTyKind)
     return;
 
   raw_string_ostream &OS = searchableTablesGetOS(ST_IMPL_OS);
@@ -4591,26 +4569,26 @@ void PrinterCapstone::searchableTablesEmitKeyArray(const GenericTable &Table,
   OS << " Index[] = {\n" << LS;
 
   int64_t idx = 0;
-  for (auto &entry : Table.Entries) {
-    OS << "{";
-    switch (Kind) {
-    case RecTy::BitRecTyKind:
-      OS << ((entry->getValueAsBit(IndexField.Name)) ? "true" : "false");
-      break;
-    case RecTy::BitsRecTyKind:
-      OS << BitsInitToUInt(entry->getValueAsBitsInit(IndexField.Name));
-      break;
-    case RecTy::IntRecTyKind:
-      OS << entry->getValueAsInt(IndexField.Name);
-      break;
-    case RecTy::StringRecTyKind:
-      OS << entry->getValueAsString(IndexField.Name);
-      break;
-    default:
-      llvm_unreachable("Kind of Index MUST be Bit, Bits, Int, or String");
-    }
-    OS << "," << idx << "}" << LS << "\n";
-    idx++;
+  for (auto & entry :  Table.Entries) {
+      OS << "{";
+      switch (Kind) {
+        case RecTy::BitRecTyKind:
+          OS << ((entry->getValueAsBit(IndexField.Name))? "true" : "false");
+          break;
+        case RecTy::BitsRecTyKind:
+          OS << BitsInitToUInt(entry->getValueAsBitsInit(IndexField.Name));
+          break;
+        case RecTy::IntRecTyKind:
+          OS << entry->getValueAsInt(IndexField.Name);
+          break;
+        case RecTy::StringRecTyKind:
+          OS << entry->getValueAsString(IndexField.Name);
+          break;
+        default:
+          llvm_unreachable("Kind of Index MUST be Bit, Bits, Int, or String");
+      }
+      OS << "," << idx << "}" << LS << "\n";
+      idx++;
   }
   OS << "};\n";
 }
@@ -4656,6 +4634,7 @@ void PrinterCapstone::searchableTablesEmitMapII() const {
   OutS << "  { ";
 }
 
+
 unsigned getEnumValue(Record *Entry) {
   if (!Entry->getValue("EnumValueField") ||
       Entry->isValueUnset("EnumValueField")) {
@@ -4673,8 +4652,7 @@ unsigned getEnumValue(Record *Entry) {
       BitsInit *BI = Entry->getValueAsBitsInit("Value");
       return BitsInitToUInt(BI);
     }
-    PrintWarning("Couldn't find an enum value for the following entry, "
-                 "returning a dummy 0 value");
+    PrintWarning("Couldn't find an enum value for the following entry, returning a dummy 0 value");
     Entry->dump();
     PrintWarning("Which of those fields above are the encoding/enum value?");
     return 0;
@@ -4734,19 +4712,16 @@ void PrinterCapstone::searchableTablesEmitMapV() {
   EnumOS << "#endif\n\n";
 }
 
-void PrinterCapstone::compressInstEmitterEmitCompressInstEmitter(
-    raw_ostream &OS, EmitterType EType, CodeGenTarget &Target,
-    SmallVector<CompressPat, 4> &CompressPatterns) {
-  std::string CppOutput;
-  raw_string_ostream CppOutputStream(CppOutput);
-  // call the PrinterLLVM implementation to avoid duplicating the massive piece
-  // of logic there
-  PrinterLLVM::compressInstEmitterEmitCompressInstEmitter(
-      CppOutputStream, EType, Target, CompressPatterns);
+void PrinterCapstone::compressInstEmitterEmitCompressInstEmitter(raw_ostream &OS, EmitterType EType,
+     CodeGenTarget &Target, SmallVector<CompressPat, 4> &CompressPatterns) {
+      std::string CppOutput;
+      raw_string_ostream CppOutputStream(CppOutput);
+      // call the PrinterLLVM implementation to avoid duplicating the massive piece of logic there
+      PrinterLLVM::compressInstEmitterEmitCompressInstEmitter(CppOutputStream, EType, Target, CompressPatterns);
 
-  // try to patch C++-isms in the output till it's valid C
-  std::string COutput = translateToC(Target.getName().str(), CppOutput);
-  OS << COutput;
+      // try to patch C++-isms in the output till it's valid C
+      std::string COutput = translateToC(Target.getName().str(), CppOutput);
+      OS << COutput;
 }
 
 } // end namespace llvm
