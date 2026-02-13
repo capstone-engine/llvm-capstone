@@ -18,6 +18,11 @@
 #include "llvm/Support/type_traits.h"
 #include <algorithm>
 #include <cassert>
+// Capstone addition.
+// Remove with update above LLVM 18.
+// On Fedora tblgen won't build otherwise.
+#include <cstdint>
+// END
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
