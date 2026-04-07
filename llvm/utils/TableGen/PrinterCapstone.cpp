@@ -3953,7 +3953,11 @@ void printInsnAliasEnum(CodeGenTarget const &Target,
                      getLLVMInstEnumName(Target.getName().upper(), RealInst) +
                      "\n";
 
-    bool ReplaceDotInMnemonic = Target.getName().equals_insensitive("PPC") ? false : true;
+    bool ReplaceDotInMnemonic = true;
+    if (Target.getName().equals_insensitive("PPC"))
+	    ReplaceDotInMnemonic = false;
+    else if (Target.getName().equals_insensitive("RISCV"))
+	    ReplaceDotInMnemonic = false;
     AliasMnemMap << "\t{ " + NormAliasMnem + ", \"" +
                         getNormalMnemonic(Target.getName(), AliasMnemonic, false,
                                            ReplaceDotInMnemonic) +
