@@ -36,7 +36,6 @@ class MForm<bits<6> opcode, bit load, string asmstr, list<dag> pattern, InstrIti
         : I<opcode, asmstr, itin> {
   let Pattern = pattern;
   let canFoldAsLoad = load;
-  let Defs = [R28]; //We may use this for frame index calculations, so reserve it here
 
   bits<5> RA;
   bits<16> DISP;
