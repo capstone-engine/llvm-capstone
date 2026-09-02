@@ -867,6 +867,7 @@ def : InstRW<[P10W_FX_2C, P10W_DISP_ANY, P10FX_Read],
 def : InstRW<[P10W_FX_3C, P10W_DISP_ANY],
       (instrs
     DSS, DSSALL,
+    MCRXR,
     MCRXRX,
     MFCTR, MFCTR8,
     MFLR, MFLR8,
