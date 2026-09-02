@@ -2729,6 +2729,15 @@ def MFCR : XFXForm_3<31, 19, (outs gprc:$RT), (ins),
 
 def MCRXRX : X_BF3<31, 576, (outs crrc:$BF), (ins),
                    "mcrxrx $BF", IIC_BrMCRX>, Requires<[IsISA3_0]>;
+
+// mcrxr (Move to CR from XER) was part of the original POWER/PowerPC
+// architecture, but was dropped from the ISA as of PowerPC ISA 2.03
+// (Book I). It moves the top 4 bits of XER (SO, OV, CA and a reserved
+// bit) into the chosen CR field and clears them in XER - superseded by
+// the (non-destructive) mcrxrx above on ISA 3.0+ implementations. It is
+// still encountered when disassembling legacy PowerPC/POWER binaries.
+def MCRXR : X_BF3<31, 512, (outs crrc:$BF), (ins),
+                  "mcrxr $BF", IIC_BrMCRX>;
 } // hasSideEffects = 0
 
 def : InstAlias<"mtcr $rA", (MTCRF 255, gprc:$rA)>;
