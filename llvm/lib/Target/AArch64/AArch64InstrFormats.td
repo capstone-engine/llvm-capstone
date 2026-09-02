@@ -1948,8 +1948,8 @@ class SystemXtI<bit L, string asm>
 }
 
 class SystemLXtI<bit L, string asm>
-  : RtSystemI<L, (outs),
-       (ins GPR64:$Rt, imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2),
+  : RtSystemI<L, (outs GPR64:$Rt),
+       (ins imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2),
        asm, "\t$Rt, $op1, $Cn, $Cm, $op2"> {
   bits<3> op1;
   bits<4> Cn;
