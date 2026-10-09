@@ -11814,7 +11814,7 @@ multiclass CompareAndSwapPair<bits<1> Acq, bits<1> Rel, string order> {
     def X : BaseCASP<order, "", XSeqPairClassOperand>;
 }
 
-let Predicates = [HasLSE] in
+let Predicates = [HasLSE], mayLoad = 1, mayStore = 1 in
 class BaseSWP<string order, string size, RegisterClass RC>
       : I<(outs RC:$Rt),(ins RC:$Rs, GPR64sp:$Rn), "swp" # order # size,
           "\t$Rs, $Rt, [$Rn]","",[]>,
